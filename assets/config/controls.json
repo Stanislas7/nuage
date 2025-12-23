@@ -1,0 +1,13 @@
+{
+    "axes": {
+        "pitch": {"positive": "W", "negative": "S"},
+        "yaw": {"positive": "A", "negative": "D"},
+        "roll": {"positive": "Q", "negative": "E"}
+    },
+    "buttons": {
+        "throttle_up": "Space",
+        "throttle_down": "LeftShift",
+        "brake": "B",
+        "quit": "Escape"
+    }
+}

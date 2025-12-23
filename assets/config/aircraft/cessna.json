@@ -1,0 +1,17 @@
+{
+    "name": "Cessna 172",
+    "speed": {
+        "min": 25,
+        "max": 70
+    },
+    "controlRates": {
+        "pitch": 1.2,
+        "yaw": 0.8,
+        "roll": 1.5
+    },
+    "limits": {
+        "maxPitch": 1.0,
+        "minAltitude": 5
+    },
+    "throttleResponse": 0.5
+}

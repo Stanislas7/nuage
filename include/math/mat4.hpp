@@ -44,6 +44,10 @@ struct Mat4 {
         return r;
     }
 
+    static Mat4 translate(const Vec3& v) {
+        return translate(v.x, v.y, v.z);
+    }
+
     static Mat4 rotateY(float a) {
         Mat4 r;
         r.m[0] = std::cos(a);
@@ -69,6 +73,9 @@ struct Mat4 {
         r.m[10] = z;
         return r;
     }
+
+    const float* data() const { return m; }
+    float* data() { return m; }
 
     Mat4 operator*(const Mat4& o) const {
         Mat4 r;

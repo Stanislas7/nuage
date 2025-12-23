@@ -13,11 +13,26 @@ set(SOURCES
     src/glad.c
     src/graphics/shader.cpp
     src/graphics/mesh.cpp
-    src/game/terrain.cpp
-    src/game/aircraft.cpp
+    src/core/simulator.cpp
+    src/modules/input_module.cpp
+    src/modules/render_module.cpp
+    src/modules/aircraft_module.cpp
+    src/modules/terrain_module.cpp
+    src/modules/camera_module.cpp
+    src/simulation/flight_model.cpp
+    src/simulation/flight_params.cpp
+    src/graphics/mesh_builder.cpp
+    src/assets/asset_store.cpp
 )
 
 add_executable(flightsim ${SOURCES})
+
+# Copy assets to the build directory
+add_custom_command(TARGET flightsim POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/assets
+    $<TARGET_FILE_DIR:flightsim>/assets
+)
 
 target_include_directories(flightsim PRIVATE
     ${CMAKE_SOURCE_DIR}/include
