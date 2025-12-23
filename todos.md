@@ -39,8 +39,30 @@
 ## Phase 3: PropertyBus
 - [x] Implement `PropertyBus.hpp/.cpp` (enhanced with Vec3/Quat helpers)
 - [ ] Add unit tests for PropertyBus (deferred to end)
-- [x] Define standard property paths (document in code) - PropertyPaths.hpp
+- [x] Define standard property paths (documented in PropertyPaths.hpp)
 - [x] Add `getSystem<T>()` to Aircraft for clean API access
+
+## Phase 4: Aircraft Systems
+- [x] Create `IAircraftSystem.hpp` interface
+- [x] Create `Aircraft.hpp/.cpp` container class
+- [x] Extract `FlightDynamics` system from FlightModel
+- [x] Create `EngineSystem` (thrust, N1, fuel flow)
+- [x] Create `FuelSystem` (tank management)
+- [x] Wire systems to read/write PropertyBus
+- [ ] Load aircraft config from JSON (deferred - using defaults for now)
+
+## Phase 5: Integration
+- [x] Connect `FlightDynamics` → `AtmosphereManager::getAirDensity()`
+- [x] Connect `CameraManager` → follows player aircraft
+- [x] Connect `InputManager` → writes to aircraft PropertyBus
+- [x] Test full loop: input → physics → render
+
+## Phase 6: Cleanup & Code Quality
+- [x] Update FlightDynamics to use Properties:: constants
+- [x] Update EngineSystem to use Properties:: constants
+- [x] Update FuelSystem to use Properties:: constants
+- [x] Update Aircraft to use Properties:: constants
+- [x] Final build test - builds successfully
 
 ## Phase 4: Aircraft Systems
 - [ ] Create `IAircraftSystem.hpp` interface

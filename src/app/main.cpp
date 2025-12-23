@@ -15,7 +15,7 @@ int main() {
         return -1;
     }
 
-    app.aircraft().spawnPlayer("assets/configs/aircraft/cessna.json");
+    app.aircraft().spawnPlayer("assets/config/aircraft/cessna.json");
 
     app.run();
     app.shutdown();

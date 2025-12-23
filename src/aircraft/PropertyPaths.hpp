@@ -36,13 +36,11 @@ namespace Engine {
     inline constexpr char FUEL_FLOW[] = "engine/fuel_flow";
 }
 
-// ============== FUEL ==============
 namespace Fuel {
     inline constexpr char QUANTITY[] = "fuel/quantity";
     inline constexpr char CAPACITY[] = "fuel/capacity";
 }
 
-// ============== ATMOSPHERE ==============
 namespace Atmosphere {
     inline constexpr char DENSITY[] = "atmosphere/density";
     inline constexpr char PRESSURE[] = "atmosphere/pressure";
@@ -51,12 +49,10 @@ namespace Atmosphere {
     inline constexpr char WIND_HEADING[] = "atmosphere/wind_heading";
 }
 
-// ============== LANDING GEAR (Future) ==============
 namespace Gear {
     inline constexpr char EXTENSION[] = "gear/extension";
 }
 
-// ============== FLAPS (Future) ==============
 namespace Flaps {
     inline constexpr char SETTING[] = "flaps/setting";
 }

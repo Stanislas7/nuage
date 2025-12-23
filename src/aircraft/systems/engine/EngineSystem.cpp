@@ -1,6 +1,7 @@
 #include "EngineSystem.hpp"
 #include "aircraft/property_bus.hpp"
 #include "aircraft/PropertyPaths.hpp"
+#include "app/App.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -38,7 +39,8 @@ void EngineSystem::update(float dt) {
     double thrustRatio = (m_currentN1 - m_config.idleN1) / (m_config.maxN1 - m_config.idleN1);
     thrustRatio = std::max(0.0, thrustRatio);
     
-    double density = m_state->get(Properties::Atmosphere::DENSITY, 1.225);
+    float altitude = static_cast<float>(m_state->get(Properties::Position::Y));
+    double density = m_app->atmosphere().getAirDensity(altitude);
     double densityRatio = density / 1.225;
     
     double thrust = m_config.maxThrust * thrustRatio * densityRatio;
