@@ -6,6 +6,7 @@
 namespace nuage {
 
 struct Mat4;
+struct Vec3;
 
 class Shader {
 public:
@@ -18,6 +19,7 @@ public:
     GLuint getProgram() const { return m_program; }
     
     void setMat4(const char* name, const Mat4& mat) const;
+    void setVec3(const char* name, const Vec3& vec) const;
 
 private:
     GLuint compileShader(GLenum type, const char* src);

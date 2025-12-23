@@ -1,7 +1,10 @@
 #include "app/App.hpp"
+#include "ui/Anchor.hpp"
 #include "graphics/glad.h"
 #include "graphics/mesh_builder.hpp"
 #include "aircraft/Aircraft.hpp"
+
+#define GLFW_INCLUDE_NONE // Tell GLFW not to include its own OpenGL headers
 #include <GLFW/glfw3.h>
 #include <iostream>
 
@@ -66,6 +69,11 @@ bool App::init(const AppConfig& config) {
     m_atmosphere.init();
     m_camera.init(this);
 
+    if (!m_ui.init(this)) {
+        std::cerr << "Failed to initialize UI system" << std::endl;
+        return false;
+    }
+
     m_camera.setAspect(static_cast<float>(config.windowWidth) / config.windowHeight);
 
     AircraftMeshSpecs specs;
@@ -78,6 +86,11 @@ bool App::init(const AppConfig& config) {
     m_terrainShader = m_assets.getShader("basic");
 
     glClearColor(0.5f, 0.7f, 0.9f, 1.0f);
+
+    m_ui.text("Hello UI!")
+        .scaleVal(2.5f)
+        .pos(20, 20)
+        .colorR(1, 1, 1);
 
     m_lastFrameTime = static_cast<float>(glfwGetTime());
     return true;
@@ -114,15 +127,18 @@ void App::run() {
         m_camera.update(m_deltaTime);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
+
         if (m_terrainMesh && m_terrainShader) {
             m_terrainShader->use();
             m_terrainShader->setMat4("uMVP", m_camera.viewProjection());
             m_terrainMesh->draw();
         }
-        
+
         m_aircraft.render();
-        
+
+        m_ui.update();
+        m_ui.draw();
+
         glfwSwapBuffers(m_window);
         glfwPollEvents();
     }
@@ -130,6 +146,7 @@ void App::run() {
 
 void App::shutdown() {
     m_aircraft.shutdown();
+    m_ui.shutdown();
     m_assets.unloadAll();
     glfwDestroyWindow(m_window);
     glfwTerminate();

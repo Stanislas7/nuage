@@ -48,6 +48,13 @@ void Shader::setMat4(const char* name, const Mat4& mat) const {
     }
 }
 
+void Shader::setVec3(const char* name, const Vec3& vec) const {
+    GLint loc = getUniformLocation(name);
+    if (loc >= 0) {
+        glUniform3f(loc, vec.x, vec.y, vec.z);
+    }
+}
+
 GLuint Shader::compileShader(GLenum type, const char* src) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &src, nullptr);

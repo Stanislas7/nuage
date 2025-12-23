@@ -16,6 +16,8 @@ file(GLOB_RECURSE SOURCES
     "src/graphics/*.cpp"
     "src/graphics/*.c"
     "src/math/*.cpp"
+    "src/ui/*.cpp"
+    "src/ui/font/*.cpp"
     "src/world/*.cpp"
 )
 
@@ -36,6 +38,8 @@ target_include_directories(nuage PRIVATE
     ${CMAKE_SOURCE_DIR}/src/aircraft/systems
     ${CMAKE_SOURCE_DIR}/src/graphics
     ${CMAKE_SOURCE_DIR}/src/math
+    ${CMAKE_SOURCE_DIR}/src/ui
+    ${CMAKE_SOURCE_DIR}/src/ui/font
     ${CMAKE_SOURCE_DIR}/src/world
 )
 
