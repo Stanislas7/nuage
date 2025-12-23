@@ -60,6 +60,7 @@ private:
     App* m_app = nullptr;
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
+    Vec3 m_color = {1, 1, 1};
 };
 
 }

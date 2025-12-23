@@ -21,8 +21,14 @@
         "fuelFlowIdle": 0.002,
         "fuelFlowMax": 0.02
     },
-    "fuel": {
-        "capacity": 150.0,
-        "initial": 120.0
-    }
-}
+        "fuel": {
+            "capacity": 150.0,
+            "initial": 120.0
+        },
+            "model": {
+                "name": "cessna_mesh",
+                "path": "assets/models/cessna.obj",
+                "color": [0.2, 0.2, 0.2]
+            }
+        }
+        

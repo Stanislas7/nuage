@@ -12,6 +12,7 @@ class Shader;
 struct SceneryObject {
     std::string meshName;
     Transform transform;
+    Vec3 color{1, 1, 1};
 };
 
 class SceneryManager {

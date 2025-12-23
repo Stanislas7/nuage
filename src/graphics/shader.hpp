@@ -20,6 +20,7 @@ public:
     
     void setMat4(const char* name, const Mat4& mat) const;
     void setVec3(const char* name, const Vec3& vec) const;
+    void setBool(const char* name, bool value) const;
 
 private:
     GLuint compileShader(GLenum type, const char* src);

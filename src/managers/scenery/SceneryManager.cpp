@@ -66,6 +66,13 @@ void SceneryManager::loadConfig(const std::string& configPath) {
                 }
             }
 
+            if (item.contains("color")) {
+                auto c = item["color"];
+                if (c.is_array() && c.size() == 3) {
+                    obj.color = Vec3(c[0], c[1], c[2]);
+                }
+            }
+
             m_objects.push_back(obj);
         }
     }
@@ -84,9 +91,12 @@ void SceneryManager::render(const Mat4& viewProjection) {
         if (mesh) {
             Mat4 mvp = viewProjection * obj.transform.matrix();
             m_shader->setMat4("uMVP", mvp);
+            m_shader->setVec3("uColor", obj.color);
+            m_shader->setBool("uUseUniformColor", true);
             mesh->draw();
         }
     }
+    m_shader->setBool("uUseUniformColor", false);
 }
 
 }

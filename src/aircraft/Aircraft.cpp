@@ -5,11 +5,13 @@
 #include "graphics/shader.hpp"
 #include "math/mat4.hpp"
 #include "utils/ConfigLoader.hpp"
+#include "app/App.hpp" // Ensure App definition is available for assets()
 
 #include "aircraft/systems/flight_dynamics/FlightDynamics.hpp"
 #include "aircraft/systems/engine/EngineSystem.hpp"
 #include "aircraft/systems/fuel/FuelSystem.hpp"
 #include "aircraft/systems/environment/EnvironmentSystem.hpp"
+#include <iostream>
 
 namespace nuage {
 
@@ -32,6 +34,37 @@ void Aircraft::init(const std::string& configPath, App* app) {
 
     const auto& json = *jsonOpt;
 
+    // Load Model
+    if (json.contains("model")) {
+        const auto& mod = json["model"];
+        std::string modelName = mod.value("name", "aircraft");
+        std::string modelPath = mod.value("path", "");
+        
+        if (!modelPath.empty()) {
+             if (m_app->assets().loadModel(modelName, modelPath)) {
+                 m_mesh = m_app->assets().getMesh(modelName);
+             } else {
+                 std::cerr << "Failed to load aircraft model: " << modelPath << std::endl;
+             }
+        }
+
+        if (mod.contains("color")) {
+            auto c = mod["color"];
+            if (c.is_array() && c.size() == 3) {
+                m_color = Vec3(c[0], c[1], c[2]);
+            }
+        }
+    }
+    
+    if (!m_mesh) {
+        // Fallback to existing 'aircraft' mesh if defined, or null
+        m_mesh = m_app->assets().getMesh("aircraft");
+    }
+    
+    // Default shader
+    m_shader = m_app->assets().getShader("basic");
+
+    // Flight Dynamics
     FlightDynamicsConfig fdConfig;
     if (json.contains("flightDynamics")) {
         const auto& fd = json["flightDynamics"];
@@ -49,6 +82,7 @@ void Aircraft::init(const std::string& configPath, App* app) {
     }
     addSystem<FlightDynamics>(fdConfig);
 
+    // Engine
     EngineConfig engConfig;
     if (json.contains("engine")) {
         const auto& eng = json["engine"];
@@ -61,6 +95,7 @@ void Aircraft::init(const std::string& configPath, App* app) {
     }
     addSystem<EngineSystem>(engConfig);
 
+    // Fuel
     FuelConfig fuelConfig;
     if (json.contains("fuel")) {
         const auto& f = json["fuel"];
@@ -69,8 +104,10 @@ void Aircraft::init(const std::string& configPath, App* app) {
     }
     addSystem<FuelSystem>(fuelConfig);
 
+    // Environment
     addSystem<EnvironmentSystem>();
 
+    // Initial State
     m_state.setVec3(Properties::Position::PREFIX, 0, 100, 0);
     m_state.set(Properties::Velocity::AIRSPEED, fdConfig.cruiseSpeed);
     m_state.setQuat(Properties::Orientation::PREFIX, Quat::identity());
@@ -93,7 +130,10 @@ void Aircraft::render(const Mat4& viewProjection) {
     Mat4 model = Mat4::translate(position()) * orientation().toMat4();
     m_shader->use();
     m_shader->setMat4("uMVP", viewProjection * model);
+    m_shader->setVec3("uColor", m_color);
+    m_shader->setBool("uUseUniformColor", true);
     m_mesh->draw();
+    m_shader->setBool("uUseUniformColor", false); // Reset
 }
 
 Vec3 Aircraft::position() const {

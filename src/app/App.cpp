@@ -109,10 +109,9 @@ bool App::initWindow(const AppConfig& config) {
 }
 
 void App::loadAssets() {
-    AircraftMeshSpecs specs;
     m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
-    m_assets.loadMesh("aircraft", MeshBuilder::aircraft(specs));
-
+    
+    // Terrain
     auto terrainData = MeshBuilder::terrain(20000.0f, 40);
     m_assets.loadMesh("terrain", terrainData);
 }
@@ -186,7 +185,10 @@ void App::render() {
     if (m_terrainMesh && m_terrainShader) {
         m_terrainShader->use();
         m_terrainShader->setMat4("uMVP", m_camera.viewProjection());
+        m_terrainShader->setVec3("uColor", Vec3(0.2f, 0.5f, 0.2f));
+        m_terrainShader->setBool("uUseUniformColor", true);
         m_terrainMesh->draw();
+        m_terrainShader->setBool("uUseUniformColor", false);
     }
     
     m_scenery.render(m_camera.viewProjection());

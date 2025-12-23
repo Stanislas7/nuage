@@ -55,6 +55,13 @@ void Shader::setVec3(const char* name, const Vec3& vec) const {
     }
 }
 
+void Shader::setBool(const char* name, bool value) const {
+    GLint loc = getUniformLocation(name);
+    if (loc >= 0) {
+        glUniform1i(loc, (int)value);
+    }
+}
+
 GLuint Shader::compileShader(GLenum type, const char* src) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &src, nullptr);

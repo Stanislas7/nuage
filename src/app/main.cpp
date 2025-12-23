@@ -34,11 +34,7 @@ int main() {
         return -1;
     }
 
-    auto* player = app.aircraft().spawnPlayer(aircraftPath);
-    if (player) {
-        player->setMesh(app.assets().getMesh("aircraft"));
-        player->setShader(app.assets().getShader("basic"));
-    }
+    app.aircraft().spawnPlayer(aircraftPath);
 
     app.run();
     app.shutdown();
