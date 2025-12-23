@@ -3,7 +3,7 @@
 #include "math/mat4.hpp"
 #include "math/vec3.hpp"
 
-namespace flightsim {
+namespace nuage {
 
 // Passed to anything that needs to render
 struct RenderContext {

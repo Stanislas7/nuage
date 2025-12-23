@@ -3,7 +3,9 @@
 #include "graphics/glad.h"
 #include <string>
 
-namespace flightsim {
+namespace nuage {
+
+struct Mat4;
 
 class Shader {
 public:
@@ -14,6 +16,8 @@ public:
     void use() const;
     GLint getUniformLocation(const char* name) const;
     GLuint getProgram() const { return m_program; }
+    
+    void setMat4(const char* name, const Mat4& mat) const;
 
 private:
     GLuint compileShader(GLenum type, const char* src);

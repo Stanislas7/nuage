@@ -1,7 +1,8 @@
 #include "graphics/shader.hpp"
+#include "math/mat4.hpp"
 #include <iostream>
 
-namespace flightsim {
+namespace nuage {
 
 Shader::~Shader() {
     if (m_program) {
@@ -38,6 +39,13 @@ void Shader::use() const {
 
 GLint Shader::getUniformLocation(const char* name) const {
     return glGetUniformLocation(m_program, name);
+}
+
+void Shader::setMat4(const char* name, const Mat4& mat) const {
+    GLint loc = getUniformLocation(name);
+    if (loc >= 0) {
+        glUniformMatrix4fv(loc, 1, GL_FALSE, mat.data());
+    }
 }
 
 GLuint Shader::compileShader(GLenum type, const char* src) {

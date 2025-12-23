@@ -3,7 +3,7 @@
 #include "vec3.hpp"
 #include <cmath>
 
-namespace flightsim {
+namespace nuage {
 
 struct Mat4 {
     float m[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};

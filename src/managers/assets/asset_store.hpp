@@ -1,13 +1,12 @@
 #pragma once
 
-#include "app/types.hpp"
 #include "graphics/shader.hpp"
 #include "graphics/mesh.hpp"
 #include <unordered_map>
 #include <memory>
 #include <string>
 
-namespace flightsim {
+namespace nuage {
 
 class AssetStore {
 public:

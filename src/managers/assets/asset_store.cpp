@@ -1,9 +1,9 @@
-#include "managers/asset_store.hpp"
+#include "managers/assets/asset_store.hpp"
 #include <fstream>
 #include <sstream>
 #include <iostream>
 
-namespace flightsim {
+namespace nuage {
 
 namespace {
     std::string readFile(const std::string& path) {

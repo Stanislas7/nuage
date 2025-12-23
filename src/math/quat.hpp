@@ -4,12 +4,18 @@
 #include "mat4.hpp"
 #include <cmath>
 
-namespace flightsim {
+namespace nuage {
 
 struct Quat {
     float w = 1, x = 0, y = 0, z = 0;
 
-    static Quat identity() { return Quat{1, 0, 0, 0}; }
+    Quat() = default;
+    Quat(float w, float x, float y, float z) : w(w), x(x), y(y), z(z) {}
+    Quat(double w_, double x_, double y_, double z_) 
+        : w(static_cast<float>(w_)), x(static_cast<float>(x_))
+        , y(static_cast<float>(y_)), z(static_cast<float>(z_)) {}
+
+    static Quat identity() { return Quat(1.0f, 0.0f, 0.0f, 0.0f); }
 
     static Quat fromAxisAngle(const Vec3& axis, float angle) {
         float half = angle * 0.5f;

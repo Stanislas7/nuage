@@ -1,6 +1,6 @@
 #include "graphics/mesh_builder.hpp"
 
-namespace flightsim {
+namespace nuage {
 
 std::vector<float> MeshBuilder::aircraft(const AircraftMeshSpecs& specs) {
     // Simple placeholder implementation - just a few triangles

@@ -262,7 +262,6 @@ public:
 
     // Spawning
     Aircraft* spawnPlayer(const std::string& configPath);
-    Aircraft* spawnAI(const std::string& configPath, const Vec3& position);
 
     // Access
     Aircraft* player() { return m_player; }

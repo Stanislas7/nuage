@@ -4,7 +4,7 @@
 #include "math/vec3.hpp"
 #include <vector>
 
-namespace flightsim {
+namespace nuage {
 
 struct AircraftMeshSpecs {
     float fuselageLength = 4.0f;

@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace flightsim {
+namespace nuage {
 
 struct Vec3 {
     float x, y, z;
@@ -17,6 +17,8 @@ struct Vec3 {
         float l = std::sqrt(x * x + y * y + z * z);
         return l > 0 ? Vec3(x / l, y / l, z / l) : Vec3();
     }
+    
+    Vec3 normalized() const { return normalize(); }
 
     Vec3 cross(const Vec3& o) const {
         return Vec3(y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x);

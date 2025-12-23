@@ -1,29 +1,24 @@
-#include "app/simulator.hpp"
+#include "app/App.hpp"
 #include <iostream>
 #include <filesystem>
 
 int main() {
     std::cout << "Current working directory: " << std::filesystem::current_path() << "\n";
 
-    flightsim::Simulator sim;
+    nuage::App app;
 
-    if (!sim.init({
+    if (!app.init({
         .windowWidth = 1280,
         .windowHeight = 720,
-        .title = "Flight Simulator"
+        .title = "Nuage"
     })) {
         return -1;
     }
 
-    sim.assets().loadShader("basic", "assets/shaders/basic.vert",
-                                     "assets/shaders/basic.frag");
+    app.aircraft().spawnPlayer("assets/configs/aircraft/cessna.json");
 
-    sim.terrain().generate({.gridSize = 100, .scale = 10.0f});
-
-    sim.aircraft().spawnPlayer("assets/config/aircraft/cessna.json");
-
-    sim.run();
-    sim.shutdown();
+    app.run();
+    app.shutdown();
 
     return 0;
 }

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(FlightSim VERSION 1.0.0)
+project(nuage VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,34 +12,34 @@ file(GLOB_RECURSE SOURCES
     "src/app/*.cpp"
     "src/managers/*.cpp"
     "src/aircraft/*.cpp"
+    "src/aircraft/systems/**/*.cpp"
     "src/graphics/*.cpp"
     "src/graphics/*.c"
     "src/math/*.cpp"
     "src/world/*.cpp"
 )
 
-add_executable(flightsim ${SOURCES})
+add_executable(nuage ${SOURCES})
 
 # Copy assets to the build directory
-add_custom_command(TARGET flightsim POST_BUILD
+add_custom_command(TARGET nuage POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/assets
-    $<TARGET_FILE_DIR:flightsim>/assets
+    $<TARGET_FILE_DIR:nuage>/assets
 )
 
-# Add the root directory to includes so "math/vec3.hpp" works (as math/ is now at root)
-# Also add specific directories if needed, but root is most important for "folder/file.hpp" includes
-target_include_directories(flightsim PRIVATE
-    ${CMAKE_SOURCE_DIR}/src # Allow includes like "app/simulator.hpp"
+target_include_directories(nuage PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/app
     ${CMAKE_SOURCE_DIR}/src/managers
     ${CMAKE_SOURCE_DIR}/src/aircraft
+    ${CMAKE_SOURCE_DIR}/src/aircraft/systems
     ${CMAKE_SOURCE_DIR}/src/graphics
     ${CMAKE_SOURCE_DIR}/src/math
     ${CMAKE_SOURCE_DIR}/src/world
 )
 
-target_link_libraries(flightsim
+target_link_libraries(nuage
     glfw
     OpenGL::GL
 )

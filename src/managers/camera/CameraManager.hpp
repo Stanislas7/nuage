@@ -1,0 +1,60 @@
+#pragma once
+
+#include "math/vec3.hpp"
+#include "math/mat4.hpp"
+
+namespace nuage {
+
+class App;
+class Aircraft;
+
+enum class CameraMode {
+    Chase,
+    Cockpit,
+    Tower,
+    Free
+};
+
+class CameraManager {
+public:
+    void init(App* app);
+    void update(float dt);
+
+    void setMode(CameraMode mode) { m_mode = mode; }
+    void setTarget(Aircraft* target) { m_target = target; }
+
+    Mat4 viewMatrix() const { return m_view; }
+    Mat4 projectionMatrix() const { return m_projection; }
+    Mat4 viewProjection() const { return m_projection * m_view; }
+    Vec3 position() const { return m_position; }
+
+    void setFov(float fov) { m_fov = fov; }
+    void setAspect(float aspect) { m_aspect = aspect; }
+    void setChaseDistance(float d) { m_followDistance = d; }
+    void setChaseHeight(float h) { m_followHeight = h; }
+
+private:
+    void updateChaseCamera(float dt);
+    void updateFreeCamera(float dt);
+    void buildMatrices();
+
+    App* m_app = nullptr;
+    Aircraft* m_target = nullptr;
+    CameraMode m_mode = CameraMode::Chase;
+
+    Vec3 m_position{0, 100, -50};
+    Vec3 m_lookAt{0, 100, 0};
+    Mat4 m_view;
+    Mat4 m_projection;
+
+    float m_followDistance = 25.0f;
+    float m_followHeight = 10.0f;
+    float m_smoothing = 5.0f;
+
+    float m_fov = 60.0f * 3.14159f / 180.0f;
+    float m_aspect = 16.0f / 9.0f;
+    float m_near = 0.1f;
+    float m_far = 5000.0f;
+};
+
+}

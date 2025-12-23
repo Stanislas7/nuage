@@ -27,14 +27,14 @@
 - [x] Update `CMakeLists.txt` with new paths
 
 ## Phase 2: Core Managers
-- [ ] Create `App.hpp/.cpp` (rename from Simulator)
-- [ ] Implement fixed timestep loop in `App::run()`
-- [ ] Create `InputManager.hpp/.cpp` (from InputModule)
-- [ ] Create `AssetManager.hpp/.cpp` (from AssetStore)
-- [ ] Create `CameraManager.hpp/.cpp` (from CameraModule)
-- [ ] Create `WorldManager.hpp/.cpp` (from TerrainModule)
-- [ ] Create `AircraftManager.hpp/.cpp` (from AircraftModule)
-- [ ] Create `AtmosphereManager.hpp/.cpp` (new)
+- [x] Create `App.hpp/.cpp` (rename from Simulator)
+- [x] Implement fixed timestep loop in `App::run()`
+- [x] Create `InputManager.hpp/.cpp` (from InputModule)
+- [x] Create `AssetManager.hpp/.cpp` (from AssetStore)
+- [x] Create `CameraManager.hpp/.cpp` (from CameraModule)
+- [x] Create `WorldManager.hpp/.cpp` (from TerrainModule)
+- [x] Create `AircraftManager.hpp/.cpp` (from AircraftModule)
+- [x] Create `AtmosphereManager.hpp/.cpp` (new)
 
 ## Phase 3: PropertyBus
 - [ ] Implement `PropertyBus.hpp/.cpp`

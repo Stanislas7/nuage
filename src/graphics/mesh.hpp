@@ -3,7 +3,7 @@
 #include "graphics/glad.h"
 #include <vector>
 
-namespace flightsim {
+namespace nuage {
 
 class Mesh {
 public:

@@ -1,6 +1,6 @@
 #include "graphics/mesh.hpp"
 
-namespace flightsim {
+namespace nuage {
 
 Mesh::~Mesh() {
     if (m_vao) glDeleteVertexArrays(1, &m_vao);

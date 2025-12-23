@@ -4,7 +4,7 @@
 #include "math/quat.hpp"
 #include "math/mat4.hpp"
 
-namespace flightsim {
+namespace nuage {
 
 struct Transform {
     Vec3 position{0, 0, 0};
