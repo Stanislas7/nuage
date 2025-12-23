@@ -1,4 +1,4 @@
-#include "core/simulator.hpp"
+#include "app/simulator.hpp"
 #include <iostream>
 #include <filesystem>
 
@@ -15,15 +15,11 @@ int main() {
         return -1;
     }
 
-    // Load assets
     sim.assets().loadShader("basic", "assets/shaders/basic.vert",
                                      "assets/shaders/basic.frag");
 
-    // Generate terrain
     sim.terrain().generate({.gridSize = 100, .scale = 10.0f});
 
-    // Spawn player
-    // Config path is dummy for now as we haven't implemented JSON loading fully
     sim.aircraft().spawnPlayer("assets/config/aircraft/cessna.json");
 
     sim.run();

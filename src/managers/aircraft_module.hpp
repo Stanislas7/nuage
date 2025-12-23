@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/module.hpp"
-#include "core/types.hpp"
-#include "simulation/flight_model.hpp"
+#include "managers/module.hpp"
+#include "app/types.hpp"
+#include "aircraft/flight_model.hpp"
 #include "graphics/mesh.hpp"
 #include <vector>
 #include <memory>

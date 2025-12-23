@@ -8,21 +8,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
-set(SOURCES
-    src/main.cpp
-    src/glad.c
-    src/graphics/shader.cpp
-    src/graphics/mesh.cpp
-    src/core/simulator.cpp
-    src/modules/input_module.cpp
-    src/modules/render_module.cpp
-    src/modules/aircraft_module.cpp
-    src/modules/terrain_module.cpp
-    src/modules/camera_module.cpp
-    src/simulation/flight_model.cpp
-    src/simulation/flight_params.cpp
-    src/graphics/mesh_builder.cpp
-    src/assets/asset_store.cpp
+file(GLOB_RECURSE SOURCES
+    "src/app/*.cpp"
+    "src/managers/*.cpp"
+    "src/aircraft/*.cpp"
+    "src/graphics/*.cpp"
+    "src/graphics/*.c"
+    "src/math/*.cpp"
+    "src/world/*.cpp"
 )
 
 add_executable(flightsim ${SOURCES})
@@ -34,8 +27,16 @@ add_custom_command(TARGET flightsim POST_BUILD
     $<TARGET_FILE_DIR:flightsim>/assets
 )
 
+# Add the root directory to includes so "math/vec3.hpp" works (as math/ is now at root)
+# Also add specific directories if needed, but root is most important for "folder/file.hpp" includes
 target_include_directories(flightsim PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src # Allow includes like "app/simulator.hpp"
+    ${CMAKE_SOURCE_DIR}/src/app
+    ${CMAKE_SOURCE_DIR}/src/managers
+    ${CMAKE_SOURCE_DIR}/src/aircraft
+    ${CMAKE_SOURCE_DIR}/src/graphics
+    ${CMAKE_SOURCE_DIR}/src/math
+    ${CMAKE_SOURCE_DIR}/src/world
 )
 
 target_link_libraries(flightsim

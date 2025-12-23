@@ -44,37 +44,38 @@ Flat structure with `.hpp` and `.cpp` together — easy to navigate, no mental o
 
 ```
 nuage/
-├── app/
-│   ├── App.hpp / .cpp              # The Grand Manager
-│   └── main.cpp
-├── managers/
-│   ├── InputManager.hpp / .cpp
-│   ├── AssetManager.hpp / .cpp
-│   ├── WorldManager.hpp / .cpp
-│   ├── AircraftManager.hpp / .cpp
-│   ├── AtmosphereManager.hpp / .cpp
-│   └── CameraManager.hpp / .cpp
-├── aircraft/
-│   ├── Aircraft.hpp / .cpp          # The container
-│   ├── IAircraftSystem.hpp
-│   ├── PropertyBus.hpp / .cpp       # Inter-system data hub
-│   └── systems/
-│       ├── FlightDynamics.hpp / .cpp
-│       ├── EngineSystem.hpp / .cpp
-│       └── FuelSystem.hpp / .cpp
-├── graphics/
-│   ├── Mesh.hpp / .cpp
-│   ├── Shader.hpp / .cpp
-│   ├── MeshBuilder.hpp / .cpp
-│   └── Renderer.hpp / .cpp
-├── math/
-│   ├── Vec3.hpp / .cpp
-│   ├── Mat4.hpp / .cpp
-│   └── Quat.hpp / .cpp
-├── world/
-│   ├── Terrain.hpp / .cpp
-│   ├── TerrainChunk.hpp / .cpp
-│   └── Airport.hpp / .cpp
+├── src/
+│   ├── app/
+│   │   ├── App.hpp / .cpp              # The Grand Manager
+│   │   └── main.cpp
+│   ├── managers/
+│   │   ├── InputManager.hpp / .cpp
+│   │   ├── AssetManager.hpp / .cpp
+│   │   ├── WorldManager.hpp / .cpp
+│   │   ├── AircraftManager.hpp / .cpp
+│   │   ├── AtmosphereManager.hpp / .cpp
+│   │   └── CameraManager.hpp / .cpp
+│   ├── aircraft/
+│   │   ├── Aircraft.hpp / .cpp          # The container
+│   │   ├── IAircraftSystem.hpp
+│   │   ├── PropertyBus.hpp / .cpp       # Inter-system data hub
+│   │   └── systems/
+│   │       ├── FlightDynamics.hpp / .cpp
+│   │       ├── EngineSystem.hpp / .cpp
+│   │       └── FuelSystem.hpp / .cpp
+│   ├── graphics/
+│   │   ├── Mesh.hpp / .cpp
+│   │   ├── Shader.hpp / .cpp
+│   │   ├── MeshBuilder.hpp / .cpp
+│   │   └── Renderer.hpp / .cpp
+│   ├── math/
+│   │   ├── Vec3.hpp / .cpp
+│   │   ├── Mat4.hpp / .cpp
+│   │   └── Quat.hpp / .cpp
+│   └── world/
+│       ├── Terrain.hpp / .cpp
+│       ├── TerrainChunk.hpp / .cpp
+│       └── Airport.hpp / .cpp
 └── assets/
     ├── shaders/
     ├── meshes/

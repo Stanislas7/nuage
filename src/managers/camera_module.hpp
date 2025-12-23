@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/module.hpp"
+#include "managers/module.hpp"
 #include "graphics/render_context.hpp"
 #include "math/vec3.hpp"
 #include "math/mat4.hpp"

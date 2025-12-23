@@ -1,5 +1,5 @@
-#include "modules/input_module.hpp"
-#include "core/simulator.hpp"
+#include "managers/input_module.hpp"
+#include "app/simulator.hpp"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 

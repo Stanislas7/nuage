@@ -1,5 +1,5 @@
-#include "modules/camera_module.hpp"
-#include "core/simulator.hpp"
+#include "managers/camera_module.hpp"
+#include "app/simulator.hpp"
 #include <cmath>
 
 namespace flightsim {

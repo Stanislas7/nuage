@@ -1,6 +1,6 @@
-#include "modules/render_module.hpp"
-#include "core/simulator.hpp"
-#include <glad/glad.h>
+#include "managers/render_module.hpp"
+#include "app/simulator.hpp"
+#include "graphics/glad.h"
 #include <GLFW/glfw3.h> // Needed for basic GL definitions sometimes, but glad handles it mostly.
 
 namespace flightsim {

@@ -1,12 +1,12 @@
 #pragma once
 
 #include "module.hpp"
-#include "modules/input_module.hpp"
-#include "modules/aircraft_module.hpp"
-#include "modules/terrain_module.hpp"
-#include "modules/camera_module.hpp"
-#include "modules/render_module.hpp"
-#include "assets/asset_store.hpp"
+#include "managers/input_module.hpp"
+#include "managers/aircraft_module.hpp"
+#include "managers/terrain_module.hpp"
+#include "managers/camera_module.hpp"
+#include "managers/render_module.hpp"
+#include "managers/asset_store.hpp"
 #include <memory>
 #include <vector>
 

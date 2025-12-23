@@ -1,5 +1,5 @@
-#include "core/simulator.hpp"
-#include <glad/glad.h>
+#include "app/simulator.hpp"
+#include "graphics/glad.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
 

@@ -2,7 +2,7 @@
 
 #include "aircraft_state.hpp"
 #include "flight_params.hpp"
-#include "modules/input_module.hpp"  // For FlightControls
+#include "managers/input_module.hpp"  // For FlightControls
 
 namespace flightsim {
 

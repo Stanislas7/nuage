@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glad/glad.h>
+#include "graphics/glad.h"
 #include <string>
 
 namespace flightsim {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/types.hpp"
+#include "app/types.hpp"
 #include "graphics/shader.hpp"
 #include "graphics/mesh.hpp"
 #include <unordered_map>

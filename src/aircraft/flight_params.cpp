@@ -1,4 +1,4 @@
-#include "simulation/flight_params.hpp"
+#include "aircraft/flight_params.hpp"
 #include <iostream>
 
 namespace flightsim {

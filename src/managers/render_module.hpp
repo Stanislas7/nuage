@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/module.hpp"
+#include "managers/module.hpp"
 #include "math/vec3.hpp"
 
 namespace flightsim {

@@ -1,7 +1,7 @@
-#include "modules/aircraft_module.hpp"
-#include "core/simulator.hpp"
+#include "managers/aircraft_module.hpp"
+#include "app/simulator.hpp"
 #include "graphics/mesh_builder.hpp"
-#include <glad/glad.h>
+#include "graphics/glad.h"
 
 namespace flightsim {
 

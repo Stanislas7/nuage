@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/module.hpp"
+#include "managers/module.hpp"
 #include "graphics/mesh.hpp"
 
 namespace flightsim {

@@ -1,6 +1,6 @@
-#include "modules/terrain_module.hpp"
-#include "core/simulator.hpp"
-#include <glad/glad.h>
+#include "managers/terrain_module.hpp"
+#include "app/simulator.hpp"
+#include "graphics/glad.h"
 #include <vector>
 #include <cmath>
 

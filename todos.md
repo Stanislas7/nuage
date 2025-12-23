@@ -11,20 +11,20 @@
 4. Run the sim — does throttle still work? Does the data flow make sense?
 5. If yes → proceed to Phase 1. If no → rethink before committing.
 
-- [ ] Create `PropertyBus` class (simple `std::unordered_map<string, double>`)
-- [ ] Create `TestEngineSystem` that reads/writes to PropertyBus
-- [ ] Temporarily wire into `FlightModel` to test data flow
-- [ ] Verify throttle → thrust still works
-- [ ] Delete test code OR keep it as the real `EngineSystem`
+- [x] Create `PropertyBus` class (simple `std::unordered_map<string, double>`)
+- [x] Create `TestEngineSystem` that reads/writes to PropertyBus
+- [x] Temporarily wire into `FlightModel` to test data flow
+- [x] Verify throttle → thrust still works
+- [x] Delete test code OR keep it as the real `EngineSystem`
 
 ---
 
 ## Phase 1: Folder Restructure
-- [ ] Create new folder structure (`app/`, `managers/`, `aircraft/`, etc.)
-- [ ] Move `math/` files (Vec3, Mat4, Quat) — merge hpp/cpp together
-- [ ] Move `graphics/` files (Mesh, Shader, MeshBuilder)
-- [ ] Delete old `include/` and `src/` split structure
-- [ ] Update `CMakeLists.txt` with new paths
+- [x] Create new folder structure (`app/`, `managers/`, `aircraft/`, etc.)
+- [x] Move `math/` files (Vec3, Mat4, Quat) — merge hpp/cpp together
+- [x] Move `graphics/` files (Mesh, Shader, MeshBuilder)
+- [x] Delete old `include/` and `src/` split structure
+- [x] Update `CMakeLists.txt` with new paths
 
 ## Phase 2: Core Managers
 - [ ] Create `App.hpp/.cpp` (rename from Simulator)
