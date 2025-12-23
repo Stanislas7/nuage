@@ -5,6 +5,7 @@
 #include "managers/assets/asset_store.hpp"
 #include "managers/atmosphere/AtmosphereManager.hpp"
 #include "managers/camera/CameraManager.hpp"
+#include "managers/scenery/SceneryManager.hpp"
 #include "ui/UIManager.hpp"
 
 struct GLFWwindow;
@@ -31,6 +32,7 @@ public:
     AssetStore& assets() { return m_assets; }
     AtmosphereManager& atmosphere() { return m_atmosphere; }
     CameraManager& camera() { return m_camera; }
+    SceneryManager& scenery() { return m_scenery; }
     UIManager& ui() { return m_ui; }
 
     float time() const { return m_time; }
@@ -47,6 +49,7 @@ private:
     AssetStore m_assets;
     AtmosphereManager m_atmosphere;
     CameraManager m_camera;
+    SceneryManager m_scenery;
     UIManager m_ui;
 
     float m_time = 0.0f;

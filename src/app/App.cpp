@@ -19,6 +19,7 @@ bool App::init(const AppConfig& config) {
     m_aircraft.init(this);
     m_atmosphere.init();
     m_camera.init(this);
+    m_scenery.init(this);
     m_camera.setAspect(static_cast<float>(config.windowWidth) / config.windowHeight);
 
     if (!m_ui.init(this)) {
@@ -74,10 +75,6 @@ void App::shutdown() {
     glfwTerminate();
 }
 
-// ---------------------------------------------------------
-// Private Helpers
-// ---------------------------------------------------------
-
 bool App::initWindow(const AppConfig& config) {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW\n";
@@ -123,6 +120,8 @@ void App::loadAssets() {
 void App::setupScene() {
     m_terrainMesh = m_assets.getMesh("terrain");
     m_terrainShader = m_assets.getShader("basic");
+    
+    m_scenery.loadConfig("assets/config/scenery.json");
 }
 
 void App::setupHUD() {
@@ -189,6 +188,8 @@ void App::render() {
         m_terrainShader->setMat4("uMVP", m_camera.viewProjection());
         m_terrainMesh->draw();
     }
+    
+    m_scenery.render(m_camera.viewProjection());
 
     m_aircraft.render();
     m_ui.draw();
