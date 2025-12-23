@@ -31,7 +31,7 @@ void Aircraft::render(const Mat4& viewProjection) {
 
     Mat4 model = Mat4::translate(position()) * orientation().toMat4();
     m_shader->use();
-    m_shader->setMat4("mvp", viewProjection * model);
+    m_shader->setMat4("uMVP", viewProjection * model);
     m_mesh->draw();
 }
 

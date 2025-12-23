@@ -48,11 +48,12 @@
 - [x] Extract `FlightDynamics` system from FlightModel
 - [x] Create `EngineSystem` (thrust, N1, fuel flow)
 - [x] Create `FuelSystem` (tank management)
+- [x] Create `EnvironmentSystem` (pushes atmosphere data to PropertyBus)
 - [x] Wire systems to read/write PropertyBus
 - [ ] Load aircraft config from JSON (deferred - using defaults for now)
 
 ## Phase 5: Integration
-- [x] Connect `FlightDynamics` → `AtmosphereManager::getAirDensity()`
+- [x] Connect `FlightDynamics` → `AtmosphereManager::getAirDensity()` (via EnvironmentSystem push)
 - [x] Connect `CameraManager` → follows player aircraft
 - [x] Connect `InputManager` → writes to aircraft PropertyBus
 - [x] Test full loop: input → physics → render
@@ -62,6 +63,8 @@
 - [x] Update EngineSystem to use Properties:: constants
 - [x] Update FuelSystem to use Properties:: constants
 - [x] Update Aircraft to use Properties:: constants
+- [x] Implement exponential decay for N1 spool rate (frame-rate independent)
+- [x] EnvironmentSystem pushes density to PropertyBus (testable EngineSystem)
 - [x] Final build test - builds successfully
 
 ## Phase 4: Aircraft Systems

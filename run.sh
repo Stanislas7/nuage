@@ -16,7 +16,7 @@ if cmake --build .; then
     echo "Build successful! Starting simulator..."
     echo "----------------------------------------"
     # Run the executable
-    ./flightsim
+    ./nuage
 else
     echo "Build failed."
     exit 1

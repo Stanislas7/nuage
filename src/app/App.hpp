@@ -2,6 +2,7 @@
 
 #include "managers/input/InputManager.hpp"
 #include "managers/aircraft/AircraftManager.hpp"
+#include "managers/assets/asset_store.hpp"
 #include "managers/atmosphere/AtmosphereManager.hpp"
 #include "managers/camera/CameraManager.hpp"
 
@@ -24,6 +25,7 @@ public:
 
     InputManager& input() { return m_input; }
     AircraftManager& aircraft() { return m_aircraft; }
+    AssetStore& assets() { return m_assets; }
     AtmosphereManager& atmosphere() { return m_atmosphere; }
     CameraManager& camera() { return m_camera; }
 
@@ -38,6 +40,7 @@ private:
 
     InputManager m_input;
     AircraftManager m_aircraft;
+    AssetStore m_assets;
     AtmosphereManager m_atmosphere;
     CameraManager m_camera;
 

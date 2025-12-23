@@ -21,6 +21,11 @@ public:
     void update(float dt, const FlightInput& input);
     void render(const Mat4& viewProjection);
 
+    void setMesh(Mesh* mesh) { m_mesh = mesh; }
+    void setShader(Shader* shader) { m_shader = shader; }
+    Mesh* mesh() const { return m_mesh; }
+    Shader* shader() const { return m_shader; }
+
     PropertyBus& state() { return m_state; }
     const PropertyBus& state() const { return m_state; }
 

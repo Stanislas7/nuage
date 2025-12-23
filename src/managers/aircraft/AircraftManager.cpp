@@ -3,6 +3,7 @@
 #include "aircraft/systems/flight_dynamics/FlightDynamics.hpp"
 #include "aircraft/systems/engine/EngineSystem.hpp"
 #include "aircraft/systems/fuel/FuelSystem.hpp"
+#include "aircraft/systems/environment/EnvironmentSystem.hpp"
 
 namespace nuage {
 
@@ -32,6 +33,7 @@ Aircraft* AircraftManager::spawnPlayer(const std::string& configPath) {
     aircraft->init(configPath, m_app);
     
     aircraft->addSystem<FlightDynamics>();
+    aircraft->addSystem<EnvironmentSystem>();
     aircraft->addSystem<EngineSystem>();
     aircraft->addSystem<FuelSystem>();
     

@@ -15,7 +15,11 @@ int main() {
         return -1;
     }
 
-    app.aircraft().spawnPlayer("assets/config/aircraft/cessna.json");
+    auto* player = app.aircraft().spawnPlayer("assets/config/aircraft/cessna.json");
+    if (player) {
+        player->setMesh(app.assets().getMesh("aircraft"));
+        player->setShader(app.assets().getShader("basic"));
+    }
 
     app.run();
     app.shutdown();
