@@ -1,17 +1,28 @@
 {
     "name": "Cessna 172",
-    "speed": {
-        "min": 25,
-        "max": 70
+    "flightDynamics": {
+        "minSpeed": 20.0,
+        "maxSpeed": 80.0,
+        "cruiseSpeed": 50.0,
+        "pitchRate": 1.5,
+        "yawRate": 1.0,
+        "rollRate": 2.0,
+        "maxPitch": 1.2,
+        "minAltitude": 5.0,
+        "throttleResponse": 0.5,
+        "liftCoefficient": 0.004,
+        "wingArea": 16.0
     },
-    "controlRates": {
-        "pitch": 1.2,
-        "yaw": 0.8,
-        "roll": 1.5
+    "engine": {
+        "maxThrust": 3000.0,
+        "idleN1": 10.0,
+        "maxN1": 100.0,
+        "spoolRate": 1.0,
+        "fuelFlowIdle": 0.002,
+        "fuelFlowMax": 0.02
     },
-    "limits": {
-        "maxPitch": 1.0,
-        "minAltitude": 5
-    },
-    "throttleResponse": 0.5
+    "fuel": {
+        "capacity": 150.0,
+        "initial": 120.0
+    }
 }

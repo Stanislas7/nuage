@@ -8,5 +8,8 @@
     "graphics": {
         "fov": 60,
         "farPlane": 5000
+    },
+    "simulation": {
+        "defaultAircraft": "assets/config/aircraft/cessna.json"
     }
 }

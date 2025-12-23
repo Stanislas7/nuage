@@ -41,6 +41,7 @@ target_include_directories(nuage PRIVATE
     ${CMAKE_SOURCE_DIR}/src/ui
     ${CMAKE_SOURCE_DIR}/src/ui/font
     ${CMAKE_SOURCE_DIR}/src/world
+    ${CMAKE_SOURCE_DIR}/src/utils
 )
 
 target_link_libraries(nuage

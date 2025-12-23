@@ -1,9 +1,5 @@
 #include "managers/aircraft/AircraftManager.hpp"
 #include "app/App.hpp"
-#include "aircraft/systems/flight_dynamics/FlightDynamics.hpp"
-#include "aircraft/systems/engine/EngineSystem.hpp"
-#include "aircraft/systems/fuel/FuelSystem.hpp"
-#include "aircraft/systems/environment/EnvironmentSystem.hpp"
 
 namespace nuage {
 
@@ -31,11 +27,6 @@ void AircraftManager::shutdown() {
 Aircraft* AircraftManager::spawnPlayer(const std::string& configPath) {
     auto aircraft = std::make_unique<Aircraft>();
     aircraft->init(configPath, m_app);
-    
-    aircraft->addSystem<FlightDynamics>();
-    aircraft->addSystem<EnvironmentSystem>();
-    aircraft->addSystem<EngineSystem>();
-    aircraft->addSystem<FuelSystem>();
     
     m_player = aircraft.get();
     m_aircraft.push_back(std::move(aircraft));
