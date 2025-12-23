@@ -80,7 +80,7 @@ bool App::init(const AppConfig& config) {
     m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
     m_assets.loadMesh("aircraft", MeshBuilder::aircraft(specs));
 
-    auto terrainData = MeshBuilder::terrain(2000.0f, 20);
+    auto terrainData = MeshBuilder::terrain(20000.0f, 40);
     m_assets.loadMesh("terrain", terrainData);
     m_terrainMesh = m_assets.getMesh("terrain");
     m_terrainShader = m_assets.getShader("basic");
