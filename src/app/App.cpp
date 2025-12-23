@@ -94,7 +94,11 @@ void App::run() {
         debugPrint(*this, lastDebugTime);
 
         m_input.update(m_deltaTime);
-        
+
+        if (m_input.isKeyPressed(GLFW_KEY_TAB)) {
+            m_camera.toggleOrbitMode();
+        }
+
         if (m_input.quitRequested()) {
             m_shouldQuit = true;
             continue;

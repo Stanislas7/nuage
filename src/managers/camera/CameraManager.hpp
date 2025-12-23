@@ -12,7 +12,7 @@ enum class CameraMode {
     Chase,
     Cockpit,
     Tower,
-    Free
+    Orbit
 };
 
 class CameraManager {
@@ -33,9 +33,15 @@ public:
     void setChaseDistance(float d) { m_followDistance = d; }
     void setChaseHeight(float h) { m_followHeight = h; }
 
+    void setOrbitDistance(float distance) { m_orbitDistance = distance; }
+    void setOrbitSpeed(float speed) { m_orbitSpeed = speed; }
+    void toggleOrbitMode();
+
+    bool isOrbitMode() const { return m_mode == CameraMode::Orbit; }
+
 private:
     void updateChaseCamera(float dt);
-    void updateFreeCamera(float dt);
+    void updateOrbitCamera(float dt);
     void buildMatrices();
 
     App* m_app = nullptr;
@@ -50,6 +56,11 @@ private:
     float m_followDistance = 25.0f;
     float m_followHeight = 10.0f;
     float m_smoothing = 5.0f;
+
+    float m_orbitDistance = 50.0f;
+    float m_orbitSpeed = 2.0f;
+    float m_orbitYaw = 0.0f;
+    float m_orbitPitch = 0.0f;
 
     float m_fov = 60.0f * 3.14159f / 180.0f;
     float m_aspect = 16.0f / 9.0f;

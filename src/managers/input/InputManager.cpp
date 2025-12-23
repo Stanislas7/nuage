@@ -11,14 +11,15 @@ namespace {
         int positiveKey;
         int negativeKey;
     };
-    
+
     std::unordered_map<std::string, AxisBinding> g_axisBindings;
     std::unordered_map<std::string, int> g_keyBindings;
 }
 
 void InputManager::init(GLFWwindow* window) {
     m_window = window;
-    
+    glfwSetWindowUserPointer(window, this);
+
     g_axisBindings["pitch"] = {GLFW_KEY_W, GLFW_KEY_S};  // AZERTY Z/S -> QWERTY W/S
     g_axisBindings["roll"] = {GLFW_KEY_D, GLFW_KEY_A};   // AZERTY D/Q -> QWERTY D/A
     g_axisBindings["yaw"] = {GLFW_KEY_E, GLFW_KEY_Q};    // AZERTY E/A -> QWERTY E/Q
@@ -31,6 +32,7 @@ void InputManager::init(GLFWwindow* window) {
 
 void InputManager::update(float dt) {
     pollKeyboard();
+    pollMouse();
     mapToControls(dt);
 }
 
@@ -77,6 +79,38 @@ bool InputManager::isKeyDown(int key) const {
 
 bool InputManager::isKeyPressed(int key) const {
     return key < 512 && m_keys[key] && !m_prevKeys[key];
+}
+
+void InputManager::pollMouse() {
+    double x, y;
+    glfwGetCursorPos(m_window, &x, &y);
+    m_mousePos = Vec2(static_cast<float>(x), static_cast<float>(y));
+
+    m_mouseDelta = m_mousePos - m_prevMousePos;
+    m_prevMousePos = m_mousePos;
+
+    for (int i = 0; i < 8; i++) {
+        m_prevMouseButtons[i] = m_mouseButtons[i];
+        m_mouseButtons[i] = glfwGetMouseButton(m_window, i) == GLFW_PRESS;
+    }
+}
+
+bool InputManager::isMouseButtonDown(int button) const {
+    return button < 8 && m_mouseButtons[button];
+}
+
+bool InputManager::isMouseButtonPressed(int button) const {
+    return button < 8 && m_mouseButtons[button] && !m_prevMouseButtons[button];
+}
+
+void InputManager::setCursorMode(int mode) {
+    glfwSetInputMode(m_window, GLFW_CURSOR, mode);
+}
+
+void InputManager::centerCursor() {
+    int w, h;
+    glfwGetWindowSize(m_window, &w, &h);
+    glfwSetCursorPos(m_window, w / 2.0, h / 2.0);
 }
 
 }

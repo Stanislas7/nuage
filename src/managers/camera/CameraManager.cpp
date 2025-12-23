@@ -1,6 +1,7 @@
 #include "managers/camera/CameraManager.hpp"
 #include "app/App.hpp"
 #include "aircraft/Aircraft.hpp"
+#include "managers/input/InputManager.hpp"
 #include <cmath>
 #include <iostream>
 
@@ -15,8 +16,8 @@ void CameraManager::update(float dt) {
         case CameraMode::Chase:
             updateChaseCamera(dt);
             break;
-        case CameraMode::Free:
-            updateFreeCamera(dt);
+        case CameraMode::Orbit:
+            updateOrbitCamera(dt);
             break;
         default:
             break;
@@ -56,8 +57,37 @@ void CameraManager::updateChaseCamera(float dt) {
     }
 }
 
-void CameraManager::updateFreeCamera(float dt) {
-    // Free camera for debugging
+void CameraManager::updateOrbitCamera(float dt) {
+    if (!m_target) {
+        m_target = m_app->aircraft().player();
+        if (!m_target) return;
+    }
+
+    Vec2 mouseDelta = m_app->input().mouseDelta();
+
+    m_orbitYaw += mouseDelta.x * m_orbitSpeed * dt;
+    m_orbitPitch -= mouseDelta.y * m_orbitSpeed * dt;
+    m_orbitPitch = std::max(-1.5f, std::min(1.5f, m_orbitPitch));
+
+    Vec3 targetPos = m_target->position();
+
+    float x = m_orbitDistance * std::cos(m_orbitPitch) * std::sin(m_orbitYaw);
+    float y = m_orbitDistance * std::sin(m_orbitPitch);
+    float z = m_orbitDistance * std::cos(m_orbitPitch) * std::cos(m_orbitYaw);
+
+    m_position = targetPos + Vec3(x, y, z);
+    m_lookAt = targetPos;
+}
+
+void CameraManager::toggleOrbitMode() {
+    if (m_mode == CameraMode::Orbit) {
+        m_mode = CameraMode::Chase;
+        m_app->input().setCursorMode(GLFW_CURSOR_NORMAL);
+    } else {
+        m_mode = CameraMode::Orbit;
+        m_app->input().setCursorMode(GLFW_CURSOR_DISABLED);
+        m_app->input().centerCursor();
+    }
 }
 
 void CameraManager::buildMatrices() {
