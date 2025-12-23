@@ -40,6 +40,15 @@ public:
         return ptr;
     }
 
+    template<typename T>
+    T* getSystem() {
+        for (auto& system : m_systems) {
+            T* typed = dynamic_cast<T*>(system.get());
+            if (typed) return typed;
+        }
+        return nullptr;
+    }
+
 private:
     PropertyBus m_state;
     std::vector<std::unique_ptr<IAircraftSystem>> m_systems;

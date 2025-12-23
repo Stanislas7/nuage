@@ -1,5 +1,6 @@
 #include "FlightDynamics.hpp"
 #include "aircraft/property_bus.hpp"
+#include "aircraft/PropertyPaths.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
 #include <algorithm>
@@ -25,27 +26,22 @@ void FlightDynamics::update(float dt) {
 }
 
 void FlightDynamics::updateThrottle(float dt) {
-    double throttleInput = m_state->get("input/throttle");
-    double currentSpeed = m_state->get("velocity/airspeed", m_config.minSpeed);
+    double throttleInput = m_state->get(Properties::Input::THROTTLE);
+    double currentSpeed = m_state->get(Properties::Velocity::AIRSPEED, m_config.minSpeed);
 
     double targetSpeed = m_config.minSpeed +
         (m_config.maxSpeed - m_config.minSpeed) * throttleInput;
 
     double speedDelta = (targetSpeed - currentSpeed) * m_config.throttleResponse * dt;
-    m_state->set("velocity/airspeed", currentSpeed + speedDelta);
+    m_state->set(Properties::Velocity::AIRSPEED, currentSpeed + speedDelta);
 }
 
 void FlightDynamics::updateOrientation(float dt) {
-    double pitch = m_state->get("input/pitch");
-    double yaw = m_state->get("input/yaw");
-    double roll = m_state->get("input/roll");
+    double pitch = m_state->get(Properties::Input::PITCH);
+    double yaw = m_state->get(Properties::Input::YAW);
+    double roll = m_state->get(Properties::Input::ROLL);
 
-    Quat orientation(
-        m_state->get("orientation/w", 1.0),
-        m_state->get("orientation/x"),
-        m_state->get("orientation/y"),
-        m_state->get("orientation/z")
-    );
+    Quat orientation = m_state->getQuat(Properties::Orientation::PREFIX);
 
     Vec3 fwd = orientation.rotate(Vec3(0, 0, 1));
     Vec3 rgt = orientation.rotate(Vec3(1, 0, 0));
@@ -60,43 +56,30 @@ void FlightDynamics::updateOrientation(float dt) {
 
     Quat newOrientation = (yawRot * pitchRot * rollRot * orientation).normalized();
 
-    m_state->set("orientation/w", newOrientation.w);
-    m_state->set("orientation/x", newOrientation.x);
-    m_state->set("orientation/y", newOrientation.y);
-    m_state->set("orientation/z", newOrientation.z);
+    m_state->setQuat(Properties::Orientation::PREFIX, newOrientation);
 }
 
 void FlightDynamics::updatePosition(float dt) {
-    Quat orientation(
-        m_state->get("orientation/w", 1.0),
-        m_state->get("orientation/x"),
-        m_state->get("orientation/y"),
-        m_state->get("orientation/z")
-    );
-
+    Quat orientation = m_state->getQuat(Properties::Orientation::PREFIX);
     Vec3 forward = orientation.rotate(Vec3(0, 0, 1));
-    double speed = m_state->get("velocity/airspeed");
+    double speed = m_state->get(Properties::Velocity::AIRSPEED);
 
-    Vec3 pos(
-        m_state->get("position/x"),
-        m_state->get("position/y"),
-        m_state->get("position/z")
-    );
-
+    Vec3 pos = m_state->getVec3(Properties::Position::PREFIX);
     Vec3 newPos = pos + forward * static_cast<float>(speed * dt);
-    m_state->setVec3("position", newPos.x, newPos.y, newPos.z);
+    m_state->setVec3(Properties::Position::PREFIX, newPos);
 }
 
 void FlightDynamics::enforceConstraints() {
-    double y = m_state->get("position/y");
-    if (y < m_config.minAltitude) {
-        m_state->set("position/y", m_config.minAltitude);
+    Vec3 pos = m_state->getVec3(Properties::Position::PREFIX);
+    if (pos.y < m_config.minAltitude) {
+        pos.y = m_config.minAltitude;
+        m_state->setVec3(Properties::Position::PREFIX, pos);
     }
 
-    double speed = m_state->get("velocity/airspeed");
+    double speed = m_state->get(Properties::Velocity::AIRSPEED);
     speed = std::clamp(speed, static_cast<double>(m_config.minSpeed), 
                              static_cast<double>(m_config.maxSpeed));
-    m_state->set("velocity/airspeed", speed);
+    m_state->set(Properties::Velocity::AIRSPEED, speed);
 }
 
 }

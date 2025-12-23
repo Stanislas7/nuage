@@ -37,9 +37,10 @@
 - [x] Create `AtmosphereManager.hpp/.cpp` (new)
 
 ## Phase 3: PropertyBus
-- [ ] Implement `PropertyBus.hpp/.cpp`
-- [ ] Add unit tests for PropertyBus
-- [ ] Define standard property paths (document in code)
+- [x] Implement `PropertyBus.hpp/.cpp` (enhanced with Vec3/Quat helpers)
+- [ ] Add unit tests for PropertyBus (deferred to end)
+- [x] Define standard property paths (document in code) - PropertyPaths.hpp
+- [x] Add `getSystem<T>()` to Aircraft for clean API access
 
 ## Phase 4: Aircraft Systems
 - [ ] Create `IAircraftSystem.hpp` interface

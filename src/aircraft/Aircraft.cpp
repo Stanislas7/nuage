@@ -1,4 +1,5 @@
 #include "aircraft/Aircraft.hpp"
+#include "aircraft/PropertyPaths.hpp"
 #include "managers/input/InputManager.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/shader.hpp"
@@ -9,19 +10,16 @@ namespace nuage {
 void Aircraft::init(const std::string& configPath, App* app) {
     m_app = app;
     
-    m_state.setVec3("position", 0, 100, 0);
-    m_state.set("velocity/airspeed", 50.0);
-    m_state.set("orientation/w", 1.0);
-    m_state.set("orientation/x", 0.0);
-    m_state.set("orientation/y", 0.0);
-    m_state.set("orientation/z", 0.0);
+    m_state.setVec3(Properties::Position::PREFIX, 0, 100, 0);
+    m_state.set(Properties::Velocity::AIRSPEED, 50.0);
+    m_state.setQuat(Properties::Orientation::PREFIX, Quat::identity());
 }
 
 void Aircraft::update(float dt, const FlightInput& input) {
-    m_state.set("input/pitch", input.pitch);
-    m_state.set("input/roll", input.roll);
-    m_state.set("input/yaw", input.yaw);
-    m_state.set("input/throttle", input.throttle);
+    m_state.set(Properties::Input::PITCH, input.pitch);
+    m_state.set(Properties::Input::ROLL, input.roll);
+    m_state.set(Properties::Input::YAW, input.yaw);
+    m_state.set(Properties::Input::THROTTLE, input.throttle);
 
     for (auto& system : m_systems) {
         system->update(dt);
@@ -38,24 +36,15 @@ void Aircraft::render(const Mat4& viewProjection) {
 }
 
 Vec3 Aircraft::position() const {
-    return Vec3(
-        m_state.get("position/x"),
-        m_state.get("position/y"),
-        m_state.get("position/z")
-    );
+    return m_state.getVec3(Properties::Position::PREFIX);
 }
 
 Quat Aircraft::orientation() const {
-    return Quat(
-        m_state.get("orientation/w", 1.0),
-        m_state.get("orientation/x"),
-        m_state.get("orientation/y"),
-        m_state.get("orientation/z")
-    );
+    return m_state.getQuat(Properties::Orientation::PREFIX);
 }
 
 float Aircraft::airspeed() const {
-    return static_cast<float>(m_state.get("velocity/airspeed"));
+    return static_cast<float>(m_state.get(Properties::Velocity::AIRSPEED));
 }
 
 Vec3 Aircraft::forward() const {

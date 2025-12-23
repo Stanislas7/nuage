@@ -1,5 +1,6 @@
 #include "FuelSystem.hpp"
 #include "aircraft/property_bus.hpp"
+#include "aircraft/PropertyPaths.hpp"
 #include <algorithm>
 
 namespace nuage {
@@ -13,21 +14,21 @@ void FuelSystem::init(PropertyBus* state, App* app) {
     m_state = state;
     m_app = app;
     
-    m_state->set("fuel/quantity", m_config.initialFuel);
-    m_state->set("fuel/capacity", m_config.capacity);
+    m_state->set(Properties::Fuel::QUANTITY, m_config.initialFuel);
+    m_state->set(Properties::Fuel::CAPACITY, m_config.capacity);
 }
 
 void FuelSystem::update(float dt) {
-    double fuelFlow = m_state->get("engine/fuel_flow");
-    double quantity = m_state->get("fuel/quantity");
+    double fuelFlow = m_state->get(Properties::Engine::FUEL_FLOW);
+    double quantity = m_state->get(Properties::Fuel::QUANTITY);
     
     quantity -= fuelFlow * dt;
     quantity = std::max(0.0, quantity);
     
-    m_state->set("fuel/quantity", quantity);
+    m_state->set(Properties::Fuel::QUANTITY, quantity);
     
     if (quantity <= 0.0) {
-        m_state->set("engine/running", 0.0);
+        m_state->set(Properties::Engine::RUNNING, 0.0);
     }
 }
 
