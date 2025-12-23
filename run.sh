@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# Create build directory if it doesn't exist
+# Delete build directory if it exists
+rm -rf build
+
+# Create build directory
 mkdir -p build
 
 # Go into build directory
