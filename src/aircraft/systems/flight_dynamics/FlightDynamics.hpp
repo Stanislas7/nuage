@@ -13,6 +13,10 @@ struct FlightDynamicsConfig {
     float maxPitch = 1.2f;
     float minAltitude = 5.0f;
     float throttleResponse = 0.5f;
+    float gravity = 9.81f;
+    float liftCoefficient = 0.004f;
+    float wingArea = 16.0f;
+    float cruiseSpeed = 50.0f;
 };
 
 class FlightDynamics : public IAircraftSystem {

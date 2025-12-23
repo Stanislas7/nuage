@@ -19,9 +19,9 @@ namespace {
 void InputManager::init(GLFWwindow* window) {
     m_window = window;
     
-    g_axisBindings["pitch"] = {GLFW_KEY_UP, GLFW_KEY_DOWN};
-    g_axisBindings["yaw"] = {GLFW_KEY_Q, GLFW_KEY_E};
-    g_axisBindings["roll"] = {GLFW_KEY_LEFT, GLFW_KEY_RIGHT};
+    g_axisBindings["pitch"] = {GLFW_KEY_W, GLFW_KEY_S};  // AZERTY Z/S -> QWERTY W/S
+    g_axisBindings["roll"] = {GLFW_KEY_D, GLFW_KEY_A};   // AZERTY D/Q -> QWERTY D/A
+    g_axisBindings["yaw"] = {GLFW_KEY_E, GLFW_KEY_Q};    // AZERTY E/A -> QWERTY E/Q
 
     g_keyBindings["throttle_up"] = GLFW_KEY_SPACE;
     g_keyBindings["throttle_down"] = GLFW_KEY_LEFT_SHIFT;

@@ -64,9 +64,27 @@ void FlightDynamics::updatePosition(float dt) {
     Vec3 forward = orientation.rotate(Vec3(0, 0, 1));
     double speed = m_state->get(Properties::Velocity::AIRSPEED);
 
+    float pitchAngle = std::asin(std::clamp(forward.y, -1.0f, 1.0f));
+    
+    double speedRatio = speed / m_config.cruiseSpeed;
+    double liftFactor = std::min(speedRatio * speedRatio, 1.5);
+    
+    double netVerticalAccel = (liftFactor - 1.0) * m_config.gravity;
+    
+    double climbRate = speed * std::sin(pitchAngle) + netVerticalAccel * 0.5;
+    
+    climbRate = std::clamp(climbRate, -20.0, 20.0);
+
     Vec3 pos = m_state->getVec3(Properties::Position::PREFIX);
-    Vec3 newPos = pos + forward * static_cast<float>(speed * dt);
-    m_state->setVec3(Properties::Position::PREFIX, newPos);
+    Vec3 horizontalForward = Vec3(forward.x, 0.0f, forward.z);
+    float horizLen = std::sqrt(horizontalForward.x * horizontalForward.x + horizontalForward.z * horizontalForward.z);
+    if (horizLen > 0.001f) {
+        horizontalForward = horizontalForward * (1.0f / horizLen);
+    }
+    pos = pos + horizontalForward * static_cast<float>(speed * std::cos(pitchAngle) * dt);
+    pos.y += static_cast<float>(climbRate * dt);
+    
+    m_state->setVec3(Properties::Position::PREFIX, pos);
 }
 
 void FlightDynamics::enforceConstraints() {
@@ -74,6 +92,10 @@ void FlightDynamics::enforceConstraints() {
     if (pos.y < m_config.minAltitude) {
         pos.y = m_config.minAltitude;
         m_state->setVec3(Properties::Position::PREFIX, pos);
+        double vertVel = m_state->get(Properties::Velocity::VERTICAL, 0.0);
+        if (vertVel < 0.0) {
+            m_state->set(Properties::Velocity::VERTICAL, 0.0);
+        }
     }
 
     double speed = m_state->get(Properties::Velocity::AIRSPEED);

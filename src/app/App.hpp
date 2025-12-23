@@ -51,6 +51,9 @@ private:
 
     float m_physicsAccumulator = 0.0f;
     static constexpr float FIXED_DT = 1.0f / 120.0f;
+
+    Mesh* m_terrainMesh = nullptr;
+    Shader* m_terrainShader = nullptr;
 };
 
 }

@@ -2,6 +2,7 @@
 #include "app/App.hpp"
 #include "aircraft/Aircraft.hpp"
 #include <cmath>
+#include <iostream>
 
 namespace nuage {
 
@@ -27,8 +28,13 @@ void CameraManager::update(float dt) {
 void CameraManager::updateChaseCamera(float dt) {
     if (!m_target) {
         m_target = m_app->aircraft().player();
+        if (m_target) {
+            std::cout << "[CAMERA] Target acquired: player aircraft\n";
+        } else {
+            std::cout << "[CAMERA] WARNING: No player aircraft found!\n";
+            return;
+        }
     }
-    if (!m_target) return;
 
     Vec3 targetPos = m_target->position();
     Vec3 targetForward = m_target->forward();
@@ -40,6 +46,14 @@ void CameraManager::updateChaseCamera(float dt) {
     float t = 1.0f - std::exp(-m_smoothing * dt);
     m_position = m_position + (desiredPos - m_position) * t;
     m_lookAt = targetPos;
+
+    static float debugTimer = 0;
+    debugTimer += dt;
+    if (debugTimer > 2.0f) {
+        debugTimer = 0;
+        std::cout << "[CAMERA] pos=(" << m_position.x << ", " << m_position.y << ", " << m_position.z << ")"
+                  << " target=(" << targetPos.x << ", " << targetPos.y << ", " << targetPos.z << ")\n" << std::flush;
+    }
 }
 
 void CameraManager::updateFreeCamera(float dt) {

@@ -16,6 +16,7 @@ struct AircraftMeshSpecs {
 class MeshBuilder {
 public:
     static std::vector<float> aircraft(const AircraftMeshSpecs& specs);
+    static std::vector<float> terrain(float size, int subdivisions);
 };
 
 }

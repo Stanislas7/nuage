@@ -72,6 +72,11 @@ bool App::init(const AppConfig& config) {
     m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
     m_assets.loadMesh("aircraft", MeshBuilder::aircraft(specs));
 
+    auto terrainData = MeshBuilder::terrain(2000.0f, 20);
+    m_assets.loadMesh("terrain", terrainData);
+    m_terrainMesh = m_assets.getMesh("terrain");
+    m_terrainShader = m_assets.getShader("basic");
+
     glClearColor(0.5f, 0.7f, 0.9f, 1.0f);
 
     m_lastFrameTime = static_cast<float>(glfwGetTime());
@@ -105,6 +110,13 @@ void App::run() {
         m_camera.update(m_deltaTime);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        if (m_terrainMesh && m_terrainShader) {
+            m_terrainShader->use();
+            m_terrainShader->setMat4("uMVP", m_camera.viewProjection());
+            m_terrainMesh->draw();
+        }
+        
         m_aircraft.render();
         
         glfwSwapBuffers(m_window);

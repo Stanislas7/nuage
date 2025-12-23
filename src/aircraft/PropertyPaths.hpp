@@ -27,6 +27,7 @@ namespace Orientation {
 
 namespace Velocity {
     inline constexpr char AIRSPEED[] = "velocity/airspeed";
+    inline constexpr char VERTICAL[] = "velocity/vertical";
 }
 
 namespace Engine {
