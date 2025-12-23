@@ -4,38 +4,81 @@
 #include "graphics/mesh_builder.hpp"
 #include "aircraft/Aircraft.hpp"
 
-#define GLFW_INCLUDE_NONE // Tell GLFW not to include its own OpenGL headers
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <cmath>
+#include <string>
 
 namespace nuage {
 
-static void debugPrint(App& app, float& lastDebugTime) {
-    float now = app.time();
-    if (now - lastDebugTime < 2.0f) return;
-    lastDebugTime = now;
+bool App::init(const AppConfig& config) {
+    if (!initWindow(config)) return false;
 
-    std::cout << "\n=== DEBUG (t=" << now << ") ===\n";
+    m_input.init(m_window);
+    m_aircraft.init(this);
+    m_atmosphere.init();
+    m_camera.init(this);
+    m_camera.setAspect(static_cast<float>(config.windowWidth) / config.windowHeight);
 
-    Aircraft* player = app.aircraft().player();
-    if (!player) {
-        std::cout << "[AIRCRAFT] Player is NULL!\n";
-    } else {
-        Vec3 pos = player->position();
-        Vec3 fwd = player->forward();
-        std::cout << "[AIRCRAFT] Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")\n";
-        std::cout << "[AIRCRAFT] Forward:  (" << fwd.x << ", " << fwd.y << ", " << fwd.z << ")\n";
-        std::cout << "[AIRCRAFT] Airspeed: " << player->airspeed() << " m/s\n";
-        std::cout << "[AIRCRAFT] Has mesh: " << (player->mesh() ? "YES" : "NO") << "\n";
-        std::cout << "[AIRCRAFT] Has shader: " << (player->shader() ? "YES" : "NO") << "\n";
+    if (!m_ui.init(this)) {
+        std::cerr << "Failed to initialize UI system" << std::endl;
+        return false;
     }
 
-    Vec3 camPos = app.camera().position();
-    std::cout << "[CAMERA] Position: (" << camPos.x << ", " << camPos.y << ", " << camPos.z << ")\n";
-    std::cout << "==========================\n" << std::flush;
+    loadAssets();
+    setupScene();
+    setupHUD();
+
+    m_lastFrameTime = static_cast<float>(glfwGetTime());
+    return true;
 }
 
-bool App::init(const AppConfig& config) {
+void App::run() {
+    while (!m_shouldQuit && !glfwWindowShouldClose(m_window)) {
+        float now = static_cast<float>(glfwGetTime());
+        m_deltaTime = now - m_lastFrameTime;
+        m_lastFrameTime = now;
+        m_time = now;
+
+        printDebugInfo();
+
+        m_input.update(m_deltaTime);
+
+        if (m_input.isKeyPressed(GLFW_KEY_TAB)) {
+            m_camera.toggleOrbitMode();
+        }
+
+        if (m_input.quitRequested()) {
+            m_shouldQuit = true;
+            continue;
+        }
+
+        updatePhysics();
+        m_atmosphere.update(m_deltaTime);
+        m_camera.update(m_deltaTime);
+
+        updateHUD();
+        render();
+
+        glfwSwapBuffers(m_window);
+        glfwPollEvents();
+    }
+}
+
+void App::shutdown() {
+    m_aircraft.shutdown();
+    m_ui.shutdown();
+    m_assets.unloadAll();
+    glfwDestroyWindow(m_window);
+    glfwTerminate();
+}
+
+// ---------------------------------------------------------
+// Private Helpers
+// ---------------------------------------------------------
+
+bool App::initWindow(const AppConfig& config) {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW\n";
         return false;
@@ -63,30 +106,26 @@ bool App::init(const AppConfig& config) {
     }
 
     glEnable(GL_DEPTH_TEST);
+    glClearColor(0.5f, 0.7f, 0.9f, 1.0f);
+    
+    return true;
+}
 
-    m_input.init(m_window);
-    m_aircraft.init(this);
-    m_atmosphere.init();
-    m_camera.init(this);
-
-    if (!m_ui.init(this)) {
-        std::cerr << "Failed to initialize UI system" << std::endl;
-        return false;
-    }
-
-    m_camera.setAspect(static_cast<float>(config.windowWidth) / config.windowHeight);
-
+void App::loadAssets() {
     AircraftMeshSpecs specs;
     m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
     m_assets.loadMesh("aircraft", MeshBuilder::aircraft(specs));
 
     auto terrainData = MeshBuilder::terrain(20000.0f, 40);
     m_assets.loadMesh("terrain", terrainData);
+}
+
+void App::setupScene() {
     m_terrainMesh = m_assets.getMesh("terrain");
     m_terrainShader = m_assets.getShader("basic");
+}
 
-    glClearColor(0.5f, 0.7f, 0.9f, 1.0f);
-
+void App::setupHUD() {
     m_altitudeText = &m_ui.text("ALT: 0.0 m");
     m_altitudeText->scaleVal(2.0f);
     m_altitudeText->pos(20, 20);
@@ -106,80 +145,75 @@ bool App::init(const AppConfig& config) {
     m_positionText->scaleVal(2.0f);
     m_positionText->pos(20, 170);
     m_positionText->colorR(1, 1, 1);
-
-    m_lastFrameTime = static_cast<float>(glfwGetTime());
-    return true;
 }
 
-void App::run() {
-    float lastDebugTime = 0.0f;
-    while (!m_shouldQuit && !glfwWindowShouldClose(m_window)) {
-        float now = static_cast<float>(glfwGetTime());
-        m_deltaTime = now - m_lastFrameTime;
-        m_lastFrameTime = now;
-        m_time = now;
-
-        debugPrint(*this, lastDebugTime);
-
-        m_input.update(m_deltaTime);
-
-        if (m_input.isKeyPressed(GLFW_KEY_TAB)) {
-            m_camera.toggleOrbitMode();
-        }
-
-        if (m_input.quitRequested()) {
-            m_shouldQuit = true;
-            continue;
-        }
-
-        m_physicsAccumulator += m_deltaTime;
-        while (m_physicsAccumulator >= FIXED_DT) {
-            m_aircraft.fixedUpdate(FIXED_DT);
-            m_physicsAccumulator -= FIXED_DT;
-        }
-
-        m_atmosphere.update(m_deltaTime);
-        m_camera.update(m_deltaTime);
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        if (m_terrainMesh && m_terrainShader) {
-            m_terrainShader->use();
-            m_terrainShader->setMat4("uMVP", m_camera.viewProjection());
-            m_terrainMesh->draw();
-        }
-
-        m_aircraft.render();
-
-        Aircraft* player = m_aircraft.player();
-        if (player && m_altitudeText && m_airspeedText && m_headingText && m_positionText) {
-            Vec3 pos = player->position();
-            float airspeed = player->airspeed();
-            Vec3 fwd = player->forward();
-
-            float heading = std::atan2(fwd.x, fwd.z) * 180.0f / 3.14159265f;
-            if (heading < 0) heading += 360.0f;
-
-            m_altitudeText->content("ALT: " + std::to_string(pos.y).substr(0, std::to_string(pos.y).find('.') + 2) + " m");
-            m_airspeedText->content("SPD: " + std::to_string(airspeed).substr(0, std::to_string(airspeed).find('.') + 2) + " m/s");
-            m_headingText->content("HDG: " + std::to_string(static_cast<int>(heading)));
-            m_positionText->content("POS: " + std::to_string(static_cast<int>(pos.x)) + ", " + std::to_string(static_cast<int>(pos.y)) + ", " + std::to_string(static_cast<int>(pos.z)));
-        }
-
-        m_ui.update();
-        m_ui.draw();
-
-        glfwSwapBuffers(m_window);
-        glfwPollEvents();
+void App::updatePhysics() {
+    m_physicsAccumulator += m_deltaTime;
+    while (m_physicsAccumulator >= FIXED_DT) {
+        m_aircraft.fixedUpdate(FIXED_DT);
+        m_physicsAccumulator -= FIXED_DT;
     }
 }
 
-void App::shutdown() {
-    m_aircraft.shutdown();
-    m_ui.shutdown();
-    m_assets.unloadAll();
-    glfwDestroyWindow(m_window);
-    glfwTerminate();
+void App::updateHUD() {
+    Aircraft* player = m_aircraft.player();
+    if (player && m_altitudeText && m_airspeedText && m_headingText && m_positionText) {
+        Vec3 pos = player->position();
+        float airspeed = player->airspeed();
+        Vec3 fwd = player->forward();
+
+        float heading = std::atan2(fwd.x, fwd.z) * 180.0f / 3.14159265f;
+        if (heading < 0) heading += 360.0f;
+
+        auto fmt = [](float val) {
+            std::string s = std::to_string(val);
+            return s.substr(0, s.find('.') + 2);
+        };
+
+        m_altitudeText->content("ALT: " + fmt(pos.y) + " m");
+        m_airspeedText->content("SPD: " + fmt(airspeed) + " m/s");
+        m_headingText->content("HDG: " + std::to_string(static_cast<int>(heading)));
+        m_positionText->content("POS: " + std::to_string(static_cast<int>(pos.x)) + ", " + 
+                                std::to_string(static_cast<int>(pos.y)) + ", " + 
+                                std::to_string(static_cast<int>(pos.z)));
+    }
+    
+    m_ui.update();
+}
+
+void App::render() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (m_terrainMesh && m_terrainShader) {
+        m_terrainShader->use();
+        m_terrainShader->setMat4("uMVP", m_camera.viewProjection());
+        m_terrainMesh->draw();
+    }
+
+    m_aircraft.render();
+    m_ui.draw();
+}
+
+void App::printDebugInfo() {
+    if (m_time - m_lastDebugTime < 2.0f) return;
+    m_lastDebugTime = m_time;
+
+    std::cout << "\n=== DEBUG (t=" << m_time << ") ===\n";
+
+    Aircraft* player = m_aircraft.player();
+    if (!player) {
+        std::cout << "[AIRCRAFT] Player is NULL!\n";
+    } else {
+        Vec3 pos = player->position();
+        Vec3 fwd = player->forward();
+        std::cout << "[AIRCRAFT] Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")\n";
+        std::cout << "[AIRCRAFT] Forward:  (" << fwd.x << ", " << fwd.y << ", " << fwd.z << ")\n";
+        std::cout << "[AIRCRAFT] Airspeed: " << player->airspeed() << " m/s\n";
+    }
+
+    Vec3 camPos = m_camera.position();
+    std::cout << "[CAMERA] Position: (" << camPos.x << ", " << camPos.y << ", " << camPos.z << ")\n";
+    std::cout << "==========================\n" << std::flush;
 }
 
 }

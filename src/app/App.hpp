@@ -64,6 +64,19 @@ private:
     Text* m_airspeedText = nullptr;
     Text* m_headingText = nullptr;
     Text* m_positionText = nullptr;
+    
+    // Helpers
+    bool initWindow(const AppConfig& config);
+    void loadAssets();
+    void setupScene();
+    void setupHUD();
+    
+    void updatePhysics();
+    void updateHUD();
+    void render();
+    void printDebugInfo();
+    
+    float m_lastDebugTime = 0.0f;
 };
 
 }
