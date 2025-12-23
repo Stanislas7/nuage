@@ -11,6 +11,8 @@ struct GLFWwindow;
 
 namespace nuage {
 
+class Text;
+
 struct AppConfig {
     int windowWidth = 1280;
     int windowHeight = 720;
@@ -57,6 +59,11 @@ private:
 
     Mesh* m_terrainMesh = nullptr;
     Shader* m_terrainShader = nullptr;
+
+    Text* m_altitudeText = nullptr;
+    Text* m_airspeedText = nullptr;
+    Text* m_headingText = nullptr;
+    Text* m_positionText = nullptr;
 };
 
 }

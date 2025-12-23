@@ -87,10 +87,25 @@ bool App::init(const AppConfig& config) {
 
     glClearColor(0.5f, 0.7f, 0.9f, 1.0f);
 
-    m_ui.text("Hello UI!")
-        .scaleVal(2.5f)
-        .pos(20, 20)
-        .colorR(1, 1, 1);
+    m_altitudeText = &m_ui.text("ALT: 0.0 m");
+    m_altitudeText->scaleVal(2.0f);
+    m_altitudeText->pos(20, 20);
+    m_altitudeText->colorR(1, 1, 1);
+
+    m_airspeedText = &m_ui.text("SPD: 0.0 m/s");
+    m_airspeedText->scaleVal(2.0f);
+    m_airspeedText->pos(20, 50);
+    m_airspeedText->colorR(1, 1, 1);
+
+    m_headingText = &m_ui.text("HDG: 000");
+    m_headingText->scaleVal(2.0f);
+    m_headingText->pos(20, 80);
+    m_headingText->colorR(1, 1, 1);
+
+    m_positionText = &m_ui.text("POS: 0, 0, 0");
+    m_positionText->scaleVal(2.0f);
+    m_positionText->pos(20, 110);
+    m_positionText->colorR(1, 1, 1);
 
     m_lastFrameTime = static_cast<float>(glfwGetTime());
     return true;
@@ -135,6 +150,21 @@ void App::run() {
         }
 
         m_aircraft.render();
+
+        Aircraft* player = m_aircraft.player();
+        if (player && m_altitudeText && m_airspeedText && m_headingText && m_positionText) {
+            Vec3 pos = player->position();
+            float airspeed = player->airspeed();
+            Vec3 fwd = player->forward();
+
+            float heading = std::atan2(fwd.x, fwd.z) * 180.0f / 3.14159265f;
+            if (heading < 0) heading += 360.0f;
+
+            m_altitudeText->content("ALT: " + std::to_string(pos.y).substr(0, std::to_string(pos.y).find('.') + 2) + " m");
+            m_airspeedText->content("SPD: " + std::to_string(airspeed).substr(0, std::to_string(airspeed).find('.') + 2) + " m/s");
+            m_headingText->content("HDG: " + std::to_string(static_cast<int>(heading)));
+            m_positionText->content("POS: " + std::to_string(static_cast<int>(pos.x)) + ", " + std::to_string(static_cast<int>(pos.y)) + ", " + std::to_string(static_cast<int>(pos.z)));
+        }
 
         m_ui.update();
         m_ui.draw();
