@@ -94,17 +94,17 @@ bool App::init(const AppConfig& config) {
 
     m_airspeedText = &m_ui.text("SPD: 0.0 m/s");
     m_airspeedText->scaleVal(2.0f);
-    m_airspeedText->pos(20, 50);
+    m_airspeedText->pos(20, 70);
     m_airspeedText->colorR(1, 1, 1);
 
     m_headingText = &m_ui.text("HDG: 000");
     m_headingText->scaleVal(2.0f);
-    m_headingText->pos(20, 80);
+    m_headingText->pos(20, 120);
     m_headingText->colorR(1, 1, 1);
 
     m_positionText = &m_ui.text("POS: 0, 0, 0");
     m_positionText->scaleVal(2.0f);
-    m_positionText->pos(20, 110);
+    m_positionText->pos(20, 170);
     m_positionText->colorR(1, 1, 1);
 
     m_lastFrameTime = static_cast<float>(glfwGetTime());
