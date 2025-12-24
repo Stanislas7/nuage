@@ -7,6 +7,8 @@
 #include "graphics/camera.hpp"
 #include "scenery/scenery.hpp"
 #include "ui/ui_manager.hpp"
+#include <cstdint>
+#include <string>
 
 struct GLFWwindow;
 
@@ -42,6 +44,29 @@ public:
     void quit() { m_shouldQuit = true; }
 
 private:
+    struct FrameProfile {
+        float frameMs = 0.0f;
+        float inputMs = 0.0f;
+        float physicsMs = 0.0f;
+        float atmosphereMs = 0.0f;
+        float cameraMs = 0.0f;
+        float hudMs = 0.0f;
+        float renderMs = 0.0f;
+        float swapMs = 0.0f;
+    };
+
+    struct FrameProfileAccum {
+        double frameMs = 0.0;
+        double inputMs = 0.0;
+        double physicsMs = 0.0;
+        double atmosphereMs = 0.0;
+        double cameraMs = 0.0;
+        double hudMs = 0.0;
+        double renderMs = 0.0;
+        double swapMs = 0.0;
+        int frames = 0;
+    };
+
     GLFWwindow* m_window = nullptr;
 
     Input m_input;
@@ -67,6 +92,8 @@ private:
     Text* m_airspeedText = nullptr;
     Text* m_headingText = nullptr;
     Text* m_positionText = nullptr;
+    Text* m_fpsText = nullptr;
+    Text* m_fpsDetailText = nullptr;
     
     // Helpers
     bool initWindow(const AppConfig& config);
@@ -77,8 +104,18 @@ private:
     void updateHUD();
     void render();
     void printDebugInfo();
+    void updateFrameStats(const FrameProfile& profile);
     
     float m_lastDebugTime = 0.0f;
+
+    float m_lastFps = 0.0f;
+    float m_fpsTimer = 0.0f;
+    int m_framesSinceFps = 0;
+    std::uint64_t m_totalFrames = 0;
+    std::string m_fpsDisplay = "FPS: 0.0 | Frame 0";
+    std::string m_fpsDetailDisplay = "Frame time 0.0ms | Render 0.0ms | Swap wait 0.0ms";
+    FrameProfile m_lastProfile{};
+    FrameProfileAccum m_profileAccum{};
 };
 
 }

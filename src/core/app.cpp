@@ -9,6 +9,9 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
 
 namespace nuage {
 
@@ -42,7 +45,11 @@ bool App::init(const AppConfig& config) {
 }
 
 void App::run() {
+    using clock = std::chrono::high_resolution_clock;
+
     while (!m_shouldQuit && !glfwWindowShouldClose(m_window)) {
+        auto frameStart = clock::now();
+
         float now = static_cast<float>(glfwGetTime());
         m_deltaTime = now - m_lastFrameTime;
         m_lastFrameTime = now;
@@ -50,7 +57,9 @@ void App::run() {
 
         printDebugInfo();
 
+        auto inputStart = clock::now();
         m_input.update(m_deltaTime);
+        auto inputEnd = clock::now();
 
         if (m_input.isKeyPressed(GLFW_KEY_TAB)) {
             m_camera.toggleOrbitMode();
@@ -61,15 +70,43 @@ void App::run() {
             continue;
         }
 
+        auto physicsStart = clock::now();
         updatePhysics();
+        auto physicsEnd = clock::now();
+        auto atmosphereStart = clock::now();
         m_atmosphere.update(m_deltaTime);
+        auto atmosphereEnd = clock::now();
+        auto cameraStart = clock::now();
         m_camera.update(m_deltaTime, m_aircraft.player());
+        auto cameraEnd = clock::now();
 
+        auto hudStart = clock::now();
         updateHUD();
+        auto hudEnd = clock::now();
+        auto renderStart = clock::now();
         render();
+        auto renderEnd = clock::now();
 
+        auto swapStart = clock::now();
         glfwSwapBuffers(m_window);
         glfwPollEvents();
+        auto swapEnd = clock::now();
+
+        auto toMs = [](const clock::time_point& start, const clock::time_point& end) {
+            return std::chrono::duration<double, std::milli>(end - start).count();
+        };
+
+        FrameProfile profile;
+        profile.frameMs = static_cast<float>(toMs(frameStart, swapEnd));
+        profile.inputMs = static_cast<float>(toMs(inputStart, inputEnd));
+        profile.physicsMs = static_cast<float>(toMs(physicsStart, physicsEnd));
+        profile.atmosphereMs = static_cast<float>(toMs(atmosphereStart, atmosphereEnd));
+        profile.cameraMs = static_cast<float>(toMs(cameraStart, cameraEnd));
+        profile.hudMs = static_cast<float>(toMs(hudStart, hudEnd));
+        profile.renderMs = static_cast<float>(toMs(renderStart, renderEnd));
+        profile.swapMs = static_cast<float>(toMs(swapStart, swapEnd));
+
+        updateFrameStats(profile);
     }
 }
 
@@ -122,25 +159,31 @@ void App::setupScene() {
 }
 
 void App::setupHUD() {
+    auto setupText = [](Text& text, float x, float y, float scale, Anchor anchor, float padding) {
+        text.scaleVal(scale);
+        text.pos(x, y);
+        text.colorR(1, 1, 1);
+        text.anchorMode(anchor);
+        text.paddingValue(padding);
+    };
+
     m_altitudeText = &m_ui.text("ALT: 0.0 m");
-    m_altitudeText->scaleVal(2.0f);
-    m_altitudeText->pos(20, 20);
-    m_altitudeText->colorR(1, 1, 1);
+    setupText(*m_altitudeText, 20, 20, 2.0f, Anchor::TopLeft, 0.0f);
 
     m_airspeedText = &m_ui.text("SPD: 0 kts");
-    m_airspeedText->scaleVal(2.0f);
-    m_airspeedText->pos(20, 70);
-    m_airspeedText->colorR(1, 1, 1);
+    setupText(*m_airspeedText, 20, 70, 2.0f, Anchor::TopLeft, 0.0f);
 
     m_headingText = &m_ui.text("HDG: 000");
-    m_headingText->scaleVal(2.0f);
-    m_headingText->pos(20, 120);
-    m_headingText->colorR(1, 1, 1);
+    setupText(*m_headingText, 20, 120, 2.0f, Anchor::TopLeft, 0.0f);
 
     m_positionText = &m_ui.text("POS: 0, 0, 0");
-    m_positionText->scaleVal(2.0f);
-    m_positionText->pos(20, 170);
-    m_positionText->colorR(1, 1, 1);
+    setupText(*m_positionText, 20, 170, 2.0f, Anchor::TopLeft, 0.0f);
+
+    m_fpsText = &m_ui.text(m_fpsDisplay);
+    setupText(*m_fpsText, 0, 10, 2.0f, Anchor::TopRight, 20.0f);
+
+    m_fpsDetailText = &m_ui.text(m_fpsDetailDisplay);
+    setupText(*m_fpsDetailText, 0, 50, 1.5f, Anchor::TopRight, 20.0f);
 }
 
 void App::updatePhysics() {
@@ -174,6 +217,13 @@ void App::updateHUD() {
         m_positionText->content("POS: " + std::to_string(static_cast<int>(pos.x)) + ", " +
                                 std::to_string(static_cast<int>(pos.y)) + ", " +
                                 std::to_string(static_cast<int>(pos.z)));
+    }
+
+    if (m_fpsText) {
+        m_fpsText->content(m_fpsDisplay);
+    }
+    if (m_fpsDetailText) {
+        m_fpsDetailText->content(m_fpsDetailDisplay);
     }
     
     m_ui.update();
@@ -215,6 +265,63 @@ void App::printDebugInfo() {
     Vec3 camPos = m_camera.position();
     std::cout << "[CAMERA] Position: (" << camPos.x << ", " << camPos.y << ", " << camPos.z << ")\n";
     std::cout << "==========================\n" << std::flush;
+}
+
+void App::updateFrameStats(const FrameProfile& profile) {
+    m_framesSinceFps++;
+    m_totalFrames++;
+    m_fpsTimer += m_deltaTime;
+
+    m_profileAccum.frames++;
+    m_profileAccum.frameMs += profile.frameMs;
+    m_profileAccum.inputMs += profile.inputMs;
+    m_profileAccum.physicsMs += profile.physicsMs;
+    m_profileAccum.atmosphereMs += profile.atmosphereMs;
+    m_profileAccum.cameraMs += profile.cameraMs;
+    m_profileAccum.hudMs += profile.hudMs;
+    m_profileAccum.renderMs += profile.renderMs;
+    m_profileAccum.swapMs += profile.swapMs;
+
+    if (m_fpsTimer < 1.0f) return;
+
+    double invFrames = (m_profileAccum.frames > 0) ? (1.0 / m_profileAccum.frames) : 0.0;
+    m_lastFps = static_cast<float>(m_framesSinceFps) / m_fpsTimer;
+    m_lastProfile.frameMs = static_cast<float>(m_profileAccum.frameMs * invFrames);
+    m_lastProfile.inputMs = static_cast<float>(m_profileAccum.inputMs * invFrames);
+    m_lastProfile.physicsMs = static_cast<float>(m_profileAccum.physicsMs * invFrames);
+    m_lastProfile.atmosphereMs = static_cast<float>(m_profileAccum.atmosphereMs * invFrames);
+    m_lastProfile.cameraMs = static_cast<float>(m_profileAccum.cameraMs * invFrames);
+    m_lastProfile.hudMs = static_cast<float>(m_profileAccum.hudMs * invFrames);
+    m_lastProfile.renderMs = static_cast<float>(m_profileAccum.renderMs * invFrames);
+    m_lastProfile.swapMs = static_cast<float>(m_profileAccum.swapMs * invFrames);
+
+    std::ostringstream hud;
+    hud << "FPS: " << std::fixed << std::setprecision(1) << m_lastFps
+        << " | Frame " << m_totalFrames;
+    m_fpsDisplay = hud.str();
+
+    std::ostringstream details;
+    details << "Frame time " << std::fixed << std::setprecision(1) << m_lastProfile.frameMs
+            << "ms | Render " << m_lastProfile.renderMs
+            << "ms | Swap wait " << m_lastProfile.swapMs << "ms";
+    m_fpsDetailDisplay = details.str();
+
+    std::cout << std::fixed << std::setprecision(1)
+              << "FPS: " << m_lastFps
+              << " | Frame " << m_totalFrames
+              << " | ms (frame " << m_lastProfile.frameMs
+              << ", input " << m_lastProfile.inputMs
+              << ", physics " << m_lastProfile.physicsMs
+              << ", atmos " << m_lastProfile.atmosphereMs
+              << ", camera " << m_lastProfile.cameraMs
+              << ", hud " << m_lastProfile.hudMs
+              << ", render " << m_lastProfile.renderMs
+              << ", swap " << m_lastProfile.swapMs
+              << ")\n";
+
+    m_framesSinceFps = 0;
+    m_fpsTimer = 0.0f;
+    m_profileAccum = {};
 }
 
 }
