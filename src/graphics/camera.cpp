@@ -33,20 +33,57 @@ void Camera::update(float dt, Aircraft::Instance* target) {
 
 void Camera::updateChaseCamera(float dt, Aircraft::Instance* target) {
     if (!target) {
-        // No target, maybe just stay still or handle gracefully
         return;
     }
 
     Vec3 targetPos = target->position();
     Vec3 targetForward = target->forward();
 
+    float forwardLen = std::sqrt(targetForward.x * targetForward.x + 
+                                targetForward.y * targetForward.y + 
+                                targetForward.z * targetForward.z);
+    if (forwardLen < 0.001f) {
+        targetForward = Vec3(0, 0, 1);
+    } else {
+        targetForward = targetForward * (1.0f / forwardLen);
+    }
+
+    float tForward = 1.0f - std::exp(-m_forwardSmoothing * dt);
+    m_smoothedForward = m_smoothedForward + (targetForward - m_smoothedForward) * tForward;
+
+    float smoothForwardLen = std::sqrt(m_smoothedForward.x * m_smoothedForward.x + 
+                                       m_smoothedForward.y * m_smoothedForward.y + 
+                                       m_smoothedForward.z * m_smoothedForward.z);
+    if (smoothForwardLen > 0.001f) {
+        m_smoothedForward = m_smoothedForward * (1.0f / smoothForwardLen);
+    }
+
     Vec3 desiredPos = targetPos
-                    - targetForward * m_followDistance
+                    - m_smoothedForward * m_followDistance
                     + Vec3(0, m_followHeight, 0);
 
-    float t = 1.0f - std::exp(-m_smoothing * dt);
-    m_position = m_position + (desiredPos - m_position) * t;
-    m_lookAt = targetPos;
+    float tPos = 1.0f - std::exp(-m_positionSmoothing * dt);
+    tPos = std::max(0.0f, std::min(1.0f, tPos));
+
+    Vec3 posDiff = desiredPos - m_position;
+    float posDiffLen = std::sqrt(posDiff.x * posDiff.x + posDiff.y * posDiff.y + posDiff.z * posDiff.z);
+    const float deadZone = 0.001f;
+    if (posDiffLen > deadZone) {
+        m_position = m_position + posDiff * tPos;
+    }
+
+    float tLookAt = 1.0f - std::exp(-m_lookAtSmoothing * dt);
+    tLookAt = std::max(0.0f, std::min(1.0f, tLookAt));
+
+    Vec3 lookAtDiff = targetPos - m_smoothedLookAt;
+    float lookAtDiffLen = std::sqrt(lookAtDiff.x * lookAtDiff.x + 
+                                    lookAtDiff.y * lookAtDiff.y + 
+                                    lookAtDiff.z * lookAtDiff.z);
+    if (lookAtDiffLen > deadZone) {
+        m_smoothedLookAt = m_smoothedLookAt + lookAtDiff * tLookAt;
+    }
+
+    m_lookAt = m_smoothedLookAt;
 }
 
 void Camera::updateOrbitCamera(float dt, Aircraft::Instance* target) {

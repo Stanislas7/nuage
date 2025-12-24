@@ -37,6 +37,11 @@ public:
     void setOrbitSpeed(float speed) { m_orbitSpeed = speed; }
     void toggleOrbitMode();
 
+    void setPositionSmoothing(float s) { m_positionSmoothing = s; }
+    void setLookAtSmoothing(float s) { m_lookAtSmoothing = s; }
+    void setForwardSmoothing(float s) { m_forwardSmoothing = s; }
+    void setPredictionFactor(float p) { m_predictionFactor = p; }
+
     bool isOrbitMode() const { return m_mode == CameraMode::Orbit; }
 
 private:
@@ -50,12 +55,17 @@ private:
 
     Vec3 m_position{0, 100, -50};
     Vec3 m_lookAt{0, 100, 0};
+    Vec3 m_smoothedForward{0, 0, 1};
+    Vec3 m_smoothedLookAt{0, 100, 0};
     Mat4 m_view;
     Mat4 m_projection;
 
     float m_followDistance = 25.0f;
     float m_followHeight = 10.0f;
-    float m_smoothing = 5.0f;
+    float m_positionSmoothing = 5.0f;
+    float m_lookAtSmoothing = 8.0f;
+    float m_forwardSmoothing = 3.0f;
+    float m_predictionFactor = 0.3f;
 
     float m_orbitDistance = 50.0f;
     float m_orbitSpeed = 2.0f;
