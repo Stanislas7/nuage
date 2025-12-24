@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aircraft/aircraft_component.hpp"
+#include "math/vec3.hpp"
 
 namespace nuage {
 
@@ -8,6 +9,7 @@ struct PhysicsConfig {
     float minAltitude = 5.0f;
     float maxClimbRate = 20.0f;
     float groundFriction = 0.02f;
+    Vec3 inertia = {948.0f, 1346.0f, 1967.0f}; // Default C172
 };
 
 class PhysicsIntegrator : public AircraftComponent {

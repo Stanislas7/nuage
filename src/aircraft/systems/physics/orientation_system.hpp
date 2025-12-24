@@ -11,6 +11,8 @@ struct OrientationConfig {
     float controlRefSpeed = 55.0f;
     float minControlScale = 0.25f;
     float maxControlScale = 1.25f;
+    float torqueMultiplier = 2000.0f;
+    float dampingFactor = 2000.0f;
 };
 
 class OrientationSystem : public AircraftComponent {

@@ -30,30 +30,28 @@ void OrientationSystem::update(float dt) {
         : 1.0f;
     controlScale = std::clamp(controlScale, m_config.minControlScale, m_config.maxControlScale);
     
-    // We treat 'Rate' config as 'Torque Authority'
     // Multipliers tuned to give reasonable response with the new inertia model
-    const float TORQUE_MULTIPLIER = 2000.0f; 
+    // TORQUE_MULTIPLIER acts as "Stiffness" (how fast we reach target rate)
+    // DAMPING_FACTOR acts as "Resistance" (keeps us from spinning forever)
+    const float TORQUE_MULTIPLIER = m_config.torqueMultiplier; 
+    const float DAMPING_FACTOR = m_config.dampingFactor; 
     
+    // Calculate Aerodynamic Damping
+    float damping = DAMPING_FACTOR * controlScale;
+
     // Torques in Body Frame
-    // X: Pitch (Right Axis)
-    // Y: Yaw (Up Axis)
-    // Z: Roll (Forward Axis)
-   
+    // Standard RHR: +X Pitch Up, +Y Yaw Left, +Z Roll Right
+    // But verify input mapping:
+    // Pitch Input (+1) -> Nose Up -> +X Torque
+    // Yaw Input (+1) -> Nose Right -> -Y Torque
+    // Roll Input (+1) -> Bank Right -> +Z Torque (Assuming Z is Forward)
     
     float pitchTorque = static_cast<float>(pitch * m_config.pitchRate * TORQUE_MULTIPLIER * controlScale);
-    float yawTorque   = static_cast<float>(-yaw * m_config.yawRate * TORQUE_MULTIPLIER * controlScale); // Inverted for Yaw Right
-    float rollTorque  = static_cast<float>(-roll * m_config.rollRate * TORQUE_MULTIPLIER * controlScale);
-    
-    rollTorque = static_cast<float>(roll * m_config.rollRate * TORQUE_MULTIPLIER * controlScale);
+    float yawTorque   = static_cast<float>(-yaw * m_config.yawRate * TORQUE_MULTIPLIER * controlScale);
+    float rollTorque  = static_cast<float>(roll * m_config.rollRate * TORQUE_MULTIPLIER * controlScale);
 
-
-    // Add Aerodynamic Damping (Stability)
-    // Resists rotation
+    // Apply Damping
     Vec3 angularVel = m_state->getVec3(Properties::Physics::ANGULAR_VELOCITY_PREFIX);
-    const float DAMPING_FACTOR = 400.0f; 
-    
-    // Damping increases with airspeed too (aerodynamic damping)
-    float damping = DAMPING_FACTOR * controlScale;
     
     pitchTorque -= angularVel.x * damping;
     yawTorque   -= angularVel.y * damping;

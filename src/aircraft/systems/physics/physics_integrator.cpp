@@ -13,8 +13,7 @@ PhysicsIntegrator::PhysicsIntegrator(const PhysicsConfig& config)
 void PhysicsIntegrator::init(PropertyBus* state) {
     m_state = state;
     if (!m_state->has(Properties::Physics::INERTIA)) {
-        // Default Cessna-ish inertia (kg*m^2)
-        m_state->setVec3(Properties::Physics::INERTIA, 1285.0, 1825.0, 2667.0);
+        m_state->setVec3(Properties::Physics::INERTIA, m_config.inertia);
     }
     // Initialize angular velocity if not present
     if (!m_state->has(Properties::Physics::ANGULAR_VELOCITY_PREFIX)) {

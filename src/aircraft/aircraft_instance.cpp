@@ -137,6 +137,9 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         physicsConfig.minAltitude = phys.value("minAltitude", physicsConfig.minAltitude);
         physicsConfig.maxClimbRate = phys.value("maxClimbRate", physicsConfig.maxClimbRate);
         physicsConfig.groundFriction = phys.value("groundFriction", physicsConfig.groundFriction);
+        if (phys.contains("inertia")) {
+             physicsConfig.inertia = parseVec3(phys["inertia"], physicsConfig.inertia);
+        }
     }
     addSystem<PhysicsIntegrator>(physicsConfig);
 
@@ -172,6 +175,8 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         orientConfig.controlRefSpeed = orient.value("controlRefSpeed", orientConfig.controlRefSpeed);
         orientConfig.minControlScale = orient.value("minControlScale", orientConfig.minControlScale);
         orientConfig.maxControlScale = orient.value("maxControlScale", orientConfig.maxControlScale);
+        orientConfig.torqueMultiplier = orient.value("torqueMultiplier", orientConfig.torqueMultiplier);
+        orientConfig.dampingFactor = orient.value("dampingFactor", orientConfig.dampingFactor);
     }
     addSystem<OrientationSystem>(orientConfig);
 

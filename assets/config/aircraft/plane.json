@@ -1,49 +1,52 @@
 {
-    "name": "Plane",
+    "name": "A6M Zero",
     "physics": {
-        "mass": 1157.0,
-        "cruiseSpeed": 62.8,
+        "mass": 2200.0,
+        "inertia": [2000.0, 3500.0, 4500.0],
+        "cruiseSpeed": 100.0,
         "minAltitude": 5.0,
-        "maxClimbRate": 4.0,
+        "maxClimbRate": 20.0,
         "groundFriction": 0.02
     },
     "orientation": {
-        "pitchRate": 1.2,
-        "yawRate": 0.6,
-        "rollRate": 1.6,
-        "controlRefSpeed": 55.0,
-        "minControlScale": 0.2,
-        "maxControlScale": 1.2
+        "pitchRate": 2.2,
+        "yawRate": 1.0,
+        "rollRate": 3.0,
+        "controlRefSpeed": 100.0,
+        "minControlScale": 0.3,
+        "maxControlScale": 1.5,
+        "torqueMultiplier": 6000.0,
+        "dampingFactor": 6000.0
     },
     "engineForce": {
         "thrustScale": 1.0,
-        "propEfficiency": 0.82,
+        "propEfficiency": 0.85,
         "minAirspeed": 10.0
     },
     "lift": {
-        "cl0": 0.2,
-        "clAlpha": 5.5,
-        "clMax": 1.5,
+        "cl0": 0.1,
+        "clAlpha": 5.8,
+        "clMax": 1.6,
         "clMin": -1.2,
-        "wingArea": 16.2
+        "wingArea": 22.44
     },
     "drag": {
-        "cd0": 0.03,
-        "inducedDragFactor": 0.05,
-        "wingArea": 16.2
+        "cd0": 0.02,
+        "inducedDragFactor": 0.04,
+        "wingArea": 22.44
     },
     "engine": {
         "maxThrust": 0.0,
-        "maxPowerKw": 134.0,
+        "maxPowerKw": 840.0,
         "idleN1": 12.0,
         "maxN1": 100.0,
-        "spoolRate": 1.2,
-        "fuelFlowIdle": 0.001,
-        "fuelFlowMax": 0.007
+        "spoolRate": 1.0,
+        "fuelFlowIdle": 0.005,
+        "fuelFlowMax": 0.08
     },
     "fuel": {
-        "capacity": 153.0,
-        "initial": 120.0
+        "capacity": 400.0,
+        "initial": 300.0
     },
     "model": {
         "name": "plane_mesh",
