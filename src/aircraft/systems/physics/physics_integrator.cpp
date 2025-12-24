@@ -12,6 +12,14 @@ PhysicsIntegrator::PhysicsIntegrator(const PhysicsConfig& config)
 
 void PhysicsIntegrator::init(PropertyBus* state) {
     m_state = state;
+    if (!m_state->has(Properties::Physics::INERTIA)) {
+        // Default Cessna-ish inertia (kg*m^2)
+        m_state->setVec3(Properties::Physics::INERTIA, 1285.0, 1825.0, 2667.0);
+    }
+    // Initialize angular velocity if not present
+    if (!m_state->has(Properties::Physics::ANGULAR_VELOCITY_PREFIX)) {
+        m_state->setVec3(Properties::Physics::ANGULAR_VELOCITY_PREFIX, 0.0, 0.0, 0.0);
+    }
 }
 
 void PhysicsIntegrator::update(float dt) {
@@ -26,6 +34,7 @@ void PhysicsIntegrator::update(float dt) {
 
 void PhysicsIntegrator::clearForces() {
     m_state->setVec3(Properties::Physics::FORCE_PREFIX, 0.0f, 0.0f, 0.0f);
+    m_state->setVec3(Properties::Physics::TORQUE_PREFIX, 0.0f, 0.0f, 0.0f);
     m_state->setVec3(Properties::Forces::TOTAL_PREFIX, 0.0f, 0.0f, 0.0f);
     m_state->setVec3(Properties::Forces::GRAVITY_PREFIX, 0.0f, 0.0f, 0.0f);
     m_state->setVec3(Properties::Forces::LIFT_PREFIX, 0.0f, 0.0f, 0.0f);
@@ -72,6 +81,40 @@ void PhysicsIntegrator::integrate(float dt) {
     }
 
     m_state->setVec3(Properties::Position::PREFIX, position);
+
+    Vec3 torque = m_state->getVec3(Properties::Physics::TORQUE_PREFIX);
+    Vec3 inertia = m_state->getVec3(Properties::Physics::INERTIA);
+    Vec3 angularVel = m_state->getVec3(Properties::Physics::ANGULAR_VELOCITY_PREFIX);
+
+    // Angular Acceleration = Torque / Inertia (component-wise approximation for principal axes)
+    Vec3 angularAccel(
+        torque.x / inertia.x,
+        torque.y / inertia.y,
+        torque.z / inertia.z
+    );
+    m_state->setVec3(Properties::Physics::ANGULAR_ACCEL_PREFIX, angularAccel);
+
+    angularVel = angularVel + angularAccel * dt;
+    
+    // Apply very basic damping to stop infinite spin
+    // In reality, this comes from aerodynamic moments, but we need a fail-safe
+    angularVel = angularVel * 0.98f; 
+    
+    m_state->setVec3(Properties::Physics::ANGULAR_VELOCITY_PREFIX, angularVel);
+
+    // Integrate Orientation: q_new = q + 0.5 * q * w_body * dt
+    Quat currentQ = m_state->getQuat(Properties::Orientation::PREFIX);
+    Quat w(0.0f, angularVel.x, angularVel.y, angularVel.z);
+    
+    // q * w_body
+    Quat dq = currentQ * w; 
+    
+    currentQ.w += dq.w * 0.5f * dt;
+    currentQ.x += dq.x * 0.5f * dt;
+    currentQ.y += dq.y * 0.5f * dt;
+    currentQ.z += dq.z * 0.5f * dt;
+
+    m_state->setQuat(Properties::Orientation::PREFIX, currentQ.normalized());
 }
 
 }

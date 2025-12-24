@@ -45,6 +45,10 @@ namespace Physics {
     inline constexpr char ACCEL_Y[] = "physics/acceleration/y";
     inline constexpr char ACCEL_Z[] = "physics/acceleration/z";
     inline constexpr char AIR_SPEED[] = "physics/air_speed";
+    inline constexpr char INERTIA[] = "physics/inertia";
+    inline constexpr char TORQUE_PREFIX[] = "physics/torque";
+    inline constexpr char ANGULAR_VELOCITY_PREFIX[] = "physics/angular_velocity";
+    inline constexpr char ANGULAR_ACCEL_PREFIX[] = "physics/angular_acceleration";
 }
 
 namespace Forces {
