@@ -4,6 +4,7 @@
 #include "graphics/mesh.hpp"
 #include "graphics/shader.hpp"
 #include "graphics/asset_store.hpp"
+#include "graphics/texture.hpp"
 #include "environment/atmosphere.hpp"
 #include "math/mat4.hpp"
 #include "utils/config_loader.hpp"
@@ -81,9 +82,11 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         const auto& mod = json["model"];
         std::string modelName = mod.value("name", "aircraft");
         std::string modelPath = mod.value("path", "");
+        std::string modelTexturePath;
+        bool modelHasTexcoords = false;
         
         if (!modelPath.empty()) {
-             if (assets.loadModel(modelName, modelPath)) {
+             if (assets.loadModel(modelName, modelPath, &modelTexturePath, &modelHasTexcoords)) {
                  m_mesh = assets.getMesh(modelName);
              } else {
                  std::cerr << "Failed to load aircraft model: " << modelPath << std::endl;
@@ -94,6 +97,19 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
             auto c = mod["color"];
             if (c.is_array() && c.size() == 3) {
                 m_color = Vec3(c[0], c[1], c[2]);
+            }
+        }
+        std::string texturePath = mod.value("texture", "");
+        if (texturePath.empty()) {
+            texturePath = modelTexturePath;
+        }
+        if (!texturePath.empty() && modelHasTexcoords) {
+            std::string textureName = modelName + "_diffuse";
+            if (assets.loadTexture(textureName, texturePath)) {
+                m_texture = assets.getTexture(textureName);
+                m_shader = assets.getShader("textured");
+            } else {
+                std::cerr << "Failed to load aircraft texture: " << texturePath << std::endl;
             }
         }
         if (mod.contains("scale")) {
@@ -111,7 +127,9 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         m_mesh = assets.getMesh("aircraft");
     }
 
-    m_shader = assets.getShader("basic");
+    if (!m_shader) {
+        m_shader = assets.getShader("basic");
+    }
 
     PhysicsConfig physicsConfig;
     if (json.contains("physics")) {
@@ -241,10 +259,17 @@ void Aircraft::Instance::render(const Mat4& viewProjection) {
         * Mat4::scale(m_modelScale.x, m_modelScale.y, m_modelScale.z);
     m_shader->use();
     m_shader->setMat4("uMVP", viewProjection * model);
-    m_shader->setVec3("uColor", m_color);
-    m_shader->setBool("uUseUniformColor", true);
+    if (m_texture) {
+        m_texture->bind(0);
+        m_shader->setInt("uTexture", 0);
+    } else {
+        m_shader->setVec3("uColor", m_color);
+        m_shader->setBool("uUseUniformColor", true);
+    }
     m_mesh->draw();
-    m_shader->setBool("uUseUniformColor", false); // Reset
+    if (!m_texture) {
+        m_shader->setBool("uUseUniformColor", false); // Reset
+    }
 }
 
 Vec3 Aircraft::Instance::position() const {

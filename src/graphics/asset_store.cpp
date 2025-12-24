@@ -50,7 +50,9 @@ bool AssetStore::loadMesh(const std::string& name, const std::vector<float>& ver
     return true;
 }
 
-bool AssetStore::loadModel(const std::string& name, const std::string& path) {
+bool AssetStore::loadModel(const std::string& name, const std::string& path,
+                           std::string* outDiffuseTexture,
+                           bool* outHasTexcoords) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -68,6 +70,22 @@ bool AssetStore::loadModel(const std::string& name, const std::string& path) {
     }
 
     if (!ret) return false;
+
+    std::string diffuseTexture;
+    for (const auto& material : materials) {
+        if (!material.diffuse_texname.empty()) {
+            diffuseTexture = baseDir + material.diffuse_texname;
+            break;
+        }
+    }
+    if (outDiffuseTexture) {
+        *outDiffuseTexture = diffuseTexture;
+    }
+
+    bool hasTexcoords = !attrib.texcoords.empty();
+    if (outHasTexcoords) {
+        *outHasTexcoords = hasTexcoords;
+    }
 
     std::vector<float> vertices;
 
@@ -88,25 +106,47 @@ bool AssetStore::loadModel(const std::string& name, const std::string& path) {
                 tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
                 tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
 
-                tinyobj::real_t nx = 0.0f;
-                tinyobj::real_t ny = 1.0f;
-                tinyobj::real_t nz = 0.0f;
+                if (hasTexcoords) {
+                    tinyobj::real_t tu = 0.0f;
+                    tinyobj::real_t tv = 0.0f;
+                    if (idx.texcoord_index >= 0) {
+                        tu = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
+                        tv = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+                    }
 
-                if (idx.normal_index >= 0) {
-                    nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
-                    ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
-                    nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
+                    vertices.push_back(static_cast<float>(vx));
+                    vertices.push_back(static_cast<float>(vy));
+                    vertices.push_back(static_cast<float>(vz));
+                    vertices.push_back(static_cast<float>(tu));
+                    vertices.push_back(static_cast<float>(tv));
+                } else {
+                    tinyobj::real_t nx = 0.0f;
+                    tinyobj::real_t ny = 1.0f;
+                    tinyobj::real_t nz = 0.0f;
+
+                    if (idx.normal_index >= 0) {
+                        nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
+                        ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
+                        nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
+                    }
+
+                    vertices.push_back(static_cast<float>(vx));
+                    vertices.push_back(static_cast<float>(vy));
+                    vertices.push_back(static_cast<float>(vz));
+                    vertices.push_back(static_cast<float>(nx));
+                    vertices.push_back(static_cast<float>(ny));
+                    vertices.push_back(static_cast<float>(nz));
                 }
-
-                vertices.push_back(static_cast<float>(vx));
-                vertices.push_back(static_cast<float>(vy));
-                vertices.push_back(static_cast<float>(vz));
-                vertices.push_back(static_cast<float>(nx));
-                vertices.push_back(static_cast<float>(ny));
-                vertices.push_back(static_cast<float>(nz));
             }
             index_offset += fv;
         }
+    }
+
+    if (hasTexcoords) {
+        auto mesh = std::make_unique<Mesh>();
+        mesh->initTextured(vertices);
+        m_meshes[name] = std::move(mesh);
+        return true;
     }
 
     return loadMesh(name, vertices);
@@ -117,9 +157,24 @@ Mesh* AssetStore::getMesh(const std::string& name) {
     return it != m_meshes.end() ? it->second.get() : nullptr;
 }
 
+bool AssetStore::loadTexture(const std::string& name, const std::string& path) {
+    auto texture = std::make_unique<Texture>();
+    if (!texture->loadFromFile(path)) {
+        return false;
+    }
+    m_textures[name] = std::move(texture);
+    return true;
+}
+
+Texture* AssetStore::getTexture(const std::string& name) {
+    auto it = m_textures.find(name);
+    return it != m_textures.end() ? it->second.get() : nullptr;
+}
+
 void AssetStore::unloadAll() {
     m_shaders.clear();
     m_meshes.clear();
+    m_textures.clear();
 }
 
 }

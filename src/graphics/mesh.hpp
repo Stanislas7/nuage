@@ -11,6 +11,7 @@ public:
     ~Mesh();
 
     void init(const std::vector<float>& data);
+    void initTextured(const std::vector<float>& data);
     void draw() const;
 
 private:

@@ -48,6 +48,7 @@
     "model": {
         "name": "plane_mesh",
         "path": "assets/models/plane.obj",
+        "texture": "assets/models/plane.jpg",
         "color": [0.8, 0.8, 0.8],
         "scale": 10.0,
         "rotation": [270.0, -90.0, 0.0],

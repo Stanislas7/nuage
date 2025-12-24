@@ -19,6 +19,7 @@ bool App::init(const AppConfig& config) {
 
     m_input.init(m_window);
     m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
+    m_assets.loadShader("textured", "assets/shaders/textured.vert", "assets/shaders/textured.frag");
     
     // Create terrain mesh
     auto terrainData = MeshBuilder::terrain(20000.0f, 40);
