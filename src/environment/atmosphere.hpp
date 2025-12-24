@@ -4,7 +4,7 @@
 
 namespace nuage {
 
-class AtmosphereManager {
+class Atmosphere {
 public:
     void init();
     void update(float dt);

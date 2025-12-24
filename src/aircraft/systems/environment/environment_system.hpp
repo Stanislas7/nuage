@@ -4,11 +4,11 @@
 
 namespace nuage {
 
-class AtmosphereManager;
+class Atmosphere;
 
 class EnvironmentSystem : public AircraftComponent {
 public:
-    explicit EnvironmentSystem(AtmosphereManager& atmosphere);
+    explicit EnvironmentSystem(Atmosphere& atmosphere);
 
     const char* name() const override { return "Environment"; }
     void init(PropertyBus* state) override;
@@ -16,7 +16,7 @@ public:
 
 private:
     PropertyBus* m_state = nullptr;
-    AtmosphereManager* m_atmosphere = nullptr;
+    Atmosphere* m_atmosphere = nullptr;
 };
 
 }

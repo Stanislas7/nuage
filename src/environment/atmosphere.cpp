@@ -1,19 +1,19 @@
-#include "environment/atmosphere_manager.hpp"
+#include "environment/atmosphere.hpp"
 #include <cmath>
 
 namespace nuage {
 
-void AtmosphereManager::init() {
+void Atmosphere::init() {
     m_timeOfDay = 12.0f;
     m_windSpeed = 0.0f;
     m_windHeading = 0.0f;
 }
 
-void AtmosphereManager::update(float dt) {
+void Atmosphere::update(float dt) {
     // Could advance time of day here if desired
 }
 
-float AtmosphereManager::getAirDensity(float altitude) const {
+float Atmosphere::getAirDensity(float altitude) const {
     // ISA atmosphere model
     // Sea level: 1.225 kg/m³
     // Decreases ~12% per 1000m up to 11km
@@ -23,7 +23,7 @@ float AtmosphereManager::getAirDensity(float altitude) const {
     return seaLevelDensity * std::exp(-altitude / scaleHeight);
 }
 
-Vec3 AtmosphereManager::getWind(const Vec3& position) const {
+Vec3 Atmosphere::getWind(const Vec3& position) const {
     if (m_windSpeed <= 0.0f) {
         return Vec3(0, 0, 0);
     }
@@ -36,7 +36,7 @@ Vec3 AtmosphereManager::getWind(const Vec3& position) const {
     );
 }
 
-Vec3 AtmosphereManager::getSunDirection() const {
+Vec3 Atmosphere::getSunDirection() const {
     // Simple sun position based on time of day
     // 6:00 = east, 12:00 = overhead, 18:00 = west
     float hourAngle = (m_timeOfDay - 12.0f) * 15.0f * 3.14159265f / 180.0f;
@@ -48,12 +48,12 @@ Vec3 AtmosphereManager::getSunDirection() const {
     ).normalized();
 }
 
-void AtmosphereManager::setTimeOfDay(float hours) {
+void Atmosphere::setTimeOfDay(float hours) {
     m_timeOfDay = std::fmod(hours, 24.0f);
     if (m_timeOfDay < 0) m_timeOfDay += 24.0f;
 }
 
-void AtmosphereManager::setWind(float speed, float heading) {
+void Atmosphere::setWind(float speed, float heading) {
     m_windSpeed = speed;
     m_windHeading = heading;
 }

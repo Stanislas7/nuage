@@ -1,11 +1,11 @@
 #pragma once
 
-#include "input/input_manager.hpp"
-#include "aircraft/aircraft_manager.hpp"
+#include "input/input.hpp"
+#include "aircraft/aircraft.hpp"
 #include "graphics/asset_store.hpp"
-#include "environment/atmosphere_manager.hpp"
-#include "graphics/camera_manager.hpp"
-#include "scenery/scenery_manager.hpp"
+#include "environment/atmosphere.hpp"
+#include "graphics/camera.hpp"
+#include "scenery/scenery.hpp"
 #include "ui/ui_manager.hpp"
 
 struct GLFWwindow;
@@ -27,12 +27,12 @@ public:
     void run();
     void shutdown();
 
-    InputManager& input() { return m_input; }
-    AircraftManager& aircraft() { return m_aircraft; }
+    Input& input() { return m_input; }
+    Aircraft& aircraft() { return m_aircraft; }
     AssetStore& assets() { return m_assets; }
-    AtmosphereManager& atmosphere() { return m_atmosphere; }
-    CameraManager& camera() { return m_camera; }
-    SceneryManager& scenery() { return m_scenery; }
+    Atmosphere& atmosphere() { return m_atmosphere; }
+    Camera& camera() { return m_camera; }
+    Scenery& scenery() { return m_scenery; }
     UIManager& ui() { return m_ui; }
 
     float time() const { return m_time; }
@@ -44,12 +44,12 @@ public:
 private:
     GLFWwindow* m_window = nullptr;
 
-    InputManager m_input;
-    AircraftManager m_aircraft;
+    Input m_input;
+    Aircraft m_aircraft;
     AssetStore m_assets;
-    AtmosphereManager m_atmosphere;
-    CameraManager m_camera;
-    SceneryManager m_scenery;
+    Atmosphere m_atmosphere;
+    Camera m_camera;
+    Scenery m_scenery;
     UIManager m_ui;
 
     float m_time = 0.0f;
@@ -70,7 +70,6 @@ private:
     
     // Helpers
     bool initWindow(const AppConfig& config);
-    void loadAssets();
     void setupScene();
     void setupHUD();
     

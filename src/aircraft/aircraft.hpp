@@ -4,63 +4,87 @@
 #include "aircraft/aircraft_component.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
+#include "math/mat4.hpp"
 #include <vector>
 #include <memory>
 #include <string>
 
 namespace nuage {
 
-class App;
+class AssetStore;
+class Atmosphere;
 class Mesh;
 class Shader;
+class Input;
 struct FlightInput;
 
 class Aircraft {
 public:
-    void init(const std::string& configPath, App* app);
-    void update(float dt, const FlightInput& input);
-    void render(const Mat4& viewProjection);
+    class Instance {
+    public:
+        void init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere);
+        void update(float dt, const FlightInput& input);
+        void render(const Mat4& viewProjection);
 
-    void setMesh(Mesh* mesh) { m_mesh = mesh; }
-    void setShader(Shader* shader) { m_shader = shader; }
-    Mesh* mesh() const { return m_mesh; }
-    Shader* shader() const { return m_shader; }
+        void setMesh(Mesh* mesh) { m_mesh = mesh; }
+        void setShader(Shader* shader) { m_shader = shader; }
+        Mesh* mesh() const { return m_mesh; }
+        Shader* shader() const { return m_shader; }
 
-    PropertyBus& state() { return m_state; }
-    const PropertyBus& state() const { return m_state; }
+        PropertyBus& state() { return m_state; }
+        const PropertyBus& state() const { return m_state; }
 
-    Vec3 position() const;
-    Quat orientation() const;
-    float airspeed() const;
-    Vec3 forward() const;
-    Vec3 up() const;
-    Vec3 right() const;
+        Vec3 position() const;
+        Quat orientation() const;
+        float airspeed() const;
+        Vec3 forward() const;
+        Vec3 up() const;
+        Vec3 right() const;
 
-    template<typename T, typename... Args>
-    T* addSystem(Args&&... args) {
-        auto system = std::make_unique<T>(std::forward<Args>(args)...);
-        T* ptr = system.get();
-        system->init(&m_state);
-        m_systems.push_back(std::move(system));
-        return ptr;
-    }
-
-    template<typename T>
-    T* getSystem() {
-        for (auto& system : m_systems) {
-            T* typed = dynamic_cast<T*>(system.get());
-            if (typed) return typed;
+        template<typename T, typename... Args>
+        T* addSystem(Args&&... args) {
+            auto system = std::make_unique<T>(std::forward<Args>(args)...);
+            T* ptr = system.get();
+            system->init(&m_state);
+            m_systems.push_back(std::move(system));
+            return ptr;
         }
-        return nullptr;
-    }
+
+        template<typename T>
+        T* getSystem() {
+            for (auto& system : m_systems) {
+                T* typed = dynamic_cast<T*>(system.get());
+                if (typed) return typed;
+            }
+            return nullptr;
+        }
+
+    private:
+        PropertyBus m_state;
+        std::vector<std::unique_ptr<AircraftComponent>> m_systems;
+        Mesh* m_mesh = nullptr;
+        Shader* m_shader = nullptr;
+        Vec3 m_color = {1, 1, 1};
+    };
+
+    void init(AssetStore& assets, Atmosphere& atmosphere);
+    void fixedUpdate(float dt, const Input& input);
+    void render(const Mat4& viewProjection);
+    void shutdown();
+
+    Instance* spawnPlayer(const std::string& configPath);
+
+    Instance* player() { return m_player; }
+    const std::vector<std::unique_ptr<Instance>>& all() const { return m_instances; }
+
+    void destroy(Instance* aircraft);
+    void destroyAll();
 
 private:
-    PropertyBus m_state;
-    std::vector<std::unique_ptr<AircraftComponent>> m_systems;
-    App* m_app = nullptr;
-    Mesh* m_mesh = nullptr;
-    Shader* m_shader = nullptr;
-    Vec3 m_color = {1, 1, 1};
+    AssetStore* m_assets = nullptr;
+    Atmosphere* m_atmosphere = nullptr;
+    std::vector<std::unique_ptr<Instance>> m_instances;
+    Instance* m_player = nullptr;
 };
 
 }

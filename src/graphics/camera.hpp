@@ -2,11 +2,11 @@
 
 #include "math/vec3.hpp"
 #include "math/mat4.hpp"
+#include "aircraft/aircraft.hpp"
 
 namespace nuage {
 
-class App;
-class Aircraft;
+class Input;
 
 enum class CameraMode {
     Chase,
@@ -15,13 +15,13 @@ enum class CameraMode {
     Orbit
 };
 
-class CameraManager {
+class Camera {
 public:
-    void init(App* app);
-    void update(float dt);
+    void init(Input& input);
+    void update(float dt, Aircraft::Instance* target = nullptr);
 
     void setMode(CameraMode mode) { m_mode = mode; }
-    void setTarget(Aircraft* target) { m_target = target; }
+    void setTarget(Aircraft::Instance* target) { m_target = target; }
 
     Mat4 viewMatrix() const { return m_view; }
     Mat4 projectionMatrix() const { return m_projection; }
@@ -40,12 +40,12 @@ public:
     bool isOrbitMode() const { return m_mode == CameraMode::Orbit; }
 
 private:
-    void updateChaseCamera(float dt);
-    void updateOrbitCamera(float dt);
+    void updateChaseCamera(float dt, Aircraft::Instance* target);
+    void updateOrbitCamera(float dt, Aircraft::Instance* target);
     void buildMatrices();
 
-    App* m_app = nullptr;
-    Aircraft* m_target = nullptr;
+    Input* m_input = nullptr;
+    Aircraft::Instance* m_target = nullptr;
     CameraMode m_mode = CameraMode::Chase;
 
     Vec3 m_position{0, 100, -50};

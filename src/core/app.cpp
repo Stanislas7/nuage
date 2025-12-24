@@ -16,10 +16,17 @@ bool App::init(const AppConfig& config) {
     if (!initWindow(config)) return false;
 
     m_input.init(m_window);
-    m_aircraft.init(this);
+    m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
+    
+    // Create terrain mesh
+    auto terrainData = MeshBuilder::terrain(20000.0f, 40);
+    m_assets.loadMesh("terrain", terrainData);
+
     m_atmosphere.init();
-    m_camera.init(this);
-    m_scenery.init(this);
+    m_aircraft.init(m_assets, m_atmosphere);
+    m_camera.init(m_input);
+    m_scenery.init(m_assets);
+    
     m_camera.setAspect(static_cast<float>(config.windowWidth) / config.windowHeight);
 
     if (!m_ui.init(this)) {
@@ -27,7 +34,6 @@ bool App::init(const AppConfig& config) {
         return false;
     }
 
-    loadAssets();
     setupScene();
     setupHUD();
 
@@ -57,7 +63,7 @@ void App::run() {
 
         updatePhysics();
         m_atmosphere.update(m_deltaTime);
-        m_camera.update(m_deltaTime);
+        m_camera.update(m_deltaTime, m_aircraft.player());
 
         updateHUD();
         render();
@@ -108,13 +114,6 @@ bool App::initWindow(const AppConfig& config) {
     return true;
 }
 
-void App::loadAssets() {
-    m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
-    
-    auto terrainData = MeshBuilder::terrain(20000.0f, 40);
-    m_assets.loadMesh("terrain", terrainData);
-}
-
 void App::setupScene() {
     m_terrainMesh = m_assets.getMesh("terrain");
     m_terrainShader = m_assets.getShader("basic");
@@ -147,13 +146,13 @@ void App::setupHUD() {
 void App::updatePhysics() {
     m_physicsAccumulator += m_deltaTime;
     while (m_physicsAccumulator >= FIXED_DT) {
-        m_aircraft.fixedUpdate(FIXED_DT);
+        m_aircraft.fixedUpdate(FIXED_DT, m_input);
         m_physicsAccumulator -= FIXED_DT;
     }
 }
 
 void App::updateHUD() {
-    Aircraft* player = m_aircraft.player();
+    Aircraft::Instance* player = m_aircraft.player();
     if (player && m_altitudeText && m_airspeedText && m_headingText && m_positionText) {
         Vec3 pos = player->position();
         float airspeed = player->airspeed();
@@ -181,15 +180,16 @@ void App::updateHUD() {
 void App::render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    Mat4 vp = m_camera.viewProjection();
+
     if (m_terrainMesh && m_terrainShader) {
         m_terrainShader->use();
-        m_terrainShader->setMat4("uMVP", m_camera.viewProjection());
+        m_terrainShader->setMat4("uMVP", vp);
         m_terrainMesh->draw();
     }
     
-    m_scenery.render(m_camera.viewProjection());
-
-    m_aircraft.render();
+    m_scenery.render(vp);
+    m_aircraft.render(vp);
     m_ui.draw();
 }
 
@@ -199,7 +199,7 @@ void App::printDebugInfo() {
 
     std::cout << "\n=== DEBUG (t=" << m_time << ") ===\n";
 
-    Aircraft* player = m_aircraft.player();
+    Aircraft::Instance* player = m_aircraft.player();
     if (!player) {
         std::cout << "[AIRCRAFT] Player is NULL!\n";
     } else {

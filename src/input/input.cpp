@@ -1,4 +1,4 @@
-#include "input/input_manager.hpp"
+#include "input/input.hpp"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <unordered_map>
@@ -16,7 +16,7 @@ namespace {
     std::unordered_map<std::string, int> g_keyBindings;
 }
 
-void InputManager::init(GLFWwindow* window) {
+void Input::init(GLFWwindow* window) {
     m_window = window;
     glfwSetWindowUserPointer(window, this);
 
@@ -30,13 +30,13 @@ void InputManager::init(GLFWwindow* window) {
     g_keyBindings["quit"] = GLFW_KEY_ESCAPE;
 }
 
-void InputManager::update(float dt) {
+void Input::update(float dt) {
     pollKeyboard();
     pollMouse();
     mapToControls(dt);
 }
 
-void InputManager::pollKeyboard() {
+void Input::pollKeyboard() {
     std::copy(std::begin(m_keys), std::end(m_keys), std::begin(m_prevKeys));
 
     for (int key = 0; key < 512; key++) {
@@ -48,7 +48,7 @@ void InputManager::pollKeyboard() {
     }
 }
 
-void InputManager::mapToControls(float dt) {
+void Input::mapToControls(float dt) {
     auto mapAxis = [&](const std::string& name) -> float {
         auto it = g_axisBindings.find(name);
         if (it == g_axisBindings.end()) return 0.0f;
@@ -73,15 +73,15 @@ void InputManager::mapToControls(float dt) {
     m_flight.brake = m_keys[g_keyBindings["brake"]];
 }
 
-bool InputManager::isKeyDown(int key) const {
+bool Input::isKeyDown(int key) const {
     return key < 512 && m_keys[key];
 }
 
-bool InputManager::isKeyPressed(int key) const {
+bool Input::isKeyPressed(int key) const {
     return key < 512 && m_keys[key] && !m_prevKeys[key];
 }
 
-void InputManager::pollMouse() {
+void Input::pollMouse() {
     double x, y;
     glfwGetCursorPos(m_window, &x, &y);
     m_mousePos = Vec2(static_cast<float>(x), static_cast<float>(y));
@@ -95,19 +95,19 @@ void InputManager::pollMouse() {
     }
 }
 
-bool InputManager::isMouseButtonDown(int button) const {
+bool Input::isMouseButtonDown(int button) const {
     return button < 8 && m_mouseButtons[button];
 }
 
-bool InputManager::isMouseButtonPressed(int button) const {
+bool Input::isMouseButtonPressed(int button) const {
     return button < 8 && m_mouseButtons[button] && !m_prevMouseButtons[button];
 }
 
-void InputManager::setCursorMode(int mode) {
+void Input::setCursorMode(int mode) {
     glfwSetInputMode(m_window, GLFW_CURSOR, mode);
 }
 
-void InputManager::centerCursor() {
+void Input::centerCursor() {
     int w, h;
     glfwGetWindowSize(m_window, &w, &h);
     glfwSetCursorPos(m_window, w / 2.0, h / 2.0);

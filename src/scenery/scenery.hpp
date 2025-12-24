@@ -6,7 +6,7 @@
 
 namespace nuage {
 
-class App;
+class AssetStore;
 class Shader;
 
 struct SceneryObject {
@@ -15,14 +15,14 @@ struct SceneryObject {
     Vec3 color{1, 1, 1};
 };
 
-class SceneryManager {
+class Scenery {
 public:
-    void init(App* app);
+    void init(AssetStore& assets);
     void loadConfig(const std::string& configPath);
     void render(const Mat4& viewProjection);
 
 private:
-    App* m_app = nullptr;
+    AssetStore* m_assets = nullptr;
     std::vector<SceneryObject> m_objects;
     Shader* m_shader = nullptr;
 };

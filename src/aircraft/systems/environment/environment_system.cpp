@@ -1,11 +1,11 @@
 #include "environment_system.hpp"
 #include "core/property_bus.hpp"
 #include "core/property_paths.hpp"
-#include "environment/atmosphere_manager.hpp"
+#include "environment/atmosphere.hpp"
 
 namespace nuage {
 
-EnvironmentSystem::EnvironmentSystem(AtmosphereManager& atmosphere)
+EnvironmentSystem::EnvironmentSystem(Atmosphere& atmosphere)
     : m_atmosphere(&atmosphere)
 {
 }

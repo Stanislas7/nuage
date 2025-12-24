@@ -20,7 +20,7 @@ struct FlightInput {
 
 class App;
 
-class InputManager {
+class Input {
 public:
     void init(GLFWwindow* window);
     void update(float dt);
