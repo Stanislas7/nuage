@@ -1,0 +1,56 @@
+{
+    "name": "Plane",
+    "physics": {
+        "mass": 1157.0,
+        "cruiseSpeed": 62.8,
+        "minAltitude": 5.0,
+        "maxClimbRate": 4.0,
+        "groundFriction": 0.02
+    },
+    "orientation": {
+        "pitchRate": 1.2,
+        "yawRate": 0.6,
+        "rollRate": 1.6,
+        "controlRefSpeed": 55.0,
+        "minControlScale": 0.2,
+        "maxControlScale": 1.2
+    },
+    "engineForce": {
+        "thrustScale": 1.0,
+        "propEfficiency": 0.82,
+        "minAirspeed": 10.0
+    },
+    "lift": {
+        "cl0": 0.2,
+        "clAlpha": 5.5,
+        "clMax": 1.5,
+        "clMin": -1.2,
+        "wingArea": 16.2
+    },
+    "drag": {
+        "cd0": 0.03,
+        "inducedDragFactor": 0.05,
+        "wingArea": 16.2
+    },
+    "engine": {
+        "maxThrust": 0.0,
+        "maxPowerKw": 134.0,
+        "idleN1": 12.0,
+        "maxN1": 100.0,
+        "spoolRate": 1.2,
+        "fuelFlowIdle": 0.001,
+        "fuelFlowMax": 0.007
+    },
+    "fuel": {
+        "capacity": 153.0,
+        "initial": 120.0
+    },
+    "model": {
+        "name": "plane_mesh",
+        "path": "assets/models/plane.obj",
+        "color": [0.8, 0.8, 0.8],
+        "scale": 10.0,
+        "rotation": [270.0, -90.0, 0.0],
+        "offset": [0.0, 0.0, 0.0]
+    }
+}

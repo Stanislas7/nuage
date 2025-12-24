@@ -18,8 +18,41 @@
 #include "aircraft/systems/fuel/fuel_system.hpp"
 #include "aircraft/systems/environment/environment_system.hpp"
 #include <iostream>
+#include <cmath>
 
 namespace nuage {
+
+namespace {
+    constexpr float kDegToRad = 3.1415926535f / 180.0f;
+
+    Vec3 parseVec3(const json& value, const Vec3& fallback) {
+        if (!value.is_array() || value.size() != 3) return fallback;
+        return Vec3(
+            value[0].get<float>(),
+            value[1].get<float>(),
+            value[2].get<float>()
+        );
+    }
+
+    Vec3 parseScale(const json& value, const Vec3& fallback) {
+        if (value.is_number()) {
+            float s = value.get<float>();
+            return Vec3(s, s, s);
+        }
+        return parseVec3(value, fallback);
+    }
+
+    Quat parseRotation(const json& value, const Quat& fallback) {
+        if (!value.is_array() || value.size() != 3) return fallback;
+        float rx = value[0].get<float>() * kDegToRad;
+        float ry = value[1].get<float>() * kDegToRad;
+        float rz = value[2].get<float>() * kDegToRad;
+        Quat qx = Quat::fromAxisAngle(Vec3(1, 0, 0), rx);
+        Quat qy = Quat::fromAxisAngle(Vec3(0, 1, 0), ry);
+        Quat qz = Quat::fromAxisAngle(Vec3(0, 0, 1), rz);
+        return (qz * qy * qx).normalized();
+    }
+}
 
 void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere) {
     auto jsonOpt = loadJsonConfig(configPath);
@@ -62,6 +95,15 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
             if (c.is_array() && c.size() == 3) {
                 m_color = Vec3(c[0], c[1], c[2]);
             }
+        }
+        if (mod.contains("scale")) {
+            m_modelScale = parseScale(mod["scale"], m_modelScale);
+        }
+        if (mod.contains("rotation")) {
+            m_modelRotation = parseRotation(mod["rotation"], m_modelRotation);
+        }
+        if (mod.contains("offset")) {
+            m_modelOffset = parseVec3(mod["offset"], m_modelOffset);
         }
     }
     
@@ -192,7 +234,11 @@ void Aircraft::Instance::update(float dt, const FlightInput& input) {
 void Aircraft::Instance::render(const Mat4& viewProjection) {
     if (!m_mesh || !m_shader) return;
 
-    Mat4 model = Mat4::translate(position()) * orientation().toMat4();
+    Mat4 model = Mat4::translate(position())
+        * orientation().toMat4()
+        * Mat4::translate(m_modelOffset)
+        * m_modelRotation.toMat4()
+        * Mat4::scale(m_modelScale.x, m_modelScale.y, m_modelScale.z);
     m_shader->use();
     m_shader->setMat4("uMVP", viewProjection * model);
     m_shader->setVec3("uColor", m_color);

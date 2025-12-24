@@ -10,6 +10,6 @@
         "farPlane": 5000
     },
     "simulation": {
-        "defaultAircraft": "assets/config/aircraft/cessna.json"
+        "defaultAircraft": "assets/config/aircraft/plane.json"
     }
 }

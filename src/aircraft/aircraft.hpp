@@ -65,6 +65,9 @@ public:
         Mesh* m_mesh = nullptr;
         Shader* m_shader = nullptr;
         Vec3 m_color = {1, 1, 1};
+        Vec3 m_modelScale = {1, 1, 1};
+        Quat m_modelRotation = Quat::identity();
+        Vec3 m_modelOffset = {0, 0, 0};
     };
 
     void init(AssetStore& assets, Atmosphere& atmosphere);
