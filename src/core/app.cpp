@@ -1,4 +1,4 @@
-#include "app/app.hpp"
+#include "core/app.hpp"
 #include "ui/anchor.hpp"
 #include "graphics/glad.h"
 #include "graphics/mesh_builder.hpp"

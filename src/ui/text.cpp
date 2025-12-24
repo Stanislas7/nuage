@@ -1,6 +1,6 @@
 #include "ui/text.hpp"
 #include "ui/font/font.hpp"
-#include "app/app.hpp"
+#include "core/app.hpp"
 #include <GLFW/glfw3.h>
 
 namespace nuage {

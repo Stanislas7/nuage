@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aircraft/property_bus.hpp"
+#include "core/property_bus.hpp"
 #include "aircraft/aircraft_component.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"

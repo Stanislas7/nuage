@@ -1,6 +1,6 @@
 #include "flight_dynamics.hpp"
-#include "aircraft/property_bus.hpp"
-#include "aircraft/property_paths.hpp"
+#include "core/property_bus.hpp"
+#include "core/property_paths.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
 #include <algorithm>

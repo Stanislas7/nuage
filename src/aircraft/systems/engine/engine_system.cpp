@@ -1,6 +1,6 @@
 #include "engine_system.hpp"
-#include "aircraft/property_bus.hpp"
-#include "aircraft/property_paths.hpp"
+#include "core/property_bus.hpp"
+#include "core/property_paths.hpp"
 #include <algorithm>
 #include <cmath>
 

@@ -1,4 +1,4 @@
-#include "managers/input/input_manager.hpp"
+#include "input/input_manager.hpp"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <unordered_map>

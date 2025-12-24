@@ -1,5 +1,5 @@
-#include "managers/aircraft/aircraft_manager.hpp"
-#include "app/app.hpp"
+#include "aircraft/aircraft_manager.hpp"
+#include "core/app.hpp"
 
 namespace nuage {
 

@@ -9,8 +9,9 @@ find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
 file(GLOB_RECURSE SOURCES
-    "src/app/*.cpp"
-    "src/managers/*.cpp"
+    "src/core/*.cpp"
+    "src/environment/*.cpp"
+    "src/input/*.cpp"
     "src/aircraft/*.cpp"
     "src/aircraft/systems/**/*.cpp"
     "src/graphics/*.cpp"
@@ -32,8 +33,9 @@ add_custom_command(TARGET nuage POST_BUILD
 
 target_include_directories(nuage PRIVATE
     ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/app
-    ${CMAKE_SOURCE_DIR}/src/managers
+    ${CMAKE_SOURCE_DIR}/src/core
+    ${CMAKE_SOURCE_DIR}/src/environment
+    ${CMAKE_SOURCE_DIR}/src/input
     ${CMAKE_SOURCE_DIR}/src/aircraft
     ${CMAKE_SOURCE_DIR}/src/aircraft/systems
     ${CMAKE_SOURCE_DIR}/src/graphics

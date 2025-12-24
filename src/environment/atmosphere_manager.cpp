@@ -1,4 +1,4 @@
-#include "managers/atmosphere/atmosphere_manager.hpp"
+#include "environment/atmosphere_manager.hpp"
 #include <cmath>
 
 namespace nuage {

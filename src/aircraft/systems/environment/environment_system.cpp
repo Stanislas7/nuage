@@ -1,7 +1,7 @@
 #include "environment_system.hpp"
-#include "aircraft/property_bus.hpp"
-#include "aircraft/property_paths.hpp"
-#include "managers/atmosphere/atmosphere_manager.hpp"
+#include "core/property_bus.hpp"
+#include "core/property_paths.hpp"
+#include "environment/atmosphere_manager.hpp"
 
 namespace nuage {
 

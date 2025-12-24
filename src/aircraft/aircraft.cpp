@@ -1,11 +1,11 @@
 #include "aircraft/aircraft.hpp"
-#include "aircraft/property_paths.hpp"
-#include "managers/input/input_manager.hpp"
+#include "core/property_paths.hpp"
+#include "input/input_manager.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/shader.hpp"
 #include "math/mat4.hpp"
 #include "utils/config_loader.hpp"
-#include "app/app.hpp" // Ensure App definition is available for assets()
+#include "core/app.hpp" // Ensure App definition is available for assets()
 
 #include "aircraft/systems/flight_dynamics/flight_dynamics.hpp"
 #include "aircraft/systems/engine/engine_system.hpp"

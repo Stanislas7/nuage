@@ -1,5 +1,5 @@
-#include "managers/scenery/scenery_manager.hpp"
-#include "app/app.hpp"
+#include "graphics/scenery_manager.hpp"
+#include "core/app.hpp"
 #include "utils/config_loader.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/shader.hpp"
