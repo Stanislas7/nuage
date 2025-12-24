@@ -6,6 +6,7 @@ namespace nuage {
 
 struct EngineConfig {
     float maxThrust = 50000.0f;      // Newtons
+    float maxPowerKw = 0.0f;         // kW (optional for prop-driven model)
     float idleN1 = 20.0f;            // % at idle
     float maxN1 = 100.0f;            // % at full throttle  
     float spoolRate = 0.3f;          // How fast N1 responds

@@ -6,6 +6,8 @@ namespace nuage {
 
 struct ThrustConfig {
     float thrustScale = 1.0f;
+    float propEfficiency = 0.8f;
+    float minAirspeed = 10.0f;
 };
 
 class ThrustForce : public AircraftComponent {

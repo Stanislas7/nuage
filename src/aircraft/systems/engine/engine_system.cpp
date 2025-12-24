@@ -16,6 +16,7 @@ void EngineSystem::init(PropertyBus* state) {
     
     m_state->set(Properties::Engine::N1, m_config.idleN1);
     m_state->set(Properties::Engine::THRUST, 0.0);
+    m_state->set(Properties::Engine::POWER, 0.0);
     m_state->set(Properties::Engine::RUNNING, 1.0);
 }
 
@@ -49,6 +50,12 @@ void EngineSystem::update(float dt) {
 
     m_state->set(Properties::Engine::N1, m_currentN1);
     m_state->set(Properties::Engine::THRUST, thrust);
+    if (m_config.maxPowerKw > 0.0f) {
+        double power = static_cast<double>(m_config.maxPowerKw) * 1000.0 * n1Ratio;
+        m_state->set(Properties::Engine::POWER, power);
+    } else {
+        m_state->set(Properties::Engine::POWER, 0.0);
+    }
     m_state->set(Properties::Engine::FUEL_FLOW, fuelFlow);
 }
 

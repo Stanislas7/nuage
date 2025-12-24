@@ -84,6 +84,7 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     if (json.contains("engine")) {
         const auto& eng = json["engine"];
         engConfig.maxThrust = eng.value("maxThrust", engConfig.maxThrust);
+        engConfig.maxPowerKw = eng.value("maxPowerKw", engConfig.maxPowerKw);
         engConfig.idleN1 = eng.value("idleN1", engConfig.idleN1);
         engConfig.maxN1 = eng.value("maxN1", engConfig.maxN1);
         engConfig.spoolRate = eng.value("spoolRate", engConfig.spoolRate);
@@ -108,6 +109,9 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         orientConfig.pitchRate = orient.value("pitchRate", orientConfig.pitchRate);
         orientConfig.yawRate = orient.value("yawRate", orientConfig.yawRate);
         orientConfig.rollRate = orient.value("rollRate", orientConfig.rollRate);
+        orientConfig.controlRefSpeed = orient.value("controlRefSpeed", orientConfig.controlRefSpeed);
+        orientConfig.minControlScale = orient.value("minControlScale", orientConfig.minControlScale);
+        orientConfig.maxControlScale = orient.value("maxControlScale", orientConfig.maxControlScale);
     }
     addSystem<OrientationSystem>(orientConfig);
 
@@ -126,13 +130,27 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     if (json.contains("engineForce")) {
         const auto& ef = json["engineForce"];
         thrustConfig.thrustScale = ef.value("thrustScale", thrustConfig.thrustScale);
+        thrustConfig.propEfficiency = ef.value("propEfficiency", thrustConfig.propEfficiency);
+        thrustConfig.minAirspeed = ef.value("minAirspeed", thrustConfig.minAirspeed);
     }
     addSystem<ThrustForce>(thrustConfig);
 
     LiftConfig liftConfig;
     if (json.contains("lift")) {
         const auto& lift = json["lift"];
-        liftConfig.liftCoefficient = lift.value("liftCoefficient", liftConfig.liftCoefficient);
+        if (lift.contains("liftCoefficient")) {
+            liftConfig.cl0 = lift.value("liftCoefficient", liftConfig.cl0);
+            liftConfig.clAlpha = 0.0f;
+            liftConfig.clMax = liftConfig.cl0;
+            liftConfig.clMin = liftConfig.cl0;
+            liftConfig.useLegacyConstant = true;
+        } else {
+            liftConfig.cl0 = lift.value("cl0", liftConfig.cl0);
+            liftConfig.clAlpha = lift.value("clAlpha", liftConfig.clAlpha);
+            liftConfig.clMax = lift.value("clMax", liftConfig.clMax);
+            liftConfig.clMin = lift.value("clMin", liftConfig.clMin);
+            liftConfig.useLegacyConstant = lift.value("useLegacyConstant", liftConfig.useLegacyConstant);
+        }
         liftConfig.wingArea = lift.value("wingArea", liftConfig.wingArea);
     }
     addSystem<LiftSystem>(liftConfig);
@@ -140,8 +158,16 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     DragConfig dragConfig;
     if (json.contains("drag")) {
         const auto& drag = json["drag"];
-        dragConfig.dragCoefficient = drag.value("dragCoefficient", dragConfig.dragCoefficient);
-        dragConfig.frontalArea = drag.value("frontalArea", dragConfig.frontalArea);
+        if (drag.contains("dragCoefficient")) {
+            dragConfig.dragCoefficient = drag.value("dragCoefficient", dragConfig.dragCoefficient);
+            dragConfig.frontalArea = drag.value("frontalArea", dragConfig.frontalArea);
+            dragConfig.useLegacyCoefficient = true;
+        } else {
+            dragConfig.cd0 = drag.value("cd0", dragConfig.cd0);
+            dragConfig.inducedDragFactor = drag.value("inducedDragFactor", dragConfig.inducedDragFactor);
+            dragConfig.wingArea = drag.value("wingArea", dragConfig.wingArea);
+            dragConfig.useLegacyCoefficient = drag.value("useLegacyCoefficient", dragConfig.useLegacyCoefficient);
+        }
     }
     addSystem<DragSystem>(dragConfig);
 

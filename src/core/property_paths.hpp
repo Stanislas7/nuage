@@ -60,6 +60,7 @@ namespace Engine {
     inline constexpr char N1[] = "engine/n1";
     inline constexpr char RUNNING[] = "engine/running";
     inline constexpr char FUEL_FLOW[] = "engine/fuel_flow";
+    inline constexpr char POWER[] = "engine/power";
 }
 
 namespace Fuel {
@@ -73,6 +74,10 @@ namespace Atmosphere {
     inline constexpr char TEMPERATURE[] = "atmosphere/temperature";
     inline constexpr char WIND_SPEED[] = "atmosphere/wind_speed";
     inline constexpr char WIND_HEADING[] = "atmosphere/wind_heading";
+    inline constexpr char WIND_PREFIX[] = "atmosphere/wind";
+    inline constexpr char WIND_X[] = "atmosphere/wind/x";
+    inline constexpr char WIND_Y[] = "atmosphere/wind/y";
+    inline constexpr char WIND_Z[] = "atmosphere/wind/z";
 }
 
 namespace Gear {
@@ -81,6 +86,12 @@ namespace Gear {
 
 namespace Flaps {
     inline constexpr char SETTING[] = "flaps/setting";
+}
+
+namespace Aero {
+    inline constexpr char AOA[] = "aero/aoa";
+    inline constexpr char SIDESLIP[] = "aero/sideslip";
+    inline constexpr char CL[] = "aero/cl";
 }
 
 } // namespace Properties

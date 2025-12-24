@@ -8,6 +8,9 @@ struct OrientationConfig {
     float pitchRate = 1.5f;
     float yawRate = 1.0f;
     float rollRate = 2.0f;
+    float controlRefSpeed = 55.0f;
+    float minControlScale = 0.25f;
+    float maxControlScale = 1.25f;
 };
 
 class OrientationSystem : public AircraftComponent {

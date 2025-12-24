@@ -13,7 +13,9 @@ public:
 protected:
     struct AerodynamicData {
         Vec3 velocity;
+        Vec3 airVelocity;
         float speed;
+        float airSpeed;
         float dynamicPressure;
         Vec3 airflowDir;
         float airDensity;
@@ -21,6 +23,11 @@ protected:
         Vec3 forward;
         Vec3 up;
         Vec3 right;
+        float aoa;
+        float sideslip;
+        float forwardSpeed;
+        float rightSpeed;
+        float upSpeed;
     };
 
     AerodynamicData computeAerodynamics(PropertyBus* state) const;
