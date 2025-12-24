@@ -23,55 +23,78 @@ The `PropertyBus` (`src/core/property_bus.hpp`) acts as a global "blackboard" or
 
 ---
 
-## Physics Engine
+## Physics Engine (Updated)
 
-The physics simulation is split into modular systems located in `src/aircraft/systems/physics/`. The current implementation results in a "floaty" arcade-like feel primarily because **rotational physics are approximated** rather than simulated with moments and inertia.
+The physics simulation is split into modular systems located in `src/aircraft/systems/physics/`. The previous implementation was "kinematic" for rotation, leading to a "floaty" feel. **The new implementation simulates full Rigid Body Dynamics including Rotational Physics.**
 
 ### The Physics Loop
 The main loop runs inside `Aircraft::fixedUpdate`. It triggers the `PhysicsIntegrator` and various force systems.
 
-1.  **Clear Forces:** The integrator resets all force accumulators to zero.
-2.  **Calculate Forces:** Each system (Gravity, Lift, Drag, Thrust) calculates its contribution and adds it to the total force vector on the bus.
-3.  **Integrate:** The integrator takes the total force, divides by mass to get acceleration, and updates velocity and position.
+1.  **Clear Forces & Torques:** The integrator resets all force and torque accumulators to zero.
+2.  **Calculate Forces & Moments:**
+    *   **Gravity:** $F = mg$ (Downwards).
+    *   **Lift:** $L = C_L  q  S$ (Perpendicular to airflow).
+    *   **Drag:** $D = C_D  q  S$ (Opposing airflow).
+    *   **Thrust:** $T$ (Forward).
+    *   **Control Moments:** Control surfaces generate **Torque** instead of direct rotation.
+3.  **Integrate Linear Motion:** $F = ma ightarrow v ightarrow p$.
+4.  **Integrate Rotational Motion:** $\tau = I\alpha \rightarrow \omega \rightarrow q$.
 
-### Why it "Floats" (The Problem)
-The primary reason the aircraft feels like it floats rather than flies is the **Orientation System** (`src/aircraft/systems/physics/orientation_system.cpp`).
+### Rotational Physics Implementation
 
-*   **Direct Rotation:** Instead of applying aerodynamic *torque* to the aircraft (which would accelerate angular velocity based on the moment of inertia), the system directly rotates the aircraft's orientation quaternion based on joystick input.
-*   **No Angular Momentum:** There is no simulation of angular inertia. When you stop input, the rotation stops instantly (or behaves like a kinematic object) rather than preserving angular momentum or being damped by air resistance.
-*   **Simple Integration:** The linear motion uses a basic Euler integrator, which is functional but simple.
+The "floaty" behavior was fixed by implementing **Angular Momentum** and **Aerodynamic Damping**. The aircraft now behaves like a real physical object with mass distribution (Inertia).
 
-### Detailed File Breakdown
+#### 1. Inertia Tensor
+Every aircraft has a defined Moment of Inertia vector $[I_{xx}, I_{yy}, I_{zz}]$ representing resistance to rotation around the Pitch, Yaw, and Roll axes.
+*   **Heavy Aircraft:** High inertia values (hard to start rotating, hard to stop).
+*   **Fighter Jets:** Low inertia values (snap maneuvers).
 
-#### 1. `src/aircraft/systems/physics/orientation_system.cpp` (The Culprit)
-*   **Role:** Updates the aircraft's rotation.
-*   **Behavior:** Reads `pitch`, `roll`, `yaw` inputs. It calculates a rotation delta based on input * `rate` * `dt` and applies it directly to the current orientation.
-*   **Issue:** It bypasses physics. Real planes rotate because air hitting deflected control surfaces creates a *moment* (torque). This file makes it behave like a zero-mass camera controller.
+Defined in `physics.md` config or `cessna.json`/`plane.json`.
 
-#### 2. `src/aircraft/systems/physics/physics_integrator.cpp`
-*   **Role:** The solver. It applies Newton's Second Law ($F=ma$).
-*   **Behavior:**
-    *   Sum of all forces / Mass = Acceleration.
-    *   Velocity += Acceleration * dt.
-    *   Position += Velocity * dt.
-    *   Handles basic ground collision (keeps `y > minAltitude`).
+#### 2. Torque Generation (`OrientationSystem`)
+Instead of directly modifying the orientation quaternion:
+1.  **Input Mapping:** Joystick inputs are converted into **Control Surface Torques**.
+    *   *Pitch Input* $\rightarrow$ Torque around X-axis.
+    *   *Yaw Input* $\rightarrow$ Torque around Y-axis.
+    *   *Roll Input* $\rightarrow$ Torque around Z-axis.
+    *   Formula: $\tau_{input} = \text{Input} \times \text{Rate} \times \text{TorqueMultiplier} \times \text{DynamicPressureScale}$
+2.  **Aerodynamic Damping:** To prevent the aircraft from spinning forever (like in space), we apply a counter-torque proportional to the current angular velocity.
+    *   Formula: $\tau_{damping} = - \omega \times \text{DampingFactor} \times \text{DynamicPressureScale}$
+3.  **Net Torque:** $\tau_{total} = \tau_{input} + \tau_{damping}$.
 
-#### 3. `src/aircraft/systems/physics/lift_system.cpp`
-*   **Role:** Generates lift.
-*   **Behavior:** Calculates Angle of Attack (AoA). Uses a linear lift coefficient model ($C_L = C_{L0} + C_{L	ext{	extalpha}} 	imes 	ext{	extalpha}$) clamped to min/max values.
-*   **Output:** Adds a force vector perpendicular to the airflow.
+#### 3. Rotational Integration (`PhysicsIntegrator`)
+The integrator updates the state using Euler integration for rotation:
+1.  **Angular Acceleration:** $\alpha = \tau_{total} / I$ (Component-wise division by Inertia).
+2.  **Angular Velocity:** $\omega_{new} = \omega_{old} + \alpha \cdot dt$.
+3.  **Orientation:** The orientation Quaternion $q$ is updated by the angular velocity vector $\omega$.
+    *   $q_{new} = q_{old} + 0.5 \cdot q_{old} \cdot \omega_{body} \cdot dt$.
+    *   The result is normalized to ensure it remains a valid rotation.
 
-#### 4. `src/aircraft/systems/physics/drag_system.cpp`
-*   **Role:** Generates air resistance.
-*   **Behavior:** Calculates Parasitic Drag (form drag) and Induced Drag (drag created by generating lift).
-*   **Output:** Adds a force vector opposing the airflow.
+### Tuning Parameters
+The flight feel is controlled via JSON configuration (`assets/config/aircraft/*.json`):
 
-#### 5. `src/aircraft/systems/physics/thrust_force.cpp`
-*   **Role:** Propels the aircraft.
-*   **Behavior:** Reads engine power/thrust. Calculates a forward force vector based on the aircraft's current orientation.
+*   `torqueMultiplier`: "Stiffness". How fast the plane accelerates towards the desired rotation rate. Higher = snappier.
+*   `dampingFactor`: "Resistance". How fast the plane stops rotating when you let go. Higher = no overshoot, stops instantly.
+*   `inertia`: The physical weight distribution.
+    *   `[2000, 3500, 4500]` -> Light Fighter (Zero).
+    *   `[1500000, ...]` -> Airliner.
 
-### Summary
-To fix the "floaty" feeling, the `OrientationSystem` needs to be rewritten to:
-1.  Calculate **Moments** (Torque) from control surfaces instead of direct rotation.
-2.  Maintain an **Angular Velocity** vector in the Property Bus.
-3.  Integrate Angular Velocity ($Torque / Inertia$) just like linear velocity.
+### Why this fixes "Floatiness"
+*   **Momentum:** If you roll hard and let go, the plane might coast a bit before stopping (depending on damping).
+*   **Weight:** You feel the "heaviness" because the torque has to overcome the inertia.
+*   **Speed Dependency:** Controls are scaled by airspeed. At low speeds (landing), controls feel "mushy" and less responsive because `controlScale` drops. At high speeds, they are firm.
+
+---
+
+### File Breakdown
+
+#### `src/aircraft/systems/physics/orientation_system.cpp`
+*   **Old:** Teleported rotation based on input.
+*   **New:** Calculates physical **Torque** based on inputs and applies **Damping**. Writes to `Properties::Physics::TORQUE_PREFIX`.
+
+#### `src/aircraft/systems/physics/physics_integrator.cpp`
+*   **Old:** Only linear $F=ma$.
+*   **New:** Handles both Linear ($F=ma$) and Rotational ($T=I\alpha$) integration. Maintains `Properties::Physics::ANGULAR_VELOCITY_PREFIX`.
+
+#### `src/utils/config_loader.hpp` & `src/aircraft/aircraft_instance.cpp`
+*   Updated to parse the new `inertia`, `torqueMultiplier`, and `dampingFactor` fields from JSON, allowing data-driven flight models.
