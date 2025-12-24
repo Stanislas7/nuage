@@ -4,7 +4,8 @@
         "mass": 1200.0,
         "cruiseSpeed": 50.0,
         "minAltitude": 5.0,
-        "maxClimbRate": 20.0
+        "maxClimbRate": 20.0,
+        "groundFriction": 0.02
     },
     "orientation": {
         "pitchRate": 1.5,
@@ -19,11 +20,11 @@
         "wingArea": 16.0
     },
     "drag": {
-        "dragCoefficient": 0.3,
+        "dragCoefficient": 0.05,
         "frontalArea": 6.0
     },
     "engine": {
-        "maxThrust": 3000.0,
+        "maxThrust": 5000.0,
         "idleN1": 10.0,
         "maxN1": 100.0,
         "spoolRate": 1.0,

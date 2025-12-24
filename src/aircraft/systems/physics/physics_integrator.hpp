@@ -7,6 +7,7 @@ namespace nuage {
 struct PhysicsConfig {
     float minAltitude = 5.0f;
     float maxClimbRate = 20.0f;
+    float groundFriction = 0.02f;
 };
 
 class PhysicsIntegrator : public AircraftComponent {

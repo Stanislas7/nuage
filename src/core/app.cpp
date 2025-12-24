@@ -127,7 +127,7 @@ void App::setupHUD() {
     m_altitudeText->pos(20, 20);
     m_altitudeText->colorR(1, 1, 1);
 
-    m_airspeedText = &m_ui.text("SPD: 0.0 m/s");
+    m_airspeedText = &m_ui.text("SPD: 0 kts");
     m_airspeedText->scaleVal(2.0f);
     m_airspeedText->pos(20, 70);
     m_airspeedText->colorR(1, 1, 1);
@@ -161,16 +161,18 @@ void App::updateHUD() {
         float heading = std::atan2(fwd.x, fwd.z) * 180.0f / 3.14159265f;
         if (heading < 0) heading += 360.0f;
 
+        float airspeedKnots = airspeed * 1.94384f;
+
         auto fmt = [](float val) {
             std::string s = std::to_string(val);
             return s.substr(0, s.find('.') + 2);
         };
 
         m_altitudeText->content("ALT: " + fmt(pos.y) + " m");
-        m_airspeedText->content("SPD: " + fmt(airspeed) + " m/s");
+        m_airspeedText->content("SPD: " + fmt(airspeedKnots) + " kts");
         m_headingText->content("HDG: " + std::to_string(static_cast<int>(heading)));
-        m_positionText->content("POS: " + std::to_string(static_cast<int>(pos.x)) + ", " + 
-                                std::to_string(static_cast<int>(pos.y)) + ", " + 
+        m_positionText->content("POS: " + std::to_string(static_cast<int>(pos.x)) + ", " +
+                                std::to_string(static_cast<int>(pos.y)) + ", " +
                                 std::to_string(static_cast<int>(pos.z)));
     }
     

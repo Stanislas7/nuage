@@ -76,6 +76,7 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         const auto& phys = json["physics"];
         physicsConfig.minAltitude = phys.value("minAltitude", physicsConfig.minAltitude);
         physicsConfig.maxClimbRate = phys.value("maxClimbRate", physicsConfig.maxClimbRate);
+        physicsConfig.groundFriction = phys.value("groundFriction", physicsConfig.groundFriction);
     }
     addSystem<PhysicsIntegrator>(physicsConfig);
 
