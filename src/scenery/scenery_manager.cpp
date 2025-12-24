@@ -1,4 +1,4 @@
-#include "graphics/scenery_manager.hpp"
+#include "scenery/scenery_manager.hpp"
 #include "core/app.hpp"
 #include "utils/config_loader.hpp"
 #include "graphics/mesh.hpp"

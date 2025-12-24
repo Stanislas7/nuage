@@ -12,6 +12,7 @@ file(GLOB_RECURSE SOURCES
     "src/core/*.cpp"
     "src/environment/*.cpp"
     "src/input/*.cpp"
+    "src/scenery/*.cpp"
     "src/aircraft/*.cpp"
     "src/aircraft/systems/**/*.cpp"
     "src/graphics/*.cpp"
@@ -19,7 +20,6 @@ file(GLOB_RECURSE SOURCES
     "src/math/*.cpp"
     "src/ui/*.cpp"
     "src/ui/font/*.cpp"
-    "src/world/*.cpp"
 )
 
 add_executable(nuage ${SOURCES})
@@ -36,13 +36,13 @@ target_include_directories(nuage PRIVATE
     ${CMAKE_SOURCE_DIR}/src/core
     ${CMAKE_SOURCE_DIR}/src/environment
     ${CMAKE_SOURCE_DIR}/src/input
+    ${CMAKE_SOURCE_DIR}/src/scenery
     ${CMAKE_SOURCE_DIR}/src/aircraft
     ${CMAKE_SOURCE_DIR}/src/aircraft/systems
     ${CMAKE_SOURCE_DIR}/src/graphics
     ${CMAKE_SOURCE_DIR}/src/math
     ${CMAKE_SOURCE_DIR}/src/ui
     ${CMAKE_SOURCE_DIR}/src/ui/font
-    ${CMAKE_SOURCE_DIR}/src/world
     ${CMAKE_SOURCE_DIR}/src/utils
 )
 

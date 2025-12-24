@@ -5,7 +5,7 @@
 #include "graphics/asset_store.hpp"
 #include "environment/atmosphere_manager.hpp"
 #include "graphics/camera_manager.hpp"
-#include "graphics/scenery_manager.hpp"
+#include "scenery/scenery_manager.hpp"
 #include "ui/ui_manager.hpp"
 
 struct GLFWwindow;
