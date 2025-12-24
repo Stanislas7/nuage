@@ -28,6 +28,23 @@ namespace Orientation {
 namespace Velocity {
     inline constexpr char AIRSPEED[] = "velocity/airspeed";
     inline constexpr char VERTICAL[] = "velocity/vertical";
+    inline constexpr char PREFIX[] = "velocity";
+    inline constexpr char X[] = "velocity/x";
+    inline constexpr char Y[] = "velocity/y";
+    inline constexpr char Z[] = "velocity/z";
+}
+
+namespace Physics {
+    inline constexpr char MASS[] = "physics/mass";
+    inline constexpr char FORCE_PREFIX[] = "physics/force";
+    inline constexpr char FORCE_X[] = "physics/force/x";
+    inline constexpr char FORCE_Y[] = "physics/force/y";
+    inline constexpr char FORCE_Z[] = "physics/force/z";
+    inline constexpr char ACCEL_PREFIX[] = "physics/acceleration";
+    inline constexpr char ACCEL_X[] = "physics/acceleration/x";
+    inline constexpr char ACCEL_Y[] = "physics/acceleration/y";
+    inline constexpr char ACCEL_Z[] = "physics/acceleration/z";
+    inline constexpr char AIR_SPEED[] = "physics/air_speed";
 }
 
 namespace Engine {

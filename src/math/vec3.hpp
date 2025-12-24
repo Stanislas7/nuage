@@ -11,6 +11,7 @@ struct Vec3 {
 
     Vec3 operator+(const Vec3& o) const { return Vec3(x + o.x, y + o.y, z + o.z); }
     Vec3 operator-(const Vec3& o) const { return Vec3(x - o.x, y - o.y, z - o.z); }
+    Vec3 operator-() const { return Vec3(-x, -y, -z); }
     Vec3 operator*(float s) const { return Vec3(x * s, y * s, z * s); }
 
     Vec3 normalize() const {
@@ -25,6 +26,8 @@ struct Vec3 {
     }
 
     float dot(const Vec3& o) const { return x * o.x + y * o.y + z * o.z; }
+
+    float length() const { return std::sqrt(x * x + y * y + z * z); }
 };
 
 }

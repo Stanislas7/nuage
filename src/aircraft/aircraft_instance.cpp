@@ -8,7 +8,12 @@
 #include "math/mat4.hpp"
 #include "utils/config_loader.hpp"
 
-#include "aircraft/systems/flight_dynamics/flight_dynamics.hpp"
+#include "aircraft/systems/physics/physics_integrator.hpp"
+#include "aircraft/systems/physics/orientation_system.hpp"
+#include "aircraft/systems/physics/gravity_system.hpp"
+#include "aircraft/systems/physics/engine_force_system.hpp"
+#include "aircraft/systems/physics/lift_system.hpp"
+#include "aircraft/systems/physics/drag_system.hpp"
 #include "aircraft/systems/engine/engine_system.hpp"
 #include "aircraft/systems/fuel/fuel_system.hpp"
 #include "aircraft/systems/environment/environment_system.hpp"
@@ -19,14 +24,19 @@ namespace nuage {
 void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere) {
     auto jsonOpt = loadJsonConfig(configPath);
     if (!jsonOpt) {
-        // Fallback
-        addSystem<FlightDynamics>();
+        addSystem<PhysicsIntegrator>();
         addSystem<EngineSystem>();
         addSystem<FuelSystem>();
         addSystem<EnvironmentSystem>(atmosphere);
-        
+        addSystem<OrientationSystem>();
+        addSystem<GravitySystem>();
+        addSystem<EngineForceSystem>();
+        addSystem<LiftSystem>();
+        addSystem<DragSystem>();
+
+        m_state.set(Properties::Physics::MASS, 1000.0);
         m_state.setVec3(Properties::Position::PREFIX, 0, 100, 0);
-        m_state.set(Properties::Velocity::AIRSPEED, 50.0);
+        m_state.setVec3(Properties::Velocity::PREFIX, 0, 0, 50);
         m_state.setQuat(Properties::Orientation::PREFIX, Quat::identity());
         return;
     }
@@ -61,25 +71,14 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     
     m_shader = assets.getShader("basic");
 
-    // Flight Dynamics
-    FlightDynamicsConfig fdConfig;
-    if (json.contains("flightDynamics")) {
-        const auto& fd = json["flightDynamics"];
-        fdConfig.minSpeed = fd.value("minSpeed", fdConfig.minSpeed);
-        fdConfig.maxSpeed = fd.value("maxSpeed", fdConfig.maxSpeed);
-        fdConfig.cruiseSpeed = fd.value("cruiseSpeed", fdConfig.cruiseSpeed);
-        fdConfig.pitchRate = fd.value("pitchRate", fdConfig.pitchRate);
-        fdConfig.yawRate = fd.value("yawRate", fdConfig.yawRate);
-        fdConfig.rollRate = fd.value("rollRate", fdConfig.rollRate);
-        fdConfig.maxPitch = fd.value("maxPitch", fdConfig.maxPitch);
-        fdConfig.minAltitude = fd.value("minAltitude", fdConfig.minAltitude);
-        fdConfig.throttleResponse = fd.value("throttleResponse", fdConfig.throttleResponse);
-        fdConfig.liftCoefficient = fd.value("liftCoefficient", fdConfig.liftCoefficient);
-        fdConfig.wingArea = fd.value("wingArea", fdConfig.wingArea);
+    PhysicsConfig physicsConfig;
+    if (json.contains("physics")) {
+        const auto& phys = json["physics"];
+        physicsConfig.minAltitude = phys.value("minAltitude", physicsConfig.minAltitude);
+        physicsConfig.maxClimbRate = phys.value("maxClimbRate", physicsConfig.maxClimbRate);
     }
-    addSystem<FlightDynamics>(fdConfig);
+    addSystem<PhysicsIntegrator>(physicsConfig);
 
-    // Engine
     EngineConfig engConfig;
     if (json.contains("engine")) {
         const auto& eng = json["engine"];
@@ -92,7 +91,6 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     }
     addSystem<EngineSystem>(engConfig);
 
-    // Fuel
     FuelConfig fuelConfig;
     if (json.contains("fuel")) {
         const auto& f = json["fuel"];
@@ -101,12 +99,60 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     }
     addSystem<FuelSystem>(fuelConfig);
 
-    // Environment
     addSystem<EnvironmentSystem>(atmosphere);
 
+    OrientationConfig orientConfig;
+    if (json.contains("orientation")) {
+        const auto& orient = json["orientation"];
+        orientConfig.pitchRate = orient.value("pitchRate", orientConfig.pitchRate);
+        orientConfig.yawRate = orient.value("yawRate", orientConfig.yawRate);
+        orientConfig.rollRate = orient.value("rollRate", orientConfig.rollRate);
+    }
+    addSystem<OrientationSystem>(orientConfig);
+
+    float mass = 1000.0f;
+    float cruiseSpeed = 50.0f;
+
+    if (json.contains("physics")) {
+        const auto& phys = json["physics"];
+        mass = phys.value("mass", mass);
+        cruiseSpeed = phys.value("cruiseSpeed", cruiseSpeed);
+    }
+
+    GravityConfig gravityConfig;
+    if (json.contains("gravity")) {
+        const auto& grav = json["gravity"];
+        gravityConfig.gravity = grav.value("gravity", gravityConfig.gravity);
+    }
+    addSystem<GravitySystem>(gravityConfig);
+
+    EngineForceConfig engineForceConfig;
+    if (json.contains("engineForce")) {
+        const auto& ef = json["engineForce"];
+        engineForceConfig.thrustScale = ef.value("thrustScale", engineForceConfig.thrustScale);
+    }
+    addSystem<EngineForceSystem>(engineForceConfig);
+
+    LiftConfig liftConfig;
+    if (json.contains("lift")) {
+        const auto& lift = json["lift"];
+        liftConfig.liftCoefficient = lift.value("liftCoefficient", liftConfig.liftCoefficient);
+        liftConfig.wingArea = lift.value("wingArea", liftConfig.wingArea);
+    }
+    addSystem<LiftSystem>(liftConfig);
+
+    DragConfig dragConfig;
+    if (json.contains("drag")) {
+        const auto& drag = json["drag"];
+        dragConfig.dragCoefficient = drag.value("dragCoefficient", dragConfig.dragCoefficient);
+        dragConfig.frontalArea = drag.value("frontalArea", dragConfig.frontalArea);
+    }
+    addSystem<DragSystem>(dragConfig);
+
     // Initial State
+    m_state.set(Properties::Physics::MASS, static_cast<double>(mass));
     m_state.setVec3(Properties::Position::PREFIX, 0, 100, 0);
-    m_state.set(Properties::Velocity::AIRSPEED, fdConfig.cruiseSpeed);
+    m_state.setVec3(Properties::Velocity::PREFIX, 0, 0, cruiseSpeed);
     m_state.setQuat(Properties::Orientation::PREFIX, Quat::identity());
 }
 
@@ -142,7 +188,7 @@ Quat Aircraft::Instance::orientation() const {
 }
 
 float Aircraft::Instance::airspeed() const {
-    return static_cast<float>(m_state.get(Properties::Velocity::AIRSPEED));
+    return static_cast<float>(m_state.get(Properties::Physics::AIR_SPEED));
 }
 
 Vec3 Aircraft::Instance::forward() const {

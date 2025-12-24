@@ -22,7 +22,8 @@ The **PropertyBus** (`core/property_bus.hpp:10`) is the central data repository 
 input/...           # Control inputs (pitch, roll, yaw, throttle)
 position/...        # Aircraft position (x, y, z)
 orientation/...     # Aircraft orientation (w, x, y, z) as quaternion
-velocity/...        # Speed data (airspeed, vertical)
+velocity/...        # Velocity vector (x, y, z)
+physics/...         # Physics state (mass, forces, acceleration, air_speed)
 engine/...          # Engine state (thrust, n1, running, fuel_flow)
 fuel/...            # Fuel quantity and capacity
 atmosphere/...      # Environmental data (density, pressure, temperature, wind)
@@ -63,32 +64,91 @@ Each frame, `Aircraft::Instance::update` (`aircraft/aircraft_instance.cpp:113`):
 
 ## Aircraft Systems
 
-### 1. FlightDynamics (`aircraft/systems/flight_dynamics/`)
+### 1. PhysicsIntegrator (`aircraft/systems/physics/`)
 
-**Purpose**: Calculates aircraft motion based on inputs
+**Purpose**: Central force accumulation and integration for linear motion
 
-**Key Behaviors**:
-- **Throttle control** (`flight_dynamics.cpp:27`): Smoothly interpolates airspeed based on throttle input
-- **Orientation update** (`flight_dynamics.cpp:38`):
-  - Reads pitch/yaw/roll inputs
-  - Creates local rotations based on current orientation axes
-  - Combines: `yawRot * pitchRot * rollRot * orientation`
-  - Normalizes to prevent drift
-- **Position update** (`flight_dynamics.cpp:61`):
-  - Calculates lift based on speed squared (`speedRatio * speedRatio`)
-  - Computes net vertical acceleration (lift minus gravity)
-  - Separates horizontal/vertical motion
-  - Applies horizontal movement along forward vector
-  - Applies vertical climb rate based on pitch and lift
+**Two-Phase Operation**:
+- **Phase 0**: Clears all accumulated forces (`physics/force` set to zero)
+- **Phase 1**: Integrates forces → acceleration → velocity → position
 
-**Physics Model**:
-- Lift factor = `(speed / cruiseSpeed)²`, clamped to 1.5
-- Net vertical accel = `(liftFactor - 1.0) * gravity`
-- Climb rate = `speed * sin(pitch) + netVerticalAccel * 0.5`
+**Integration** (`physics_integrator.cpp:49`):
+```cpp
+acceleration = force / mass
+velocity += acceleration * dt
+position += velocity * dt
+air_speed = |velocity|
+```
+
+**Constraints**: Enforces minimum altitude and clamps vertical velocity at ground
 
 ---
 
-### 2. EngineSystem (`aircraft/systems/engine/`)
+### 2. GravitySystem (`aircraft/systems/gravity/`)
+
+**Purpose**: Applies gravitational force in world frame
+
+**Behavior** (`gravity_system.cpp:19`):
+```cpp
+force_y -= mass * gravity  // Always points down in world space
+```
+
+---
+
+### 3. EngineForceSystem (`aircraft/systems/engine_force/`)
+
+**Purpose**: Converts engine thrust to forward-directed force in local frame
+
+**Behavior** (`engine_force_system.cpp:21`):
+- Reads `engine/thrust` from EngineSystem
+- Rotates forward vector (0,0,1) by aircraft orientation
+- Adds thrust force to `physics/force`
+
+---
+
+### 4. LiftSystem (`aircraft/systems/lift/`)
+
+**Purpose**: Calculates aerodynamic lift force
+
+**Behavior** (`lift_system.cpp:23`):
+```cpp
+dynamic_pressure = 0.5 * density * speed²
+lift_mag = liftCoefficient * dynamic_pressure * wingArea
+lift_dir = perpendicular to airflow, pointing "up" relative to aircraft
+```
+
+**Lift Direction**: Computed perpendicular to horizontal velocity component, rotated to oppose gravity
+
+---
+
+### 5. DragSystem (`aircraft/systems/drag/`)
+
+**Purpose**: Calculates aerodynamic drag force opposing motion
+
+**Behavior** (`drag_system.cpp:22`):
+```cpp
+dynamic_pressure = 0.5 * density * speed²
+drag_mag = dragCoefficient * dynamic_pressure * frontalArea
+drag_dir = -normalized(velocity)
+```
+
+---
+
+### 6. OrientationSystem (`aircraft/systems/orientation/`)
+
+**Purpose**: Handles pilot pitch/yaw/roll control
+
+**Behavior** (`orientation_system.cpp:24`):
+- Reads pitch/yaw/roll inputs from `input/...`
+- Creates local-axis rotations based on current orientation
+- Combines: `yawRot * pitchRot * rollRot * orientation`
+- Normalizes to prevent drift
+
+**Note**: Orientation is "pilot authority" in Phase 1, not physics-driven
+
+---
+
+### 7. EngineSystem (`aircraft/systems/engine/`)
 
 **Purpose**: Simulates turbine engine behavior
 
@@ -281,7 +341,12 @@ Updated each frame from aircraft PropertyBus state.
 ### Aircraft Configuration (`assets/config/aircraft/cessna.json`)
 
 JSON files define:
-- **flightDynamics**: Speed limits, rotation rates, aerodynamic coefficients
+- **physics**: Mass, cruise speed, constraints (minAltitude, maxClimbRate)
+- **orientation**: Pitch/yaw/roll rates
+- **gravity**: Gravitational acceleration
+- **engineForce**: Thrust scaling factor
+- **lift**: Lift coefficient, wing area
+- **drag**: Drag coefficient, frontal area
 - **engine**: Thrust curve, N1 range, spool rate, fuel consumption
 - **fuel**: Capacity and initial quantity
 - **model**: Mesh file and color
@@ -296,7 +361,17 @@ This allows creating multiple aircraft types without code changes.
 ```
 main() -> App.init() -> Aircraft.spawnPlayer(configPath)
     -> Aircraft::Instance.init()
-        -> Add systems (FlightDynamics, Engine, Fuel, Environment)
+        -> Add systems in order:
+            1. PhysicsIntegrator (phase 0: clears forces)
+            2. EngineSystem
+            3. FuelSystem
+            4. EnvironmentSystem
+            5. OrientationSystem
+            6. GravitySystem
+            7. EngineForceSystem
+            8. LiftSystem
+            9. DragSystem
+            10. PhysicsIntegrator (phase 1: integrates)
         -> Set initial property values from JSON
 ```
 
@@ -309,11 +384,21 @@ App.run():
     updatePhysics() [fixed timestep]:
         Aircraft::Instance.update(FlightInput)
             -> Write input properties to PropertyBus
-            -> Call system.update(dt) for each:
-                1. FlightDynamics: reads inputs, writes position/orientation
+            -> Call system.update(dt) for each in order:
+                1. PhysicsIntegrator (phase 0): clears physics/force
                 2. EngineSystem: reads input/throttle, writes thrust/n1/fuel
                 3. FuelSystem: reads fuel_flow, updates fuel quantity
                 4. EnvironmentSystem: reads altitude, writes air density
+                5. OrientationSystem: reads inputs, updates orientation
+                6. GravitySystem: adds downward force to physics/force
+                7. EngineForceSystem: converts thrust to forward force
+                8. LiftSystem: calculates and adds lift force
+                9. DragSystem: calculates and adds drag force
+                10. PhysicsIntegrator (phase 1):
+                    - acceleration = force / mass
+                    - velocity += acceleration * dt
+                    - position += velocity * dt
+                    - air_speed = |velocity|
 
     Camera.update() -> reads position/orientation from PropertyBus
     updateHUD() -> reads properties, updates text overlay
@@ -328,17 +413,31 @@ App.run():
 - **Modularity**: Adding new systems only requires implementing `AircraftComponent`
 - **Data-driven**: JSON configs define behavior without recompilation
 - **Testing**: Systems can be tested in isolation with mock PropertyBuses
+- **Force Accumulation**: Multiple systems can contribute to the same force property
+
+### Why Force-Based Physics?
+- **Extensibility**: Add new forces by creating new systems (ground effect, stall, AoA, etc.)
+- **Configurable**: Aerodynamic coefficients adjustable via JSON
+- **Debuggable**: All forces visible in property bus for analysis
+- **Realistic**: Proper energy conservation, speed-altitude tradeoffs
 
 ### Why Fixed Timestep Physics?
 - **Determinism**: Same inputs always produce same outputs
 - **Stability**: Small deltas prevent numerical instability in integrators
 - **Frame rate independence**: Physics consistent at 30fps or 144fps
 
+### Why Orientation as Pilot Authority?
+- **Simplification**: Avoids complex angular physics (inertia tensors, gyroscopic effects)
+- **Focus**: Linear physics provides realistic flight feel without stability issues
+- **Phase 1**: Orientation controlled directly, physics controls translation
+- **Future**: Can swap to full angular physics without touching force systems
+
 ### Why Component-Based Aircraft?
 - **Flexibility**: Different aircraft can have different system combinations
 - **Configurable**: System parameters loaded from JSON
 - **Maintainable**: Each system is self-contained with clear responsibility
+- **Ordering**: System update order explicitly controlled for force accumulation
 
 ---
 
-This architecture enables Nuage to simulate realistic flight behavior while remaining easily extensible for new aircraft types, systems, and features.
+This architecture enables Nuage to simulate realistic flight behavior through a modular, force-based physics system. The separation of force computation from integration makes it easy to add new aerodynamic effects over time, while the Property Bus provides loose coupling and debuggability.

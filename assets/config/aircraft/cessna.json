@@ -1,17 +1,29 @@
 {
     "name": "Cessna 172",
-    "flightDynamics": {
-        "minSpeed": 20.0,
-        "maxSpeed": 80.0,
+    "physics": {
+        "mass": 1200.0,
         "cruiseSpeed": 50.0,
+        "minAltitude": 5.0,
+        "maxClimbRate": 20.0
+    },
+    "orientation": {
         "pitchRate": 1.5,
         "yawRate": 1.0,
-        "rollRate": 2.0,
-        "maxPitch": 1.2,
-        "minAltitude": 5.0,
-        "throttleResponse": 0.5,
-        "liftCoefficient": 0.004,
+        "rollRate": 2.0
+    },
+    "gravity": {
+        "gravity": 9.81
+    },
+    "engineForce": {
+        "thrustScale": 1.0
+    },
+    "lift": {
+        "liftCoefficient": 0.7,
         "wingArea": 16.0
+    },
+    "drag": {
+        "dragCoefficient": 0.3,
+        "frontalArea": 6.0
     },
     "engine": {
         "maxThrust": 3000.0,
@@ -21,14 +33,13 @@
         "fuelFlowIdle": 0.002,
         "fuelFlowMax": 0.02
     },
-        "fuel": {
-            "capacity": 150.0,
-            "initial": 120.0
-        },
-            "model": {
-                "name": "cessna_mesh",
-                "path": "assets/models/cessna.obj",
-                "color": [0.2, 0.2, 0.2]
-            }
-        }
-        
+    "fuel": {
+        "capacity": 150.0,
+        "initial": 120.0
+    },
+    "model": {
+        "name": "cessna_mesh",
+        "path": "assets/models/cessna.obj",
+        "color": [0.2, 0.2, 0.2]
+    }
+}
