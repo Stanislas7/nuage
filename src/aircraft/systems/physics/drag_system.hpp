@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aircraft/aircraft_component.hpp"
+#include "aircraft/physics/forces/aerodynamic_force_base.hpp"
 
 namespace nuage {
 
@@ -9,7 +10,7 @@ struct DragConfig {
     float frontalArea = 4.0f;
 };
 
-class DragSystem : public AircraftComponent {
+class DragSystem : public AircraftComponent, private AerodynamicForceBase {
 public:
     explicit DragSystem(const DragConfig& config = {});
 

@@ -4,21 +4,21 @@
 
 namespace nuage {
 
-struct EngineForceConfig {
+struct ThrustConfig {
     float thrustScale = 1.0f;
 };
 
-class EngineForceSystem : public AircraftComponent {
+class ThrustForce : public AircraftComponent {
 public:
-    explicit EngineForceSystem(const EngineForceConfig& config = {});
+    explicit ThrustForce(const ThrustConfig& config = {});
 
-    const char* name() const override { return "EngineForceSystem"; }
+    const char* name() const override { return "ThrustForce"; }
     void init(PropertyBus* state) override;
     void update(float dt) override;
 
 private:
     PropertyBus* m_state = nullptr;
-    EngineForceConfig m_config;
+    ThrustConfig m_config;
 };
 
 }

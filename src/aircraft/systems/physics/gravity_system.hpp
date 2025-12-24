@@ -4,13 +4,9 @@
 
 namespace nuage {
 
-struct GravityConfig {
-    float gravity = 9.81f;
-};
-
 class GravitySystem : public AircraftComponent {
 public:
-    explicit GravitySystem(const GravityConfig& config = {});
+    GravitySystem() = default;
 
     const char* name() const override { return "GravitySystem"; }
     void init(PropertyBus* state) override;
@@ -18,7 +14,6 @@ public:
 
 private:
     PropertyBus* m_state = nullptr;
-    GravityConfig m_config;
 };
 
 }

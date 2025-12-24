@@ -47,6 +47,14 @@ namespace Physics {
     inline constexpr char AIR_SPEED[] = "physics/air_speed";
 }
 
+namespace Forces {
+    inline constexpr char TOTAL_PREFIX[] = "forces/total";
+    inline constexpr char GRAVITY_PREFIX[] = "forces/gravity";
+    inline constexpr char LIFT_PREFIX[] = "forces/lift";
+    inline constexpr char DRAG_PREFIX[] = "forces/drag";
+    inline constexpr char THRUST_PREFIX[] = "forces/thrust";
+}
+
 namespace Engine {
     inline constexpr char THRUST[] = "engine/thrust";
     inline constexpr char N1[] = "engine/n1";

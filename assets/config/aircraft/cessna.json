@@ -11,9 +11,6 @@
         "yawRate": 1.0,
         "rollRate": 2.0
     },
-    "gravity": {
-        "gravity": 9.81
-    },
     "engineForce": {
         "thrustScale": 1.0
     },

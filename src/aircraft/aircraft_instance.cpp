@@ -11,7 +11,7 @@
 #include "aircraft/systems/physics/physics_integrator.hpp"
 #include "aircraft/systems/physics/orientation_system.hpp"
 #include "aircraft/systems/physics/gravity_system.hpp"
-#include "aircraft/systems/physics/engine_force_system.hpp"
+#include "aircraft/systems/physics/thrust_force.hpp"
 #include "aircraft/systems/physics/lift_system.hpp"
 #include "aircraft/systems/physics/drag_system.hpp"
 #include "aircraft/systems/engine/engine_system.hpp"
@@ -30,7 +30,7 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         addSystem<EnvironmentSystem>(atmosphere);
         addSystem<OrientationSystem>();
         addSystem<GravitySystem>();
-        addSystem<EngineForceSystem>();
+        addSystem<ThrustForce>();
         addSystem<LiftSystem>();
         addSystem<DragSystem>();
 
@@ -68,7 +68,7 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     if (!m_mesh) {
         m_mesh = assets.getMesh("aircraft");
     }
-    
+
     m_shader = assets.getShader("basic");
 
     PhysicsConfig physicsConfig;
@@ -119,19 +119,14 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         cruiseSpeed = phys.value("cruiseSpeed", cruiseSpeed);
     }
 
-    GravityConfig gravityConfig;
-    if (json.contains("gravity")) {
-        const auto& grav = json["gravity"];
-        gravityConfig.gravity = grav.value("gravity", gravityConfig.gravity);
-    }
-    addSystem<GravitySystem>(gravityConfig);
+    addSystem<GravitySystem>();
 
-    EngineForceConfig engineForceConfig;
+    ThrustConfig thrustConfig;
     if (json.contains("engineForce")) {
         const auto& ef = json["engineForce"];
-        engineForceConfig.thrustScale = ef.value("thrustScale", engineForceConfig.thrustScale);
+        thrustConfig.thrustScale = ef.value("thrustScale", thrustConfig.thrustScale);
     }
-    addSystem<EngineForceSystem>(engineForceConfig);
+    addSystem<ThrustForce>(thrustConfig);
 
     LiftConfig liftConfig;
     if (json.contains("lift")) {

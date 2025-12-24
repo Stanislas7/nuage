@@ -1,4 +1,5 @@
 #include "drag_system.hpp"
+#include "aircraft/physics/forces/aerodynamic_force_base.hpp"
 #include "core/property_bus.hpp"
 #include "core/property_paths.hpp"
 
@@ -14,22 +15,22 @@ void DragSystem::init(PropertyBus* state) {
 }
 
 void DragSystem::update(float dt) {
-    Vec3 velocity = m_state->getVec3(Properties::Velocity::PREFIX);
-    double density = m_state->get(Properties::Atmosphere::DENSITY, 1.225);
+    AerodynamicForceBase::AerodynamicData data = computeAerodynamics(m_state);
 
-    float speed = velocity.length();
-    if (speed < 0.01f) {
+    if (data.speed < 0.01f) {
         return;
     }
 
-    Vec3 dragDir = -velocity.normalize();
+    Vec3 dragDir = -data.airflowDir;
 
-    float dynamicPressure = 0.5f * static_cast<float>(density) * speed * speed;
-    float dragMagnitude = m_config.dragCoefficient * dynamicPressure * m_config.frontalArea;
+    float dragMagnitude = m_config.dragCoefficient * data.dynamicPressure * m_config.frontalArea;
+    Vec3 dragVec = dragDir * dragMagnitude;
 
     Vec3 currentForce = m_state->getVec3(Properties::Physics::FORCE_PREFIX);
-    currentForce = currentForce + dragDir * dragMagnitude;
+    currentForce = currentForce + dragVec;
     m_state->setVec3(Properties::Physics::FORCE_PREFIX, currentForce);
+
+    m_state->setVec3(Properties::Forces::DRAG_PREFIX, dragVec);
 }
 
 }

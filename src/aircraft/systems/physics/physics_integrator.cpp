@@ -25,6 +25,11 @@ void PhysicsIntegrator::update(float dt) {
 
 void PhysicsIntegrator::clearForces() {
     m_state->setVec3(Properties::Physics::FORCE_PREFIX, 0.0f, 0.0f, 0.0f);
+    m_state->setVec3(Properties::Forces::TOTAL_PREFIX, 0.0f, 0.0f, 0.0f);
+    m_state->setVec3(Properties::Forces::GRAVITY_PREFIX, 0.0f, 0.0f, 0.0f);
+    m_state->setVec3(Properties::Forces::LIFT_PREFIX, 0.0f, 0.0f, 0.0f);
+    m_state->setVec3(Properties::Forces::DRAG_PREFIX, 0.0f, 0.0f, 0.0f);
+    m_state->setVec3(Properties::Forces::THRUST_PREFIX, 0.0f, 0.0f, 0.0f);
 }
 
 void PhysicsIntegrator::integrate(float dt) {
