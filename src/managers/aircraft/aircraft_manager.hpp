@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aircraft/Aircraft.hpp"
+#include "aircraft/aircraft.hpp"
 #include <vector>
 #include <memory>
 #include <string>

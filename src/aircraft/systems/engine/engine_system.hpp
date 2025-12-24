@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aircraft/IAircraftSystem.hpp"
+#include "aircraft/aircraft_component.hpp"
 
 namespace nuage {
 
@@ -13,17 +13,16 @@ struct EngineConfig {
     float fuelFlowMax = 1.5f;        // kg/s at max thrust
 };
 
-class EngineSystem : public IAircraftSystem {
+class EngineSystem : public AircraftComponent {
 public:
     explicit EngineSystem(const EngineConfig& config = {});
 
     const char* name() const override { return "Engine"; }
-    void init(PropertyBus* state, App* app) override;
+    void init(PropertyBus* state) override;
     void update(float dt) override;
 
 private:
     PropertyBus* m_state = nullptr;
-    App* m_app = nullptr;
     EngineConfig m_config;
     
     double m_currentN1 = 20.0;

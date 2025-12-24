@@ -1,7 +1,7 @@
 #pragma once
 
 #include "aircraft/property_bus.hpp"
-#include "aircraft/IAircraftSystem.hpp"
+#include "aircraft/aircraft_component.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
 #include <vector>
@@ -40,7 +40,7 @@ public:
     T* addSystem(Args&&... args) {
         auto system = std::make_unique<T>(std::forward<Args>(args)...);
         T* ptr = system.get();
-        system->init(&m_state, m_app);
+        system->init(&m_state);
         m_systems.push_back(std::move(system));
         return ptr;
     }
@@ -56,7 +56,7 @@ public:
 
 private:
     PropertyBus m_state;
-    std::vector<std::unique_ptr<IAircraftSystem>> m_systems;
+    std::vector<std::unique_ptr<AircraftComponent>> m_systems;
     App* m_app = nullptr;
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;

@@ -1,5 +1,5 @@
-#include "app/App.hpp"
-#include "utils/ConfigLoader.hpp"
+#include "app/app.hpp"
+#include "utils/config_loader.hpp"
 #include <iostream>
 #include <filesystem>
 #include <string>

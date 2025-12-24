@@ -1,6 +1,6 @@
-#include "FlightDynamics.hpp"
+#include "flight_dynamics.hpp"
 #include "aircraft/property_bus.hpp"
-#include "aircraft/PropertyPaths.hpp"
+#include "aircraft/property_paths.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
 #include <algorithm>
@@ -13,9 +13,8 @@ FlightDynamics::FlightDynamics(const FlightDynamicsConfig& config)
 {
 }
 
-void FlightDynamics::init(PropertyBus* state, App* app) {
+void FlightDynamics::init(PropertyBus* state) {
     m_state = state;
-    m_app = app;
 }
 
 void FlightDynamics::update(float dt) {

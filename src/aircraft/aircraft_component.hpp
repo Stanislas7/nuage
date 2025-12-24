@@ -5,11 +5,11 @@ namespace nuage {
 class PropertyBus;
 class App;
 
-class IAircraftSystem {
+class AircraftComponent {
 public:
-    virtual ~IAircraftSystem() = default;
+    virtual ~AircraftComponent() = default;
     virtual const char* name() const = 0;
-    virtual void init(PropertyBus* state, App* app) = 0;
+    virtual void init(PropertyBus* state) = 0;
     virtual void update(float dt) = 0;
 };
 

@@ -1,6 +1,6 @@
-#include "EngineSystem.hpp"
+#include "engine_system.hpp"
 #include "aircraft/property_bus.hpp"
-#include "aircraft/PropertyPaths.hpp"
+#include "aircraft/property_paths.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -11,9 +11,8 @@ EngineSystem::EngineSystem(const EngineConfig& config)
 {
 }
 
-void EngineSystem::init(PropertyBus* state, App* app) {
+void EngineSystem::init(PropertyBus* state) {
     m_state = state;
-    m_app = app;
     
     m_state->set(Properties::Engine::N1, m_config.idleN1);
     m_state->set(Properties::Engine::THRUST, 0.0);

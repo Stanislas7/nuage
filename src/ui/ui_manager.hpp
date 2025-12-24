@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ui/Text.hpp"
-#include "ui/font/Font.hpp"
+#include "ui/text.hpp"
+#include "ui/font/font.hpp"
 #include "graphics/shader.hpp"
 #include "math/mat4.hpp"
 #include <vector>

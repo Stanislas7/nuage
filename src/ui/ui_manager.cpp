@@ -1,5 +1,5 @@
-#include "ui/UIManager.hpp"
-#include "app/App.hpp"
+#include "ui/ui_manager.hpp"
+#include "app/app.hpp"
 #include "graphics/glad.h"
 #include <GLFW/glfw3.h>
 #include <iostream>

@@ -1,7 +1,7 @@
-#include "managers/camera/CameraManager.hpp"
-#include "app/App.hpp"
-#include "aircraft/Aircraft.hpp"
-#include "managers/input/InputManager.hpp"
+#include "managers/camera/camera_manager.hpp"
+#include "app/app.hpp"
+#include "aircraft/aircraft.hpp"
+#include "managers/input/input_manager.hpp"
 #include <cmath>
 #include <iostream>
 

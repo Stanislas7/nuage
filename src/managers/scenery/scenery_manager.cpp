@@ -1,6 +1,6 @@
-#include "managers/scenery/SceneryManager.hpp"
-#include "app/App.hpp"
-#include "utils/ConfigLoader.hpp"
+#include "managers/scenery/scenery_manager.hpp"
+#include "app/app.hpp"
+#include "utils/config_loader.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/shader.hpp"
 #include <iostream>

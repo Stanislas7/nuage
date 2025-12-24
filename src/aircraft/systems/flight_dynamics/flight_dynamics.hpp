@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aircraft/IAircraftSystem.hpp"
+#include "aircraft/aircraft_component.hpp"
 
 namespace nuage {
 
@@ -19,12 +19,12 @@ struct FlightDynamicsConfig {
     float cruiseSpeed = 50.0f;
 };
 
-class FlightDynamics : public IAircraftSystem {
+class FlightDynamics : public AircraftComponent {
 public:
     explicit FlightDynamics(const FlightDynamicsConfig& config = {});
 
     const char* name() const override { return "FlightDynamics"; }
-    void init(PropertyBus* state, App* app) override;
+    void init(PropertyBus* state) override;
     void update(float dt) override;
 
 private:
@@ -34,7 +34,6 @@ private:
     void enforceConstraints();
 
     PropertyBus* m_state = nullptr;
-    App* m_app = nullptr;
     FlightDynamicsConfig m_config;
 };
 

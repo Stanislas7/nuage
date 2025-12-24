@@ -1,12 +1,12 @@
 #pragma once
 
-#include "managers/input/InputManager.hpp"
-#include "managers/aircraft/AircraftManager.hpp"
+#include "managers/input/input_manager.hpp"
+#include "managers/aircraft/aircraft_manager.hpp"
 #include "managers/assets/asset_store.hpp"
-#include "managers/atmosphere/AtmosphereManager.hpp"
-#include "managers/camera/CameraManager.hpp"
-#include "managers/scenery/SceneryManager.hpp"
-#include "ui/UIManager.hpp"
+#include "managers/atmosphere/atmosphere_manager.hpp"
+#include "managers/camera/camera_manager.hpp"
+#include "managers/scenery/scenery_manager.hpp"
+#include "ui/ui_manager.hpp"
 
 struct GLFWwindow;
 

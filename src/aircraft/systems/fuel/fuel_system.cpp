@@ -1,6 +1,6 @@
-#include "FuelSystem.hpp"
+#include "fuel_system.hpp"
 #include "aircraft/property_bus.hpp"
-#include "aircraft/PropertyPaths.hpp"
+#include "aircraft/property_paths.hpp"
 #include <algorithm>
 
 namespace nuage {
@@ -10,9 +10,8 @@ FuelSystem::FuelSystem(const FuelConfig& config)
 {
 }
 
-void FuelSystem::init(PropertyBus* state, App* app) {
+void FuelSystem::init(PropertyBus* state) {
     m_state = state;
-    m_app = app;
     
     m_state->set(Properties::Fuel::QUANTITY, m_config.initialFuel);
     m_state->set(Properties::Fuel::CAPACITY, m_config.capacity);

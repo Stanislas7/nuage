@@ -1,16 +1,16 @@
-#include "aircraft/Aircraft.hpp"
-#include "aircraft/PropertyPaths.hpp"
-#include "managers/input/InputManager.hpp"
+#include "aircraft/aircraft.hpp"
+#include "aircraft/property_paths.hpp"
+#include "managers/input/input_manager.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/shader.hpp"
 #include "math/mat4.hpp"
-#include "utils/ConfigLoader.hpp"
-#include "app/App.hpp" // Ensure App definition is available for assets()
+#include "utils/config_loader.hpp"
+#include "app/app.hpp" // Ensure App definition is available for assets()
 
-#include "aircraft/systems/flight_dynamics/FlightDynamics.hpp"
-#include "aircraft/systems/engine/EngineSystem.hpp"
-#include "aircraft/systems/fuel/FuelSystem.hpp"
-#include "aircraft/systems/environment/EnvironmentSystem.hpp"
+#include "aircraft/systems/flight_dynamics/flight_dynamics.hpp"
+#include "aircraft/systems/engine/engine_system.hpp"
+#include "aircraft/systems/fuel/fuel_system.hpp"
+#include "aircraft/systems/environment/environment_system.hpp"
 #include <iostream>
 
 namespace nuage {
@@ -24,7 +24,7 @@ void Aircraft::init(const std::string& configPath, App* app) {
         addSystem<FlightDynamics>();
         addSystem<EngineSystem>();
         addSystem<FuelSystem>();
-        addSystem<EnvironmentSystem>();
+        addSystem<EnvironmentSystem>(m_app->atmosphere());
         
         m_state.setVec3(Properties::Position::PREFIX, 0, 100, 0);
         m_state.set(Properties::Velocity::AIRSPEED, 50.0);
@@ -105,7 +105,7 @@ void Aircraft::init(const std::string& configPath, App* app) {
     addSystem<FuelSystem>(fuelConfig);
 
     // Environment
-    addSystem<EnvironmentSystem>();
+    addSystem<EnvironmentSystem>(m_app->atmosphere());
 
     // Initial State
     m_state.setVec3(Properties::Position::PREFIX, 0, 100, 0);

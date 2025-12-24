@@ -1,8 +1,8 @@
-#include "app/App.hpp"
-#include "ui/Anchor.hpp"
+#include "app/app.hpp"
+#include "ui/anchor.hpp"
 #include "graphics/glad.h"
 #include "graphics/mesh_builder.hpp"
-#include "aircraft/Aircraft.hpp"
+#include "aircraft/aircraft.hpp"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>

@@ -1,4 +1,4 @@
-#include "ui/font/Font.hpp"
+#include "ui/font/font.hpp"
 #include "math/vec3.hpp"
 #include <fstream>
 #include <iostream>
