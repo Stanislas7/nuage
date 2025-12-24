@@ -8,7 +8,6 @@
 #include "scenery/scenery.hpp"
 #include "ui/ui_manager.hpp"
 #include <cstdint>
-#include <string>
 
 struct GLFWwindow;
 
@@ -92,8 +91,6 @@ private:
     Text* m_airspeedText = nullptr;
     Text* m_headingText = nullptr;
     Text* m_positionText = nullptr;
-    Text* m_fpsText = nullptr;
-    Text* m_fpsDetailText = nullptr;
     
     // Helpers
     bool initWindow(const AppConfig& config);
@@ -112,8 +109,6 @@ private:
     float m_fpsTimer = 0.0f;
     int m_framesSinceFps = 0;
     std::uint64_t m_totalFrames = 0;
-    std::string m_fpsDisplay = "FPS: 0.0 | Frame 0";
-    std::string m_fpsDetailDisplay = "Frame time 0.0ms | Render 0.0ms | Swap wait 0.0ms";
     FrameProfile m_lastProfile{};
     FrameProfileAccum m_profileAccum{};
 };

@@ -11,7 +11,6 @@
 #include <string>
 #include <chrono>
 #include <iomanip>
-#include <sstream>
 
 namespace nuage {
 
@@ -179,11 +178,6 @@ void App::setupHUD() {
     m_positionText = &m_ui.text("POS: 0, 0, 0");
     setupText(*m_positionText, 20, 170, 2.0f, Anchor::TopLeft, 0.0f);
 
-    m_fpsText = &m_ui.text(m_fpsDisplay);
-    setupText(*m_fpsText, 0, 10, 2.0f, Anchor::TopRight, 20.0f);
-
-    m_fpsDetailText = &m_ui.text(m_fpsDetailDisplay);
-    setupText(*m_fpsDetailText, 0, 50, 1.5f, Anchor::TopRight, 20.0f);
 }
 
 void App::updatePhysics() {
@@ -219,13 +213,6 @@ void App::updateHUD() {
                                 std::to_string(static_cast<int>(pos.z)));
     }
 
-    if (m_fpsText) {
-        m_fpsText->content(m_fpsDisplay);
-    }
-    if (m_fpsDetailText) {
-        m_fpsDetailText->content(m_fpsDetailDisplay);
-    }
-    
     m_ui.update();
 }
 
@@ -295,19 +282,8 @@ void App::updateFrameStats(const FrameProfile& profile) {
     m_lastProfile.renderMs = static_cast<float>(m_profileAccum.renderMs * invFrames);
     m_lastProfile.swapMs = static_cast<float>(m_profileAccum.swapMs * invFrames);
 
-    std::ostringstream hud;
-    hud << "FPS: " << std::fixed << std::setprecision(1) << m_lastFps
-        << " | Frame " << m_totalFrames;
-    m_fpsDisplay = hud.str();
-
-    std::ostringstream details;
-    details << "Frame time " << std::fixed << std::setprecision(1) << m_lastProfile.frameMs
-            << "ms | Render " << m_lastProfile.renderMs
-            << "ms | Swap wait " << m_lastProfile.swapMs << "ms";
-    m_fpsDetailDisplay = details.str();
-
     std::cout << std::fixed << std::setprecision(1)
-              << "FPS: " << m_lastFps
+              << "FPS avg 1s: " << m_lastFps
               << " | Frame " << m_totalFrames
               << " | ms (frame " << m_lastProfile.frameMs
               << ", input " << m_lastProfile.inputMs
