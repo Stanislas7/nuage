@@ -94,11 +94,7 @@ void PhysicsIntegrator::integrate(float dt) {
     m_state->setVec3(Properties::Physics::ANGULAR_ACCEL_PREFIX, angularAccel);
 
     angularVel = angularVel + angularAccel * dt;
-    
-    // Apply very basic damping to stop infinite spin
-    // In reality, this comes from aerodynamic moments, but we need a fail-safe
-    angularVel = angularVel * 0.98f; 
-    
+        
     m_state->setVec3(Properties::Physics::ANGULAR_VELOCITY_PREFIX, angularVel);
 
     // Integrate Orientation: q_new = q + 0.5 * q * w_body * dt

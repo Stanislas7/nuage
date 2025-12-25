@@ -66,6 +66,7 @@ Instead of directly modifying the orientation quaternion:
 The integrator updates the state using Euler integration for rotation:
 1.  **Angular Acceleration:** $\alpha = \tau_{total} / I$ (Component-wise division by Inertia).
 2.  **Angular Velocity:** $\omega_{new} = \omega_{old} + \alpha \cdot dt$.
+    *   *Note:* Artificial damping (multiplying velocity by 0.98) has been removed. Damping is now fully handled physically by the `OrientationSystem`.
 3.  **Orientation:** The orientation Quaternion $q$ is updated by the angular velocity vector $\omega$.
     *   $q_{new} = q_{old} + 0.5 \cdot q_{old} \cdot \omega_{body} \cdot dt$.
     *   The result is normalized to ensure it remains a valid rotation.

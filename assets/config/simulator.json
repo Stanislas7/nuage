@@ -10,6 +10,6 @@
         "farPlane": 5000
     },
     "simulation": {
-        "defaultAircraft": "assets/config/aircraft/plane.json"
+        "defaultAircraft": "assets/config/aircraft/a6m_zero.json"
     }
 }
