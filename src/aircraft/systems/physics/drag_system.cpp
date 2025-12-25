@@ -23,14 +23,10 @@ void DragSystem::update(float dt) {
 
     Vec3 dragDir = -data.airflowDir;
 
-    float dragMagnitude = 0.0f;
-    if (m_config.useLegacyCoefficient) {
-        dragMagnitude = m_config.dragCoefficient * data.dynamicPressure * m_config.frontalArea;
-    } else {
-        float cl = static_cast<float>(m_state->get(Properties::Aero::CL, 0.0));
-        float cd = m_config.cd0 + m_config.inducedDragFactor * cl * cl;
-        dragMagnitude = cd * data.dynamicPressure * m_config.wingArea;
-    }
+    float cl = static_cast<float>(m_state->get(Properties::Aero::CL, 0.0));
+    float cd = m_config.cd0 + m_config.inducedDragFactor * cl * cl;
+    float dragMagnitude = cd * data.dynamicPressure * m_config.wingArea;
+
     Vec3 dragVec = dragDir * dragMagnitude;
 
     Vec3 currentForce = m_state->getVec3(Properties::Physics::FORCE_PREFIX);

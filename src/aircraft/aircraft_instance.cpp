@@ -8,6 +8,7 @@
 #include "environment/atmosphere.hpp"
 #include "math/mat4.hpp"
 #include "utils/config_loader.hpp"
+#include "aircraft/aircraft_config_keys.hpp"
 
 #include "aircraft/systems/physics/physics_integrator.hpp"
 #include "aircraft/systems/physics/orientation_system.hpp"
@@ -58,6 +59,7 @@ namespace {
 void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere) {
     auto jsonOpt = loadJsonConfig(configPath);
     if (!jsonOpt) {
+        // Fallback for missing file - this part we keep for basic safety but simplified
         addSystem<PhysicsIntegrator>();
         addSystem<EngineSystem>();
         addSystem<FuelSystem>();
@@ -67,179 +69,119 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         addSystem<ThrustForce>();
         addSystem<LiftSystem>();
         addSystem<DragSystem>();
-
-        m_state.set(Properties::Physics::MASS, 1000.0);
-        m_state.setVec3(Properties::Position::PREFIX, 0, 100, 0);
-        m_state.setVec3(Properties::Velocity::PREFIX, 0, 0, 50);
-        m_state.setQuat(Properties::Orientation::PREFIX, Quat::identity());
         return;
     }
 
     const auto& json = *jsonOpt;
 
     // Load Model
-    if (json.contains("model")) {
-        const auto& mod = json["model"];
-        std::string modelName = mod.value("name", "aircraft");
-        std::string modelPath = mod.value("path", "");
-        std::string modelTexturePath;
-        bool modelHasTexcoords = false;
-        
-        if (!modelPath.empty()) {
-             if (assets.loadModel(modelName, modelPath, &modelTexturePath, &modelHasTexcoords)) {
-                 m_mesh = assets.getMesh(modelName);
-             } else {
-                 std::cerr << "Failed to load aircraft model: " << modelPath << std::endl;
-             }
-        }
+    const auto& mod = json[ConfigKeys::MODEL];
+    std::string modelName = mod[ConfigKeys::NAME];
+    std::string modelPath = mod[ConfigKeys::PATH];
+    std::string modelTexturePath;
+    bool modelHasTexcoords = false;
+    
+    if (assets.loadModel(modelName, modelPath, &modelTexturePath, &modelHasTexcoords)) {
+        m_mesh = assets.getMesh(modelName);
+    }
 
-        if (mod.contains("color")) {
-            auto c = mod["color"];
-            if (c.is_array() && c.size() == 3) {
-                m_color = Vec3(c[0], c[1], c[2]);
-            }
-        }
-        std::string texturePath = mod.value("texture", "");
-        if (texturePath.empty()) {
-            texturePath = modelTexturePath;
-        }
-        if (!texturePath.empty() && modelHasTexcoords) {
-            std::string textureName = modelName + "_diffuse";
-            if (assets.loadTexture(textureName, texturePath)) {
-                m_texture = assets.getTexture(textureName);
-                m_shader = assets.getShader("textured");
-            } else {
-                std::cerr << "Failed to load aircraft texture: " << texturePath << std::endl;
-            }
-        }
-        if (mod.contains("scale")) {
-            m_modelScale = parseScale(mod["scale"], m_modelScale);
-        }
-        if (mod.contains("rotation")) {
-            m_modelRotation = parseRotation(mod["rotation"], m_modelRotation);
-        }
-        if (mod.contains("offset")) {
-            m_modelOffset = parseVec3(mod["offset"], m_modelOffset);
+    auto c = mod[ConfigKeys::COLOR];
+    m_color = Vec3(c[0], c[1], c[2]);
+
+    std::string texturePath = mod.contains(ConfigKeys::TEXTURE) ? mod[ConfigKeys::TEXTURE].get<std::string>() : modelTexturePath;
+    if (!texturePath.empty() && modelHasTexcoords) {
+        std::string textureName = modelName + "_diffuse";
+        if (assets.loadTexture(textureName, texturePath)) {
+            m_texture = assets.getTexture(textureName);
+            m_shader = assets.getShader("textured");
         }
     }
     
-    if (!m_mesh) {
-        m_mesh = assets.getMesh("aircraft");
-    }
+    m_modelScale = parseScale(mod[ConfigKeys::SCALE], m_modelScale);
+    m_modelRotation = parseRotation(mod[ConfigKeys::ROTATION], m_modelRotation);
+    m_modelOffset = parseVec3(mod[ConfigKeys::OFFSET], m_modelOffset);
+    
+    if (!m_mesh) m_mesh = assets.getMesh("aircraft");
+    if (!m_shader) m_shader = assets.getShader("basic");
 
-    if (!m_shader) {
-        m_shader = assets.getShader("basic");
-    }
-
+    // Physics
+    const auto& phys = json[ConfigKeys::PHYSICS];
     PhysicsConfig physicsConfig;
-    if (json.contains("physics")) {
-        const auto& phys = json["physics"];
-        physicsConfig.minAltitude = phys.value("minAltitude", physicsConfig.minAltitude);
-        physicsConfig.maxClimbRate = phys.value("maxClimbRate", physicsConfig.maxClimbRate);
-        physicsConfig.groundFriction = phys.value("groundFriction", physicsConfig.groundFriction);
-        if (phys.contains("inertia")) {
-             physicsConfig.inertia = parseVec3(phys["inertia"], physicsConfig.inertia);
-        }
-    }
+    physicsConfig.minAltitude = phys[ConfigKeys::MIN_ALTITUDE];
+    physicsConfig.maxClimbRate = phys[ConfigKeys::MAX_CLIMB_RATE];
+    physicsConfig.groundFriction = phys[ConfigKeys::GROUND_FRICTION];
+    physicsConfig.inertia = parseVec3(phys[ConfigKeys::INERTIA], physicsConfig.inertia);
     addSystem<PhysicsIntegrator>(physicsConfig);
 
+    // Engine
+    const auto& eng = json[ConfigKeys::ENGINE];
     EngineConfig engConfig;
-    if (json.contains("engine")) {
-        const auto& eng = json["engine"];
-        engConfig.maxThrust = eng.value("maxThrust", engConfig.maxThrust);
-        engConfig.maxPowerKw = eng.value("maxPowerKw", engConfig.maxPowerKw);
-        engConfig.idleN1 = eng.value("idleN1", engConfig.idleN1);
-        engConfig.maxN1 = eng.value("maxN1", engConfig.maxN1);
-        engConfig.spoolRate = eng.value("spoolRate", engConfig.spoolRate);
-        engConfig.fuelFlowIdle = eng.value("fuelFlowIdle", engConfig.fuelFlowIdle);
-        engConfig.fuelFlowMax = eng.value("fuelFlowMax", engConfig.fuelFlowMax);
-    }
+    engConfig.maxThrust = eng[ConfigKeys::MAX_THRUST];
+    engConfig.maxPowerKw = eng[ConfigKeys::MAX_POWER_KW];
+    engConfig.idleN1 = eng[ConfigKeys::IDLE_N1];
+    engConfig.maxN1 = eng[ConfigKeys::MAX_N1];
+    engConfig.spoolRate = eng[ConfigKeys::SPOOL_RATE];
+    engConfig.fuelFlowIdle = eng[ConfigKeys::FUEL_FLOW_IDLE];
+    engConfig.fuelFlowMax = eng[ConfigKeys::FUEL_FLOW_MAX];
     addSystem<EngineSystem>(engConfig);
 
+    // Fuel
+    const auto& f = json[ConfigKeys::FUEL];
     FuelConfig fuelConfig;
-    if (json.contains("fuel")) {
-        const auto& f = json["fuel"];
-        fuelConfig.capacity = f.value("capacity", fuelConfig.capacity);
-        fuelConfig.initialFuel = f.value("initial", fuelConfig.initialFuel);
-    }
+    fuelConfig.capacity = f[ConfigKeys::CAPACITY];
+    fuelConfig.initialFuel = f[ConfigKeys::INITIAL];
     addSystem<FuelSystem>(fuelConfig);
 
     addSystem<EnvironmentSystem>(atmosphere);
 
+    // Orientation
+    const auto& orient = json[ConfigKeys::ORIENTATION];
     OrientationConfig orientConfig;
-    if (json.contains("orientation")) {
-        const auto& orient = json["orientation"];
-        orientConfig.pitchRate = orient.value("pitchRate", orientConfig.pitchRate);
-        orientConfig.yawRate = orient.value("yawRate", orientConfig.yawRate);
-        orientConfig.rollRate = orient.value("rollRate", orientConfig.rollRate);
-        orientConfig.controlRefSpeed = orient.value("controlRefSpeed", orientConfig.controlRefSpeed);
-        orientConfig.minControlScale = orient.value("minControlScale", orientConfig.minControlScale);
-        orientConfig.maxControlScale = orient.value("maxControlScale", orientConfig.maxControlScale);
-        orientConfig.torqueMultiplier = orient.value("torqueMultiplier", orientConfig.torqueMultiplier);
-        orientConfig.dampingFactor = orient.value("dampingFactor", orientConfig.dampingFactor);
-    }
+    orientConfig.pitchRate = orient[ConfigKeys::PITCH_RATE];
+    orientConfig.yawRate = orient[ConfigKeys::YAW_RATE];
+    orientConfig.rollRate = orient[ConfigKeys::ROLL_RATE];
+    orientConfig.controlRefSpeed = orient[ConfigKeys::CONTROL_REF_SPEED];
+    orientConfig.minControlScale = orient[ConfigKeys::MIN_CONTROL_SCALE];
+    orientConfig.maxControlScale = orient[ConfigKeys::MAX_CONTROL_SCALE];
+    orientConfig.torqueMultiplier = orient[ConfigKeys::TORQUE_MULTIPLIER];
+    orientConfig.dampingFactor = orient[ConfigKeys::DAMPING_FACTOR];
     addSystem<OrientationSystem>(orientConfig);
 
-    float mass = 1000.0f;
-    float cruiseSpeed = 50.0f;
-
-    if (json.contains("physics")) {
-        const auto& phys = json["physics"];
-        mass = phys.value("mass", mass);
-        cruiseSpeed = phys.value("cruiseSpeed", cruiseSpeed);
-    }
-
+    // Forces
     addSystem<GravitySystem>();
 
+    const auto& ef = json[ConfigKeys::ENGINE_FORCE];
     ThrustConfig thrustConfig;
-    if (json.contains("engineForce")) {
-        const auto& ef = json["engineForce"];
-        thrustConfig.thrustScale = ef.value("thrustScale", thrustConfig.thrustScale);
-        thrustConfig.propEfficiency = ef.value("propEfficiency", thrustConfig.propEfficiency);
-        thrustConfig.minAirspeed = ef.value("minAirspeed", thrustConfig.minAirspeed);
-    }
+    thrustConfig.thrustScale = ef[ConfigKeys::THRUST_SCALE];
+    thrustConfig.propEfficiency = ef[ConfigKeys::PROP_EFFICIENCY];
+    thrustConfig.minAirspeed = ef[ConfigKeys::MIN_AIRSPEED];
     addSystem<ThrustForce>(thrustConfig);
 
+    const auto& lift = json[ConfigKeys::LIFT];
     LiftConfig liftConfig;
-    if (json.contains("lift")) {
-        const auto& lift = json["lift"];
-        if (lift.contains("liftCoefficient")) {
-            liftConfig.cl0 = lift.value("liftCoefficient", liftConfig.cl0);
-            liftConfig.clAlpha = 0.0f;
-            liftConfig.clMax = liftConfig.cl0;
-            liftConfig.clMin = liftConfig.cl0;
-            liftConfig.useLegacyConstant = true;
-        } else {
-            liftConfig.cl0 = lift.value("cl0", liftConfig.cl0);
-            liftConfig.clAlpha = lift.value("clAlpha", liftConfig.clAlpha);
-            liftConfig.clMax = lift.value("clMax", liftConfig.clMax);
-            liftConfig.clMin = lift.value("clMin", liftConfig.clMin);
-            liftConfig.useLegacyConstant = lift.value("useLegacyConstant", liftConfig.useLegacyConstant);
-        }
-        liftConfig.wingArea = lift.value("wingArea", liftConfig.wingArea);
-    }
+    liftConfig.cl0 = lift[ConfigKeys::CL0];
+    liftConfig.clAlpha = lift[ConfigKeys::CL_ALPHA];
+    liftConfig.clMax = lift[ConfigKeys::CL_MAX];
+    liftConfig.clMin = lift[ConfigKeys::CL_MIN];
+    liftConfig.wingArea = lift[ConfigKeys::WING_AREA];
     addSystem<LiftSystem>(liftConfig);
 
+    const auto& drag = json[ConfigKeys::DRAG];
     DragConfig dragConfig;
-    if (json.contains("drag")) {
-        const auto& drag = json["drag"];
-        if (drag.contains("dragCoefficient")) {
-            dragConfig.dragCoefficient = drag.value("dragCoefficient", dragConfig.dragCoefficient);
-            dragConfig.frontalArea = drag.value("frontalArea", dragConfig.frontalArea);
-            dragConfig.useLegacyCoefficient = true;
-        } else {
-            dragConfig.cd0 = drag.value("cd0", dragConfig.cd0);
-            dragConfig.inducedDragFactor = drag.value("inducedDragFactor", dragConfig.inducedDragFactor);
-            dragConfig.wingArea = drag.value("wingArea", dragConfig.wingArea);
-            dragConfig.useLegacyCoefficient = drag.value("useLegacyCoefficient", dragConfig.useLegacyCoefficient);
-        }
-    }
+    dragConfig.cd0 = drag[ConfigKeys::CD0];
+    dragConfig.inducedDragFactor = drag[ConfigKeys::INDUCED_DRAG_FACTOR];
+    dragConfig.wingArea = drag[ConfigKeys::WING_AREA];
     addSystem<DragSystem>(dragConfig);
 
     // Initial State
-    m_state.set(Properties::Physics::MASS, static_cast<double>(mass));
-    m_state.setVec3(Properties::Position::PREFIX, 0, 100, 0);
-    m_state.setVec3(Properties::Velocity::PREFIX, 0, 0, cruiseSpeed);
+    m_state.set(Properties::Physics::MASS, static_cast<double>(phys[ConfigKeys::MASS]));
+    
+    const auto& spawn = json[ConfigKeys::SPAWN];
+    Vec3 initialPos = parseVec3(spawn[ConfigKeys::POSITION], Vec3(0, 100, 0));
+    Vec3 initialVel(0, 0, spawn[ConfigKeys::AIRSPEED]);
+    
+    m_state.setVec3(Properties::Position::PREFIX, initialPos);
+    m_state.setVec3(Properties::Velocity::PREFIX, initialVel);
     m_state.setQuat(Properties::Orientation::PREFIX, Quat::identity());
 }
 

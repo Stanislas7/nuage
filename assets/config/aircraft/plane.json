@@ -48,6 +48,10 @@
         "capacity": 400.0,
         "initial": 300.0
     },
+    "spawn": {
+        "position": [0.0, 100.0, 0.0],
+        "airspeed": 100.0
+    },
     "model": {
         "name": "plane_mesh",
         "path": "assets/models/plane.obj",

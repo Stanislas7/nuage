@@ -32,7 +32,7 @@ void LiftSystem::update(float dt) {
         return;
     }
 
-    float cl = m_config.useLegacyConstant ? m_config.cl0 : (m_config.cl0 + m_config.clAlpha * data.aoa);
+    float cl = m_config.cl0 + m_config.clAlpha * data.aoa;
     cl = std::clamp(cl, m_config.clMin, m_config.clMax);
 
     float liftMagnitude = cl * data.dynamicPressure * m_config.wingArea;

@@ -9,9 +9,7 @@ struct DragConfig {
     float cd0 = 0.03f;
     float inducedDragFactor = 0.05f;
     float wingArea = 16.0f;
-    float dragCoefficient = 0.04f;
     float frontalArea = 4.0f;
-    bool useLegacyCoefficient = false;
 };
 
 class DragSystem : public AircraftComponent, private AerodynamicForceBase {
