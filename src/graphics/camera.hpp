@@ -18,7 +18,7 @@ enum class CameraMode {
 class Camera {
 public:
     void init(Input& input);
-    void update(float dt, Aircraft::Instance* target = nullptr);
+    void update(float dt, Aircraft::Instance* target = nullptr, float alpha = 1.0f);
 
     void setMode(CameraMode mode) { m_mode = mode; }
     void setTarget(Aircraft::Instance* target) { m_target = target; }
@@ -45,8 +45,8 @@ public:
     bool isOrbitMode() const { return m_mode == CameraMode::Orbit; }
 
 private:
-    void updateChaseCamera(float dt, Aircraft::Instance* target);
-    void updateOrbitCamera(float dt, Aircraft::Instance* target);
+    void updateChaseCamera(float dt, Aircraft::Instance* target, float alpha);
+    void updateOrbitCamera(float dt, Aircraft::Instance* target, float alpha);
     void buildMatrices();
 
     Input* m_input = nullptr;

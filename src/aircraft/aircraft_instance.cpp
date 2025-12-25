@@ -183,9 +183,15 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     m_state.setVec3(Properties::Position::PREFIX, initialPos);
     m_state.setVec3(Properties::Velocity::PREFIX, initialVel);
     m_state.setQuat(Properties::Orientation::PREFIX, Quat::identity());
+    
+    // Initialize previous state
+    m_prevState = m_state;
 }
 
 void Aircraft::Instance::update(float dt, const FlightInput& input) {
+    // Save previous state for interpolation
+    m_prevState = m_state;
+
     m_state.set(Properties::Input::PITCH, input.pitch);
     m_state.set(Properties::Input::ROLL, input.roll);
     m_state.set(Properties::Input::YAW, input.yaw);
@@ -196,11 +202,14 @@ void Aircraft::Instance::update(float dt, const FlightInput& input) {
     }
 }
 
-void Aircraft::Instance::render(const Mat4& viewProjection) {
+void Aircraft::Instance::render(const Mat4& viewProjection, float alpha) {
     if (!m_mesh || !m_shader) return;
 
-    Mat4 model = Mat4::translate(position())
-        * orientation().toMat4()
+    Vec3 renderPos = interpolatedPosition(alpha);
+    Quat renderRot = interpolatedOrientation(alpha);
+
+    Mat4 model = Mat4::translate(renderPos)
+        * renderRot.toMat4()
         * Mat4::translate(m_modelOffset)
         * m_modelRotation.toMat4()
         * Mat4::scale(m_modelScale.x, m_modelScale.y, m_modelScale.z);
@@ -225,6 +234,18 @@ Vec3 Aircraft::Instance::position() const {
 
 Quat Aircraft::Instance::orientation() const {
     return m_state.getQuat(Properties::Orientation::PREFIX);
+}
+
+Vec3 Aircraft::Instance::interpolatedPosition(float alpha) const {
+    Vec3 curr = m_state.getVec3(Properties::Position::PREFIX);
+    Vec3 prev = m_prevState.getVec3(Properties::Position::PREFIX);
+    return prev + (curr - prev) * alpha;
+}
+
+Quat Aircraft::Instance::interpolatedOrientation(float alpha) const {
+    Quat curr = m_state.getQuat(Properties::Orientation::PREFIX);
+    Quat prev = m_prevState.getQuat(Properties::Orientation::PREFIX);
+    return Quat::slerp(prev, curr, alpha);
 }
 
 float Aircraft::Instance::airspeed() const {

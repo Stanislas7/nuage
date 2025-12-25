@@ -16,9 +16,9 @@ void Aircraft::fixedUpdate(float dt, const Input& input) {
     }
 }
 
-void Aircraft::render(const Mat4& viewProjection) {
+void Aircraft::render(const Mat4& viewProjection, float alpha) {
     for (auto& ac : m_instances) {
-        ac->render(viewProjection);
+        ac->render(viewProjection, alpha);
     }
 }
 

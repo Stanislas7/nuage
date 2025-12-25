@@ -11,7 +11,7 @@ void Camera::init(Input& input) {
     m_input = &input;
 }
 
-void Camera::update(float dt, Aircraft::Instance* target) {
+void Camera::update(float dt, Aircraft::Instance* target, float alpha) {
     // If a target is provided, use it; otherwise use the internal one if set.
     if (target) {
         m_target = target;
@@ -19,10 +19,10 @@ void Camera::update(float dt, Aircraft::Instance* target) {
 
     switch (m_mode) {
         case CameraMode::Chase:
-            updateChaseCamera(dt, m_target);
+            updateChaseCamera(dt, m_target, alpha);
             break;
         case CameraMode::Orbit:
-            updateOrbitCamera(dt, m_target);
+            updateOrbitCamera(dt, m_target, alpha);
             break;
         default:
             break;
@@ -31,13 +31,15 @@ void Camera::update(float dt, Aircraft::Instance* target) {
     buildMatrices();
 }
 
-void Camera::updateChaseCamera(float dt, Aircraft::Instance* target) {
+void Camera::updateChaseCamera(float dt, Aircraft::Instance* target, float alpha) {
     if (!target) {
         return;
     }
 
-    Vec3 targetPos = target->position();
-    Vec3 targetForward = target->forward();
+    Vec3 targetPos = target->interpolatedPosition(alpha);
+    // Interpolated forward vector isn't strictly necessary for direction if it changes slowly, 
+    // but good for correctness.
+    Vec3 targetForward = target->interpolatedOrientation(alpha).rotate(Vec3(0, 0, 1));
 
     float forwardLen = std::sqrt(targetForward.x * targetForward.x + 
                                 targetForward.y * targetForward.y + 
@@ -86,7 +88,7 @@ void Camera::updateChaseCamera(float dt, Aircraft::Instance* target) {
     m_lookAt = m_smoothedLookAt;
 }
 
-void Camera::updateOrbitCamera(float dt, Aircraft::Instance* target) {
+void Camera::updateOrbitCamera(float dt, Aircraft::Instance* target, float alpha) {
     if (!target) return;
 
     Vec2 mouseDelta = m_input->mouseDelta();
@@ -95,7 +97,7 @@ void Camera::updateOrbitCamera(float dt, Aircraft::Instance* target) {
     m_orbitPitch -= mouseDelta.y * m_orbitSpeed * dt;
     m_orbitPitch = std::max(-1.5f, std::min(1.5f, m_orbitPitch));
 
-    Vec3 targetPos = target->position();
+    Vec3 targetPos = target->interpolatedPosition(alpha);
 
     float x = m_orbitDistance * std::cos(m_orbitPitch) * std::sin(m_orbitYaw);
     float y = m_orbitDistance * std::sin(m_orbitPitch);

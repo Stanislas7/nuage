@@ -73,18 +73,21 @@ void App::run() {
         auto physicsStart = clock::now();
         updatePhysics();
         auto physicsEnd = clock::now();
+        
+        float alpha = m_physicsAccumulator / FIXED_DT;
+
         auto atmosphereStart = clock::now();
         m_atmosphere.update(m_deltaTime);
         auto atmosphereEnd = clock::now();
         auto cameraStart = clock::now();
-        m_camera.update(m_deltaTime, m_aircraft.player());
+        m_camera.update(m_deltaTime, m_aircraft.player(), alpha);
         auto cameraEnd = clock::now();
 
         auto hudStart = clock::now();
         updateHUD();
         auto hudEnd = clock::now();
         auto renderStart = clock::now();
-        render();
+        render(alpha);
         auto renderEnd = clock::now();
 
         auto swapStart = clock::now();
@@ -217,7 +220,7 @@ void App::updateHUD() {
     m_ui.update();
 }
 
-void App::render() {
+void App::render(float alpha) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     Mat4 vp = m_camera.viewProjection();
@@ -229,7 +232,9 @@ void App::render() {
     }
     
     m_scenery.render(vp);
-    m_aircraft.render(vp);
+    
+    m_aircraft.render(vp, alpha);
+    
     m_ui.draw();
 }
 

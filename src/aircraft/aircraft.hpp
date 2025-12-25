@@ -25,7 +25,7 @@ public:
     public:
         void init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere);
         void update(float dt, const FlightInput& input);
-        void render(const Mat4& viewProjection);
+        void render(const Mat4& viewProjection, float alpha = 1.0f);
 
         void setMesh(Mesh* mesh) { m_mesh = mesh; }
         void setShader(Shader* shader) { m_shader = shader; }
@@ -37,6 +37,11 @@ public:
 
         Vec3 position() const;
         Quat orientation() const;
+        
+        // Interpolated getters for rendering
+        Vec3 interpolatedPosition(float alpha) const;
+        Quat interpolatedOrientation(float alpha) const;
+
         float airspeed() const;
         Vec3 forward() const;
         Vec3 up() const;
@@ -62,6 +67,7 @@ public:
 
     private:
         PropertyBus m_state;
+        PropertyBus m_prevState; // Added for interpolation
         std::vector<std::unique_ptr<AircraftComponent>> m_systems;
         Mesh* m_mesh = nullptr;
         Shader* m_shader = nullptr;
@@ -74,7 +80,7 @@ public:
 
     void init(AssetStore& assets, Atmosphere& atmosphere);
     void fixedUpdate(float dt, const Input& input);
-    void render(const Mat4& viewProjection);
+    void render(const Mat4& viewProjection, float alpha = 1.0f);
     void shutdown();
 
     Instance* spawnPlayer(const std::string& configPath);
