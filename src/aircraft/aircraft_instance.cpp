@@ -111,7 +111,8 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     physicsConfig.maxClimbRate = phys[ConfigKeys::MAX_CLIMB_RATE];
     physicsConfig.groundFriction = phys[ConfigKeys::GROUND_FRICTION];
     physicsConfig.inertia = parseVec3(phys[ConfigKeys::INERTIA], physicsConfig.inertia);
-    addSystem<PhysicsIntegrator>(physicsConfig);
+    // PhysicsIntegrator moved to end
+
 
     // Engine
     const auto& eng = json[ConfigKeys::ENGINE];
@@ -186,6 +187,9 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     
     // Initialize previous state
     m_prevState = m_state;
+
+    // Add Integrator last (Semi-Implicit: Calculate Forces -> Integrate)
+    addSystem<PhysicsIntegrator>(physicsConfig);
 }
 
 void Aircraft::Instance::update(float dt, const FlightInput& input) {
@@ -196,6 +200,10 @@ void Aircraft::Instance::update(float dt, const FlightInput& input) {
     m_state.set(Properties::Input::ROLL, input.roll);
     m_state.set(Properties::Input::YAW, input.yaw);
     m_state.set(Properties::Input::THROTTLE, input.throttle);
+
+    // Clear forces and torques for the new frame accumulation
+    m_state.setVec3(Properties::Physics::FORCE_PREFIX, 0.0f, 0.0f, 0.0f);
+    m_state.setVec3(Properties::Physics::TORQUE_PREFIX, 0.0f, 0.0f, 0.0f);
 
     for (auto& system : m_systems) {
         system->update(dt);

@@ -6,11 +6,11 @@
 namespace nuage {
 
 struct LiftConfig {
-    float cl0 = 0.2f;
-    float clAlpha = 5.5f;
-    float clMax = 1.5f;
-    float clMin = -1.2f;
-    float wingArea = 16.0f;
+    float cl0 = 0.0f;
+    float clAlpha = 0.0f;
+    float clMax = 0.0f;
+    float clMin = 0.0f;
+    float wingArea = 0.0f;
 };
 
 class LiftSystem : public AircraftComponent, private AerodynamicForceBase {

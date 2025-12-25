@@ -39,13 +39,6 @@ void OrientationSystem::update(float dt) {
     // Calculate Aerodynamic Damping
     float damping = DAMPING_FACTOR * controlScale;
 
-    // Torques in Body Frame
-    // Standard RHR: +X Pitch Up, +Y Yaw Left, +Z Roll Right
-    // But verify input mapping:
-    // Pitch Input (+1) -> Nose Up -> +X Torque
-    // Yaw Input (+1) -> Nose Right -> -Y Torque
-    // Roll Input (+1) -> Bank Right -> +Z Torque (Assuming Z is Forward)
-    
     float pitchTorque = static_cast<float>(pitch * m_config.pitchRate * TORQUE_MULTIPLIER * controlScale);
     float yawTorque   = static_cast<float>(-yaw * m_config.yawRate * TORQUE_MULTIPLIER * controlScale);
     float rollTorque  = static_cast<float>(roll * m_config.rollRate * TORQUE_MULTIPLIER * controlScale);

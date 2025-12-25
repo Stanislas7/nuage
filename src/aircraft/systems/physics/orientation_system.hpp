@@ -5,14 +5,14 @@
 namespace nuage {
 
 struct OrientationConfig {
-    float pitchRate = 1.5f;
-    float yawRate = 1.0f;
-    float rollRate = 2.0f;
-    float controlRefSpeed = 55.0f;
-    float minControlScale = 0.25f;
-    float maxControlScale = 1.25f;
-    float torqueMultiplier = 2000.0f;
-    float dampingFactor = 2000.0f;
+    float pitchRate = 0.0f;
+    float yawRate = 0.0f;
+    float rollRate = 0.0f;
+    float controlRefSpeed = 0.0f;
+    float minControlScale = 0.0f;
+    float maxControlScale = 0.0f;
+    float torqueMultiplier = 0.0f;
+    float dampingFactor = 0.0f;
 };
 
 class OrientationSystem : public AircraftComponent {

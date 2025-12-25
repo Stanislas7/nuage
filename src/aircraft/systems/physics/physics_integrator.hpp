@@ -9,7 +9,7 @@ struct PhysicsConfig {
     float minAltitude = 5.0f;
     float maxClimbRate = 20.0f;
     float groundFriction = 0.02f;
-    Vec3 inertia = {948.0f, 1346.0f, 1967.0f}; // Default C172
+    Vec3 inertia = {1.0f, 1.0f, 1.0f}; // Generic default, overrides should come from config
 };
 
 class PhysicsIntegrator : public AircraftComponent {
@@ -21,12 +21,10 @@ public:
     void update(float dt) override;
 
 private:
-    void clearForces();
     void integrate(float dt);
 
     PropertyBus* m_state = nullptr;
     PhysicsConfig m_config;
-    int m_phase = 0;
 };
 
 }

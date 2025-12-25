@@ -6,10 +6,10 @@
 namespace nuage {
 
 struct DragConfig {
-    float cd0 = 0.03f;
-    float inducedDragFactor = 0.05f;
-    float wingArea = 16.0f;
-    float frontalArea = 4.0f;
+    float cd0 = 0.0f;
+    float inducedDragFactor = 0.0f;
+    float wingArea = 0.0f;
+    float frontalArea = 0.0f;
 };
 
 class DragSystem : public AircraftComponent, private AerodynamicForceBase {
