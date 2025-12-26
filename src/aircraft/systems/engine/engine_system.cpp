@@ -25,7 +25,6 @@ void EngineSystem::update(float dt) {
     if (!running) {
         m_state->set(Properties::Engine::N1, 0.0);
         m_state->set(Properties::Engine::THRUST, 0.0);
-        m_state->set(Properties::Engine::FUEL_FLOW, 0.0);
         return;
     }
 
@@ -45,8 +44,6 @@ void EngineSystem::update(float dt) {
     double thrust = m_config.maxThrust * thrustRatio * densityRatio;
     
     double n1Ratio = m_currentN1 / m_config.maxN1;
-    double fuelFlow = m_config.fuelFlowIdle + 
-        (m_config.fuelFlowMax - m_config.fuelFlowIdle) * n1Ratio * n1Ratio;
 
     m_state->set(Properties::Engine::N1, m_currentN1);
     m_state->set(Properties::Engine::THRUST, thrust);
@@ -56,7 +53,6 @@ void EngineSystem::update(float dt) {
     } else {
         m_state->set(Properties::Engine::POWER, 0.0);
     }
-    m_state->set(Properties::Engine::FUEL_FLOW, fuelFlow);
 }
 
 }

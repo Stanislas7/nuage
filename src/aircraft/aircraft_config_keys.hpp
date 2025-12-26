@@ -7,7 +7,6 @@ namespace ConfigKeys {
     inline constexpr char MODEL[] = "model";
     inline constexpr char PHYSICS[] = "physics";
     inline constexpr char ENGINE[] = "engine";
-    inline constexpr char FUEL[] = "fuel";
     inline constexpr char ORIENTATION[] = "orientation";
     inline constexpr char JSBSIM[] = "jsbsim";
     inline constexpr char ENGINE_FORCE[] = "engineForce";
@@ -46,12 +45,6 @@ namespace ConfigKeys {
     inline constexpr char IDLE_N1[] = "idleN1";
     inline constexpr char MAX_N1[] = "maxN1";
     inline constexpr char SPOOL_RATE[] = "spoolRate";
-    inline constexpr char FUEL_FLOW_IDLE[] = "fuelFlowIdle";
-    inline constexpr char FUEL_FLOW_MAX[] = "fuelFlowMax";
-
-    // Fuel
-    inline constexpr char CAPACITY[] = "capacity";
-    inline constexpr char INITIAL[] = "initial";
 
     // Orientation
     inline constexpr char PITCH_RATE[] = "pitchRate";

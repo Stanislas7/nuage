@@ -63,13 +63,7 @@ namespace Engine {
     inline constexpr char THRUST[] = "engine/thrust";
     inline constexpr char N1[] = "engine/n1";
     inline constexpr char RUNNING[] = "engine/running";
-    inline constexpr char FUEL_FLOW[] = "engine/fuel_flow";
     inline constexpr char POWER[] = "engine/power";
-}
-
-namespace Fuel {
-    inline constexpr char QUANTITY[] = "fuel/quantity";
-    inline constexpr char CAPACITY[] = "fuel/capacity";
 }
 
 namespace Atmosphere {

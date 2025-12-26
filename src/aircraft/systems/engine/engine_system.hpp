@@ -10,8 +10,6 @@ struct EngineConfig {
     float idleN1 = 0.0f;            // % at idle
     float maxN1 = 0.0f;            // % at full throttle  
     float spoolRate = 0.0f;          // How fast N1 responds
-    float fuelFlowIdle = 0.0f;       // kg/s at idle
-    float fuelFlowMax = 0.0f;        // kg/s at max thrust
 };
 
 class EngineSystem : public AircraftComponent {

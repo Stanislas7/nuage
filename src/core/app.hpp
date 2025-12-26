@@ -105,11 +105,8 @@ private:
     void updatePhysics();
     void updateHUD();
     void render(float alpha);
-    void printDebugInfo();
     void updateFrameStats(const FrameProfile& profile);
     
-    float m_lastDebugTime = 0.0f;
-
     float m_lastFps = 0.0f;
     float m_fpsTimer = 0.0f;
     int m_framesSinceFps = 0;

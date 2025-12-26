@@ -3,7 +3,6 @@
 #include "graphics/glad.h"
 #include "graphics/mesh_builder.hpp"
 #include "aircraft/aircraft.hpp"
-#include "core/property_paths.hpp"
 #include "utils/config_loader.hpp"
 
 #define GLFW_INCLUDE_NONE
@@ -56,8 +55,6 @@ void App::run() {
         m_deltaTime = now - m_lastFrameTime;
         m_lastFrameTime = now;
         m_time = now;
-
-        printDebugInfo();
 
         auto inputStart = clock::now();
         m_input.update(m_deltaTime);
@@ -367,39 +364,6 @@ void App::render(float alpha) {
     m_aircraft.render(vp, alpha);
     
     m_ui.draw();
-}
-
-void App::printDebugInfo() {
-    if (m_time - m_lastDebugTime < 2.0f) return;
-    m_lastDebugTime = m_time;
-
-    Aircraft::Instance* player = m_aircraft.player();
-    if (!player) {
-        std::cout << "[PHYSICS] Player is NULL!\n";
-        return;
-    }
-
-    const PropertyBus& state = player->state();
-    Vec3 pos = player->position();
-    Vec3 vel = state.getVec3(Properties::Velocity::PREFIX);
-    Vec3 force = state.getVec3(Properties::Physics::FORCE_PREFIX);
-    Vec3 torque = state.getVec3(Properties::Physics::TORQUE_PREFIX);
-    double airspeed = state.get(Properties::Physics::AIR_SPEED, player->airspeed());
-
-    double pitch = state.get(Properties::Input::PITCH);
-    double roll = state.get(Properties::Input::ROLL);
-    double yaw = state.get(Properties::Input::YAW);
-    double throttle = state.get(Properties::Input::THROTTLE);
-
-    std::cout << "\n=== PHYSICS (t=" << m_time << ") ===\n";
-    std::cout << "pos (" << pos.x << ", " << pos.y << ", " << pos.z << ") m\n";
-    std::cout << "vel (" << vel.x << ", " << vel.y << ", " << vel.z << ") m/s\n";
-    std::cout << "airspeed " << airspeed << " m/s\n";
-    std::cout << "input pitch " << pitch << " roll " << roll
-              << " yaw " << yaw << " thr " << throttle << "\n";
-    std::cout << "force (" << force.x << ", " << force.y << ", " << force.z << ") N\n";
-    std::cout << "torque (" << torque.x << ", " << torque.y << ", " << torque.z << ") N*m\n";
-    std::cout << "==========================\n" << std::flush;
 }
 
 void App::updateFrameStats(const FrameProfile& profile) {

@@ -20,7 +20,6 @@
 #include "aircraft/systems/physics/stability_system.hpp"
 #include "aircraft/systems/physics/jsbsim_system.hpp"
 #include "aircraft/systems/engine/engine_system.hpp"
-#include "aircraft/systems/fuel/fuel_system.hpp"
 #include "aircraft/systems/environment/environment_system.hpp"
 #include <iostream>
 #include <cmath>
@@ -77,7 +76,6 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         // Fallback for missing file - this part we keep for basic safety but simplified
         addSystem<PhysicsIntegrator>();
         addSystem<EngineSystem>();
-        addSystem<FuelSystem>();
         addSystem<EnvironmentSystem>(atmosphere);
         addSystem<OrientationSystem>();
         addSystem<GravitySystem>();
@@ -156,16 +154,7 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         engConfig.idleN1 = eng[ConfigKeys::IDLE_N1];
         engConfig.maxN1 = eng[ConfigKeys::MAX_N1];
         engConfig.spoolRate = eng[ConfigKeys::SPOOL_RATE];
-        engConfig.fuelFlowIdle = eng[ConfigKeys::FUEL_FLOW_IDLE];
-        engConfig.fuelFlowMax = eng[ConfigKeys::FUEL_FLOW_MAX];
         addSystem<EngineSystem>(engConfig);
-
-        // Fuel
-        const auto& f = json[ConfigKeys::FUEL];
-        FuelConfig fuelConfig;
-        fuelConfig.capacity = f[ConfigKeys::CAPACITY];
-        fuelConfig.initialFuel = f[ConfigKeys::INITIAL];
-        addSystem<FuelSystem>(fuelConfig);
 
         // Orientation
         const auto& orient = json[ConfigKeys::ORIENTATION];
