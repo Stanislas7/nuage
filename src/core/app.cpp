@@ -254,7 +254,7 @@ void App::setupHUD() {
         text.paddingValue(padding);
     };
 
-    m_altitudeText = &m_ui.text("ALT: 0.0 m");
+    m_altitudeText = &m_ui.text("ALT: 0.0 ft");
     setupText(*m_altitudeText, 20, 20, 2.0f, Anchor::TopLeft, 0.0f);
 
     m_airspeedText = &m_ui.text("SPD: 0 kts");
@@ -293,7 +293,9 @@ void App::updateHUD() {
             return s.substr(0, s.find('.') + 2);
         };
 
-        m_altitudeText->content("ALT: " + fmt(pos.y) + " m");
+        float altitudeFeet = pos.y * 3.28084f;
+
+        m_altitudeText->content("ALT: " + fmt(altitudeFeet) + " ft");
         m_airspeedText->content("SPD: " + fmt(airspeedKnots) + " kts");
         m_headingText->content("HDG: " + std::to_string(static_cast<int>(heading)));
         m_positionText->content("POS: " + std::to_string(static_cast<int>(pos.x)) + ", " +

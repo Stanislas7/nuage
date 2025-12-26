@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Delete build directory if it exists
-rm -rf build
-
 # Create build directory
 mkdir -p build
 
