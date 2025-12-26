@@ -1,6 +1,6 @@
 #include "jsbsim_system.hpp"
-#include "core/property_bus.hpp"
-#include "core/property_paths.hpp"
+#include "core/properties/property_bus.hpp"
+#include "core/properties/property_paths.hpp"
 #include "aircraft/aircraft_state.hpp"
 #include <FGFDMExec.h>
 #include <models/FGPropagate.h>

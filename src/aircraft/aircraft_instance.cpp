@@ -1,5 +1,5 @@
 #include "aircraft/aircraft.hpp"
-#include "core/property_paths.hpp"
+#include "core/properties/property_paths.hpp"
 #include "input/input.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/shader.hpp"

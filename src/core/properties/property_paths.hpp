@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/property_id.hpp"
+#include "core/properties/property_id.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
 

@@ -1,6 +1,6 @@
 #include "environment_system.hpp"
-#include "core/property_bus.hpp"
-#include "core/property_paths.hpp"
+#include "core/properties/property_bus.hpp"
+#include "core/properties/property_paths.hpp"
 #include "environment/atmosphere.hpp"
 #include "aircraft/aircraft_state.hpp"
 

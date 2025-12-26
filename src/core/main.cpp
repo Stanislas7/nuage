@@ -9,7 +9,6 @@ int main() {
     
     nuage::AppConfig config;
     std::string windowTitle = "Nuage";
-
     std::string aircraftPath = "assets/config/aircraft/c172p.json";
 
     if (configJson) {
@@ -32,7 +31,17 @@ int main() {
         return -1;
     }
 
-    app.aircraft().spawnPlayer(aircraftPath);
+    // Prepare and start the initial flight
+    nuage::FlightConfig flight;
+    flight.aircraftPath = aircraftPath;
+    flight.terrainPath = "assets/config/terrain.json";
+    flight.sceneryPath = "assets/config/scenery.json";
+    flight.timeOfDay = 12.0f;
+
+    if (!app.startFlight(flight)) {
+        std::cerr << "Failed to start initial flight session" << std::endl;
+        return -1;
+    }
 
     app.run();
     app.shutdown();

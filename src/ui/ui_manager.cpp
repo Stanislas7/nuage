@@ -37,40 +37,9 @@ bool UIManager::init(App* app) {
         return false;
     }
 
-    const char* vertexSrc = R"(
-        #version 330 core
-        layout(location = 0) in vec2 aPos;
-        layout(location = 1) in vec2 aTexCoord;
-
-        out vec2 vTexCoord;
-
-        uniform mat4 uProjection;
-        uniform mat4 uModel;
-
-        void main() {
-            vTexCoord = aTexCoord;
-            gl_Position = uProjection * uModel * vec4(aPos, 0.0, 1.0);
-        }
-    )";
-
-    const char* fragmentSrc = R"(
-        #version 330 core
-        in vec2 vTexCoord;
-        out vec4 FragColor;
-
-        uniform sampler2D uTexture;
-        uniform vec3 uColor;
-        uniform float uAlpha;
-
-        void main() {
-            float alpha = texture(uTexture, vTexCoord).r * uAlpha;
-            FragColor = vec4(uColor, alpha);
-        }
-    )";
-
-    m_shader = std::make_unique<Shader>();
-    if (!m_shader->init(vertexSrc, fragmentSrc)) {
-        std::cerr << "Failed to create UI shader" << std::endl;
+    m_shader = app->assets().getShader("ui");
+    if (!m_shader) {
+        std::cerr << "UI shader not found in AssetStore" << std::endl;
         return false;
     }
 
@@ -101,7 +70,7 @@ bool UIManager::init(App* app) {
 void UIManager::shutdown() {
     m_texts.clear();
     m_font.reset();
-    m_shader.reset();
+    m_shader = nullptr;
 
     if (m_vao) glDeleteVertexArrays(1, &m_vao);
     if (m_vbo) glDeleteBuffers(1, &m_vbo);

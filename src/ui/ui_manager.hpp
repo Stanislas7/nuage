@@ -38,7 +38,7 @@ private:
 
     App* m_app = nullptr;
     std::unique_ptr<Font> m_font;
-    std::unique_ptr<Shader> m_shader;
+    Shader* m_shader = nullptr;
     std::vector<std::unique_ptr<Text>> m_texts;
 
     GLuint m_vao = 0;

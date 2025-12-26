@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/property_bus.hpp"
+#include "core/properties/property_bus.hpp"
 #include "aircraft/aircraft_component.hpp"
 #include "aircraft/aircraft_state.hpp"
 #include "aircraft/aircraft_visual.hpp"

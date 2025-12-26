@@ -1,19 +1,17 @@
 #pragma once
 
 #include "input/input.hpp"
-#include "aircraft/aircraft.hpp"
 #include "graphics/asset_store.hpp"
-#include "environment/atmosphere.hpp"
-#include "graphics/camera.hpp"
-#include "scenery/scenery.hpp"
 #include "ui/ui_manager.hpp"
+#include "ui/overlays/pause_overlay.hpp"
+#include "core/session/flight_config.hpp"
+#include "core/session/flight_session.hpp"
 #include <cstdint>
+#include <memory>
 
 struct GLFWwindow;
 
 namespace nuage {
-
-class Text;
 
 struct AppConfig {
     int windowWidth = 1280;
@@ -28,13 +26,18 @@ public:
     void run();
     void shutdown();
 
+    // Session Management
+    bool startFlight(const FlightConfig& config);
+    void endFlight();
+    bool isFlightActive() const { return m_session != nullptr; }
+
+    // Persistent Systems
     Input& input() { return m_input; }
-    Aircraft& aircraft() { return m_aircraft; }
     AssetStore& assets() { return m_assets; }
-    Atmosphere& atmosphere() { return m_atmosphere; }
-    Camera& camera() { return m_camera; }
-    Scenery& scenery() { return m_scenery; }
     UIManager& ui() { return m_ui; }
+
+    // Current Session Delegation
+    FlightSession* session() { return m_session.get(); }
 
     float time() const { return m_time; }
     float dt() const { return m_deltaTime; }
@@ -47,9 +50,6 @@ private:
         float frameMs = 0.0f;
         float inputMs = 0.0f;
         float physicsMs = 0.0f;
-        float atmosphereMs = 0.0f;
-        float cameraMs = 0.0f;
-        float hudMs = 0.0f;
         float renderMs = 0.0f;
         float swapMs = 0.0f;
     };
@@ -58,9 +58,6 @@ private:
         double frameMs = 0.0;
         double inputMs = 0.0;
         double physicsMs = 0.0;
-        double atmosphereMs = 0.0;
-        double cameraMs = 0.0;
-        double hudMs = 0.0;
         double renderMs = 0.0;
         double swapMs = 0.0;
         int frames = 0;
@@ -68,13 +65,14 @@ private:
 
     GLFWwindow* m_window = nullptr;
 
+    // Persistent Engine Systems
     Input m_input;
-    Aircraft m_aircraft;
     AssetStore m_assets;
-    Atmosphere m_atmosphere;
-    Camera m_camera;
-    Scenery m_scenery;
     UIManager m_ui;
+    PauseOverlay m_pauseOverlay;
+
+    // Active Flight Session
+    std::unique_ptr<FlightSession> m_session;
 
     float m_time = 0.0f;
     float m_deltaTime = 0.0f;
@@ -85,30 +83,11 @@ private:
     float m_physicsAccumulator = 0.0f;
     static constexpr float FIXED_DT = 1.0f / 120.0f;
 
-    Mesh* m_terrainMesh = nullptr;
-    Shader* m_terrainShader = nullptr;
-    Shader* m_terrainTexturedShader = nullptr;
-    Texture* m_terrainTexture = nullptr;
-    bool m_terrainTextured = false;
-    Shader* m_skyShader = nullptr;
-    unsigned int m_skyVao = 0;
-
-    Text* m_altitudeText = nullptr;
-    Text* m_airspeedText = nullptr;
-    Text* m_headingText = nullptr;
-    Text* m_positionText = nullptr;
-    Text* m_powerText = nullptr;
-    
     // Helpers
     bool initWindow(const AppConfig& config);
-    void setupScene();
-    void setupHUD();
-    
     void updatePhysics();
-    void updateHUD();
     void render(float alpha);
     void updateFrameStats(const FrameProfile& profile);
-    void refreshPauseUI();
     
     float m_lastFps = 0.0f;
     float m_fpsTimer = 0.0f;

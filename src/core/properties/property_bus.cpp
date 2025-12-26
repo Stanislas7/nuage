@@ -1,4 +1,4 @@
-#include "core/property_bus.hpp"
+#include "core/properties/property_bus.hpp"
 
 namespace nuage {
 

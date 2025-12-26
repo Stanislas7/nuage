@@ -2,7 +2,7 @@
 
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
-#include "core/property_id.hpp"
+#include "core/properties/property_id.hpp"
 #include <string>
 #include <unordered_map>
 #include <variant>
