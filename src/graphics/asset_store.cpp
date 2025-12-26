@@ -52,6 +52,13 @@ bool AssetStore::loadMesh(const std::string& name, const std::vector<float>& ver
     return true;
 }
 
+bool AssetStore::loadTexturedMesh(const std::string& name, const std::vector<float>& vertices) {
+    auto mesh = std::make_unique<Mesh>();
+    mesh->initTextured(vertices);
+    m_meshes[name] = std::move(mesh);
+    return true;
+}
+
 bool AssetStore::loadModel(const std::string& name, const std::string& path,
                            std::string* outDiffuseTexture,
                            bool* outHasTexcoords) {

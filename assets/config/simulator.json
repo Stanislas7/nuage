@@ -7,7 +7,7 @@
     },
     "graphics": {
         "fov": 60,
-        "farPlane": 5000
+        "farPlane": 300000
     },
     "simulation": {
         "defaultAircraft": "assets/config/aircraft/c172p.json"

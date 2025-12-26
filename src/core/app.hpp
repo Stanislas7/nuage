@@ -86,6 +86,9 @@ private:
 
     Mesh* m_terrainMesh = nullptr;
     Shader* m_terrainShader = nullptr;
+    Shader* m_terrainTexturedShader = nullptr;
+    Texture* m_terrainTexture = nullptr;
+    bool m_terrainTextured = false;
     Shader* m_skyShader = nullptr;
     unsigned int m_skyVao = 0;
 

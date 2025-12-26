@@ -1,0 +1,10 @@
+{
+  "heightmap": "../heights_keywest.png",
+  "sizeX": 52950.0,
+  "sizeZ": 39810.0,
+  "heightMin": -3.0,
+  "heightMax": 24.480110168457,
+  "maxResolution": 512,
+  "flipY": true,
+  "albedo": "../imagery/albedo.jpg"
+}

@@ -20,6 +20,7 @@ public:
 
     // Meshes
     bool loadMesh(const std::string& name, const std::vector<float>& vertices);
+    bool loadTexturedMesh(const std::string& name, const std::vector<float>& vertices);
     bool loadModel(const std::string& name, const std::string& path,
                    std::string* outDiffuseTexture = nullptr,
                    bool* outHasTexcoords = nullptr);

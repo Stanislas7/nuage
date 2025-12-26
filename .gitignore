@@ -26,3 +26,20 @@ Makefile
 compile_commands.json
 
 .cache
+
+# Terrain/imagery intermediates
+assets/imagery/s2_visual/
+assets/dem_tiles/
+assets/imagery/*_clip_wgs84.tif
+assets/imagery/*_utm.tif
+assets/imagery/*_utm_filled.tif
+assets/imagery/*_band*.tif
+assets/imagery/*_mosaic.vrt
+assets/imagery/*_mosaic.vrt.ovr
+assets/*_clip_wgs84.tif
+assets/*_utm.tif
+assets/*_utm_filled.tif
+assets/*_mosaic.vrt
+assets/*_mosaic.vrt.ovr
+assets/heights.tif
+assets/heights.png

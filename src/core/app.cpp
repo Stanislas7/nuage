@@ -3,6 +3,7 @@
 #include "graphics/glad.h"
 #include "graphics/mesh_builder.hpp"
 #include "aircraft/aircraft.hpp"
+#include "utils/config_loader.hpp"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -11,6 +12,7 @@
 #include <string>
 #include <chrono>
 #include <iomanip>
+#include <filesystem>
 
 namespace nuage {
 
@@ -24,10 +26,6 @@ bool App::init(const AppConfig& config) {
 
     glGenVertexArrays(1, &m_skyVao);
     
-    // Create terrain mesh
-    auto terrainData = MeshBuilder::terrain(20000.0f, 40);
-    m_assets.loadMesh("terrain", terrainData);
-
     m_atmosphere.init();
     m_aircraft.init(m_assets, m_atmosphere);
     m_camera.init(m_input);
@@ -164,9 +162,88 @@ bool App::initWindow(const AppConfig& config) {
 }
 
 void App::setupScene() {
-    m_terrainMesh = m_assets.getMesh("terrain");
     m_terrainShader = m_assets.getShader("basic");
-    
+    m_terrainTexturedShader = m_assets.getShader("textured");
+    m_terrainTextured = false;
+    m_terrainTexture = nullptr;
+
+    std::filesystem::path terrainConfigPath;
+    {
+        std::filesystem::path cwd = std::filesystem::current_path();
+        std::filesystem::path probe = cwd;
+        for (int i = 0; i < 6; ++i) {
+            std::filesystem::path candidate = probe / "assets/config/terrain.json";
+            if (std::filesystem::exists(candidate)) {
+                terrainConfigPath = candidate;
+                break;
+            }
+            if (probe.has_parent_path()) {
+                probe = probe.parent_path();
+            } else {
+                break;
+            }
+        }
+    }
+    if (terrainConfigPath.empty()) {
+        terrainConfigPath = "assets/config/terrain.json";
+    }
+
+    auto resolvePath = [&](const std::string& rawPath) {
+        if (rawPath.empty()) return rawPath;
+        std::filesystem::path p(rawPath);
+        if (p.is_absolute()) return rawPath;
+        return (terrainConfigPath.parent_path() / p).string();
+    };
+
+    auto terrainConfigOpt = loadJsonConfig(terrainConfigPath.string());
+    if (terrainConfigOpt && terrainConfigOpt->contains("heightmap")) {
+        const auto& config = *terrainConfigOpt;
+        std::string heightmap = resolvePath(config.value("heightmap", ""));
+        float sizeX = config.value("sizeX", 20000.0f);
+        float sizeZ = config.value("sizeZ", 20000.0f);
+        float heightMin = config.value("heightMin", 0.0f);
+        float heightMax = config.value("heightMax", 1000.0f);
+        int maxResolution = config.value("maxResolution", 512);
+        bool flipY = config.value("flipY", true);
+        std::string albedo = resolvePath(config.value("albedo", ""));
+
+        bool textureLoaded = false;
+        if (!albedo.empty()) {
+            textureLoaded = m_assets.loadTexture("terrain_albedo", albedo);
+            if (textureLoaded) {
+                m_terrainTexture = m_assets.getTexture("terrain_albedo");
+            } else {
+                std::cerr << "Failed to load terrain albedo: " << albedo << std::endl;
+            }
+        }
+
+        bool useTexture = textureLoaded && m_terrainTexture;
+        auto terrainData = MeshBuilder::terrainFromHeightmap(heightmap,
+                                                             sizeX,
+                                                             sizeZ,
+                                                             heightMin,
+                                                             heightMax,
+                                                             maxResolution,
+                                                             useTexture,
+                                                             flipY);
+        if (!terrainData.empty()) {
+            if (useTexture) {
+                m_assets.loadTexturedMesh("terrain", terrainData);
+                m_terrainTextured = true;
+            } else {
+                m_assets.loadMesh("terrain", terrainData);
+            }
+        } else {
+            std::cerr << "Failed to build terrain from heightmap: " << heightmap << std::endl;
+        }
+    }
+
+    if (!m_assets.getMesh("terrain")) {
+        auto terrainData = MeshBuilder::terrain(20000.0f, 40);
+        m_assets.loadMesh("terrain", terrainData);
+    }
+
+    m_terrainMesh = m_assets.getMesh("terrain");
     m_scenery.loadConfig("assets/config/scenery.json");
 }
 
@@ -270,8 +347,17 @@ void App::render(float alpha) {
     }
 
     if (m_terrainMesh && m_terrainShader) {
-        m_terrainShader->use();
-        m_terrainShader->setMat4("uMVP", vp);
+        Shader* terrainShader = m_terrainShader;
+        if (m_terrainTextured && m_terrainTexturedShader && m_terrainTexture) {
+            terrainShader = m_terrainTexturedShader;
+            terrainShader->use();
+            terrainShader->setMat4("uMVP", vp);
+            m_terrainTexture->bind(0);
+            terrainShader->setInt("uTexture", 0);
+        } else {
+            terrainShader->use();
+            terrainShader->setMat4("uMVP", vp);
+        }
         m_terrainMesh->draw();
     }
     

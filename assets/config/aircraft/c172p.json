@@ -67,7 +67,7 @@
         "initial": 90.0
     },
     "spawn": {
-        "position": [0.0, 100.0, 0.0],
+        "position": [0.0, 1500.0, -500.0],
         "airspeed": 60.0
     },
     "model": {

@@ -75,7 +75,7 @@ private:
     float m_fov = 60.0f * 3.14159f / 180.0f;
     float m_aspect = 16.0f / 9.0f;
     float m_near = 0.1f;
-    float m_far = 5000.0f;
+    float m_far = 50000.0f;
 };
 
 }
