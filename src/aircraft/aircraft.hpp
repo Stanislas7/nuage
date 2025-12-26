@@ -2,6 +2,7 @@
 
 #include "core/property_bus.hpp"
 #include "aircraft/aircraft_component.hpp"
+#include "aircraft/aircraft_state.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
 #include "math/mat4.hpp"
@@ -67,8 +68,12 @@ public:
         }
 
     private:
+        void updateCacheFromBus();
+
         PropertyBus m_state;
-        PropertyBus m_prevState; // Added for interpolation
+        AircraftState m_currentState;
+        AircraftState m_prevState;
+        
         std::vector<std::unique_ptr<AircraftComponent>> m_systems;
         Mesh* m_mesh = nullptr;
         Shader* m_shader = nullptr;

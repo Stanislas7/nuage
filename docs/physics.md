@@ -37,9 +37,6 @@ JSBSim uses body axes `X forward, Y right, Z down`. Nuage relies on `X right, Y 
 ## Environment system
 `EnvironmentSystem` runs alongside `JsbsimSystem` and pulls global atmospheric data from `Atmosphere`. It writes the density to `atmosphere/density` and derives a world wind vector from `Atmosphere::getWind`, keeping the property bus as the single source of truth for anything that needs current weather.
 
-## Legacy custom physics
-The legacy force-based systems (`EngineSystem`, `ThrustForce`, `PhysicsIntegrator`, etc.) remain in the codebase but Nuage no longer instantiates them by default. The assets/config JSON still allows you to define engine/lift/drag blocks, but when `jsbsim` is present they are ignored. You can resurrect the old path by replacing `JsbsimSystem` with whichever force-driven components you prefer, but for now JSBSim is the only active flight dynamics engine.
-
 ## Aircraft configuration (JSON + JSBSim XML)
 Only a handful of fields are required when targeting JSBSim: the visual model, a spawn state, and the `jsbsim` block (`assets/config/aircraft/template.json`). Anything under `physics`, `engine`, `lift`, or `drag` is skipped when JSBSim is enabled because the JSBSim system owns the forces.
 

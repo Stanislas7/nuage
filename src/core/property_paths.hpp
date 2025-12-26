@@ -1,95 +1,80 @@
 #pragma once
 
+#include "core/property_id.hpp"
+#include "math/vec3.hpp"
+#include "math/quat.hpp"
+
 namespace nuage {
 namespace Properties {
 
 namespace Input {
-    inline constexpr char PITCH[] = "input/pitch";
-    inline constexpr char ROLL[] = "input/roll";
-    inline constexpr char YAW[] = "input/yaw";
-    inline constexpr char THROTTLE[] = "input/throttle";
+    inline constexpr TypedProperty<double> PITCH("input/pitch");
+    inline constexpr TypedProperty<double> ROLL("input/roll");
+    inline constexpr TypedProperty<double> YAW("input/yaw");
+    inline constexpr TypedProperty<double> THROTTLE("input/throttle");
 }
 
 namespace Position {
-    inline constexpr char PREFIX[] = "position";
-    inline constexpr char X[] = "position/x";
-    inline constexpr char Y[] = "position/y";
-    inline constexpr char Z[] = "position/z";
+    inline constexpr TypedProperty<Vec3> PREFIX("position");
 }
 
 namespace Orientation {
-    inline constexpr char PREFIX[] = "orientation";
-    inline constexpr char W[] = "orientation/w";
-    inline constexpr char X[] = "orientation/x";
-    inline constexpr char Y[] = "orientation/y";
-    inline constexpr char Z[] = "orientation/z";
+    inline constexpr TypedProperty<Quat> PREFIX("orientation");
 }
 
 namespace Velocity {
-    inline constexpr char AIRSPEED[] = "velocity/airspeed";
-    inline constexpr char VERTICAL[] = "velocity/vertical";
-    inline constexpr char PREFIX[] = "velocity";
-    inline constexpr char X[] = "velocity/x";
-    inline constexpr char Y[] = "velocity/y";
-    inline constexpr char Z[] = "velocity/z";
+    inline constexpr TypedProperty<double> AIRSPEED("velocity/airspeed");
+    inline constexpr TypedProperty<double> VERTICAL("velocity/vertical");
+    inline constexpr TypedProperty<Vec3> PREFIX("velocity");
 }
 
 namespace Physics {
-    inline constexpr char MASS[] = "physics/mass";
-    inline constexpr char FORCE_PREFIX[] = "physics/force";
-    inline constexpr char FORCE_X[] = "physics/force/x";
-    inline constexpr char FORCE_Y[] = "physics/force/y";
-    inline constexpr char FORCE_Z[] = "physics/force/z";
-    inline constexpr char ACCEL_PREFIX[] = "physics/acceleration";
-    inline constexpr char ACCEL_X[] = "physics/acceleration/x";
-    inline constexpr char ACCEL_Y[] = "physics/acceleration/y";
-    inline constexpr char ACCEL_Z[] = "physics/acceleration/z";
-    inline constexpr char AIR_SPEED[] = "physics/air_speed";
-    inline constexpr char INERTIA[] = "physics/inertia";
-    inline constexpr char TORQUE_PREFIX[] = "physics/torque";
-    inline constexpr char ANGULAR_VELOCITY_PREFIX[] = "physics/angular_velocity";
-    inline constexpr char ANGULAR_ACCEL_PREFIX[] = "physics/angular_acceleration";
+    inline constexpr TypedProperty<double> MASS("physics/mass");
+    inline constexpr TypedProperty<Vec3> FORCE_PREFIX("physics/force");
+    inline constexpr TypedProperty<Vec3> ACCEL_PREFIX("physics/acceleration");
+    inline constexpr TypedProperty<double> AIR_SPEED("physics/air_speed");
+    inline constexpr TypedProperty<Vec3> INERTIA("physics/inertia");
+    inline constexpr TypedProperty<Vec3> TORQUE_PREFIX("physics/torque");
+    inline constexpr TypedProperty<Vec3> ANGULAR_VELOCITY_PREFIX("physics/angular_velocity");
+    inline constexpr TypedProperty<Vec3> ANGULAR_ACCEL_PREFIX("physics/angular_acceleration");
 }
 
 namespace Forces {
-    inline constexpr char TOTAL_PREFIX[] = "forces/total";
-    inline constexpr char GRAVITY_PREFIX[] = "forces/gravity";
-    inline constexpr char LIFT_PREFIX[] = "forces/lift";
-    inline constexpr char DRAG_PREFIX[] = "forces/drag";
-    inline constexpr char THRUST_PREFIX[] = "forces/thrust";
+    inline constexpr TypedProperty<Vec3> TOTAL_PREFIX("forces/total");
+    inline constexpr TypedProperty<Vec3> GRAVITY_PREFIX("forces/gravity");
+    inline constexpr TypedProperty<Vec3> LIFT_PREFIX("forces/lift");
+    inline constexpr TypedProperty<Vec3> DRAG_PREFIX("forces/drag");
+    inline constexpr TypedProperty<Vec3> THRUST_PREFIX("forces/thrust");
 }
 
 namespace Engine {
-    inline constexpr char THRUST[] = "engine/thrust";
-    inline constexpr char N1[] = "engine/n1";
-    inline constexpr char RUNNING[] = "engine/running";
-    inline constexpr char POWER[] = "engine/power";
+    inline constexpr TypedProperty<double> THRUST("engine/thrust");
+    inline constexpr TypedProperty<double> N1("engine/n1");
+    inline constexpr TypedProperty<bool> RUNNING("engine/running");
+    inline constexpr TypedProperty<double> POWER("engine/power");
 }
 
 namespace Atmosphere {
-    inline constexpr char DENSITY[] = "atmosphere/density";
-    inline constexpr char PRESSURE[] = "atmosphere/pressure";
-    inline constexpr char TEMPERATURE[] = "atmosphere/temperature";
-    inline constexpr char WIND_SPEED[] = "atmosphere/wind_speed";
-    inline constexpr char WIND_HEADING[] = "atmosphere/wind_heading";
-    inline constexpr char WIND_PREFIX[] = "atmosphere/wind";
-    inline constexpr char WIND_X[] = "atmosphere/wind/x";
-    inline constexpr char WIND_Y[] = "atmosphere/wind/y";
-    inline constexpr char WIND_Z[] = "atmosphere/wind/z";
+    inline constexpr TypedProperty<double> DENSITY("atmosphere/density");
+    inline constexpr TypedProperty<double> PRESSURE("atmosphere/pressure");
+    inline constexpr TypedProperty<double> TEMPERATURE("atmosphere/temperature");
+    inline constexpr TypedProperty<double> WIND_SPEED("atmosphere/wind_speed");
+    inline constexpr TypedProperty<double> WIND_HEADING("atmosphere/wind_heading");
+    inline constexpr TypedProperty<Vec3> WIND_PREFIX("atmosphere/wind");
 }
 
 namespace Gear {
-    inline constexpr char EXTENSION[] = "gear/extension";
+    inline constexpr TypedProperty<double> EXTENSION("gear/extension");
 }
 
 namespace Flaps {
-    inline constexpr char SETTING[] = "flaps/setting";
+    inline constexpr TypedProperty<double> SETTING("flaps/setting");
 }
 
 namespace Aero {
-    inline constexpr char AOA[] = "aero/aoa";
-    inline constexpr char SIDESLIP[] = "aero/sideslip";
-    inline constexpr char CL[] = "aero/cl";
+    inline constexpr TypedProperty<double> AOA("aero/aoa");
+    inline constexpr TypedProperty<double> SIDESLIP("aero/sideslip");
+    inline constexpr TypedProperty<double> CL("aero/cl");
 }
 
 } // namespace Properties

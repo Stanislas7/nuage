@@ -15,13 +15,13 @@ void EnvironmentSystem::init(PropertyBus* state) {
 }
 
 void EnvironmentSystem::update(float dt) {
-    float altitude = static_cast<float>(m_state->get(Properties::Position::Y));
+    Vec3 position = m_state->get(Properties::Position::PREFIX);
+    float altitude = position.y;
     float density = m_atmosphere->getAirDensity(altitude);
     m_state->set(Properties::Atmosphere::DENSITY, density);
 
-    Vec3 position = m_state->getVec3(Properties::Position::PREFIX);
     Vec3 wind = m_atmosphere->getWind(position);
-    m_state->setVec3(Properties::Atmosphere::WIND_PREFIX, wind);
+    m_state->set(Properties::Atmosphere::WIND_PREFIX, wind);
 }
 
 }

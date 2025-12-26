@@ -96,8 +96,8 @@ void JsbsimSystem::ensureInitialized(float dt) {
     m_fdm->Setdt(dt);
 
     // Initial conditions derived from current bus state (spawn)
-    Vec3 pos = m_state->getVec3(Properties::Position::PREFIX);
-    Vec3 vel = m_state->getVec3(Properties::Velocity::PREFIX);
+    Vec3 pos = m_state->get(Properties::Position::PREFIX);
+    Vec3 vel = m_state->get(Properties::Velocity::PREFIX);
 
     m_fdm->SetPropertyValue("ic/long-gc-deg", m_config.initLonDeg);
     m_fdm->SetPropertyValue("ic/lat-gc-deg", m_config.initLatDeg);
@@ -131,7 +131,7 @@ void JsbsimSystem::syncInputs() {
     m_fdm->SetPropertyValue("fcs/rudder-cmd-norm", clampInput(yaw));
     m_fdm->SetPropertyValue("fcs/throttle-cmd-norm", clampInput(throttle));
 
-    Vec3 wind = m_state->getVec3(Properties::Atmosphere::WIND_PREFIX);
+    Vec3 wind = m_state->get(Properties::Atmosphere::WIND_PREFIX);
     double windNorth = wind.z * kMToFt;
     double windEast = wind.x * kMToFt;
     double windDown = -wind.y * kMToFt;
@@ -148,11 +148,11 @@ void JsbsimSystem::syncOutputs() {
 
     const auto& velNed = prop->GetVel();
     Vec3 worldVel = nedToWorld(velNed);
-    m_state->setVec3(Properties::Velocity::PREFIX, worldVel);
+    m_state->set(Properties::Velocity::PREFIX, worldVel);
 
     const auto& pqr = prop->GetPQR();
     Vec3 angVel = jsbBodyToNuage(pqr);
-    m_state->setVec3(Properties::Physics::ANGULAR_VELOCITY_PREFIX, angVel);
+    m_state->set(Properties::Physics::ANGULAR_VELOCITY_PREFIX, angVel);
 
     // Orientation: JSBSim body -> NED matrix, then align body axes to Nuage
     JSBSim::FGMatrix33 b2l = prop->GetTb2l();
@@ -189,7 +189,7 @@ void JsbsimSystem::syncOutputs() {
         }
     }
     Quat orientation = quatFromMatrix(b2w);
-    m_state->setQuat(Properties::Orientation::PREFIX, orientation);
+    m_state->set(Properties::Orientation::PREFIX, orientation);
 
     double lat = m_fdm->GetPropertyValue("position/lat-gc-rad");
     double lon = m_fdm->GetPropertyValue("position/long-gc-rad");
@@ -202,7 +202,7 @@ void JsbsimSystem::syncOutputs() {
     double east = dLon * kEarthRadiusM * std::cos(m_originLatRad);
     double alt = altFt * kFtToM;
 
-    m_state->setVec3(Properties::Position::PREFIX, Vec3(
+    m_state->set(Properties::Position::PREFIX, Vec3(
         static_cast<float>(east),
         static_cast<float>(alt),
         static_cast<float>(north)

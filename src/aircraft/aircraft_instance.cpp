@@ -121,18 +121,18 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         initialVel = Vec3(0, 0, spawn.value(ConfigKeys::AIRSPEED, 0.0f));
     }
     
-    m_state.setVec3(Properties::Position::PREFIX, initialPos);
-    m_state.setVec3(Properties::Velocity::PREFIX, initialVel);
-    m_state.setQuat(Properties::Orientation::PREFIX, Quat::identity());
+    m_state.set(Properties::Position::PREFIX, initialPos);
+    m_state.set(Properties::Velocity::PREFIX, initialVel);
+    m_state.set(Properties::Orientation::PREFIX, Quat::identity());
     
-    // Initialize previous state
-    m_prevState = m_state;
-
+    // Initial State Cache
+    updateCacheFromBus();
+    m_prevState = m_currentState;
 }
 
 void Aircraft::Instance::update(float dt, const FlightInput& input) {
     // Save previous state for interpolation
-    m_prevState = m_state;
+    m_prevState = m_currentState;
 
     m_state.set(Properties::Input::PITCH, input.pitch);
     m_state.set(Properties::Input::ROLL, input.roll);
@@ -140,12 +140,14 @@ void Aircraft::Instance::update(float dt, const FlightInput& input) {
     m_state.set(Properties::Input::THROTTLE, input.throttle);
 
     // Clear forces and torques for the new frame accumulation
-    m_state.setVec3(Properties::Physics::FORCE_PREFIX, 0.0f, 0.0f, 0.0f);
-    m_state.setVec3(Properties::Physics::TORQUE_PREFIX, 0.0f, 0.0f, 0.0f);
+    m_state.set(Properties::Physics::FORCE_PREFIX, Vec3(0.0f, 0.0f, 0.0f));
+    m_state.set(Properties::Physics::TORQUE_PREFIX, Vec3(0.0f, 0.0f, 0.0f));
 
     for (auto& system : m_systems) {
         system->update(dt);
     }
+
+    updateCacheFromBus();
 }
 
 void Aircraft::Instance::render(const Mat4& viewProjection, float alpha) {
@@ -199,27 +201,30 @@ void Aircraft::Instance::render(const Mat4& viewProjection, float alpha) {
 }
 
 Vec3 Aircraft::Instance::position() const {
-    return m_state.getVec3(Properties::Position::PREFIX);
+    return m_currentState.position;
 }
 
 Quat Aircraft::Instance::orientation() const {
-    return m_state.getQuat(Properties::Orientation::PREFIX);
+    return m_currentState.orientation;
 }
 
 Vec3 Aircraft::Instance::interpolatedPosition(float alpha) const {
-    Vec3 curr = m_state.getVec3(Properties::Position::PREFIX);
-    Vec3 prev = m_prevState.getVec3(Properties::Position::PREFIX);
-    return prev + (curr - prev) * alpha;
+    return m_prevState.position + (m_currentState.position - m_prevState.position) * alpha;
 }
 
 Quat Aircraft::Instance::interpolatedOrientation(float alpha) const {
-    Quat curr = m_state.getQuat(Properties::Orientation::PREFIX);
-    Quat prev = m_prevState.getQuat(Properties::Orientation::PREFIX);
-    return Quat::slerp(prev, curr, alpha);
+    return Quat::slerp(m_prevState.orientation, m_currentState.orientation, alpha);
 }
 
 float Aircraft::Instance::airspeed() const {
-    return static_cast<float>(m_state.get(Properties::Physics::AIR_SPEED));
+    return static_cast<float>(m_currentState.airspeed);
+}
+
+void Aircraft::Instance::updateCacheFromBus() {
+    m_currentState.position = m_state.get(Properties::Position::PREFIX);
+    m_currentState.orientation = m_state.get(Properties::Orientation::PREFIX);
+    m_currentState.velocity = m_state.get(Properties::Velocity::PREFIX);
+    m_currentState.airspeed = m_state.get(Properties::Physics::AIR_SPEED);
 }
 
 Vec3 Aircraft::Instance::forward() const {

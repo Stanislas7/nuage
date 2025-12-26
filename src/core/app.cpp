@@ -322,7 +322,7 @@ void App::updateHUD() {
 
     if (m_powerText) {
         if (player) {
-            double throttle = player->state().get(Properties::Input::THROTTLE, 0.0);
+            double throttle = player->state().get(Properties::Input::THROTTLE);
             throttle = std::clamp(throttle, 0.0, 1.0);
             int percent = static_cast<int>(std::round(throttle * 100.0));
             m_powerText->content("PWR: " + std::to_string(percent) + "%");
