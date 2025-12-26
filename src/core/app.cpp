@@ -20,6 +20,9 @@ bool App::init(const AppConfig& config) {
     m_input.init(m_window);
     m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
     m_assets.loadShader("textured", "assets/shaders/textured.vert", "assets/shaders/textured.frag");
+    m_assets.loadShader("sky", "assets/shaders/sky.vert", "assets/shaders/sky.frag");
+
+    glGenVertexArrays(1, &m_skyVao);
     
     // Create terrain mesh
     auto terrainData = MeshBuilder::terrain(20000.0f, 40);
@@ -117,6 +120,10 @@ void App::shutdown() {
     m_aircraft.shutdown();
     m_ui.shutdown();
     m_assets.unloadAll();
+    if (m_skyVao) {
+        glDeleteVertexArrays(1, &m_skyVao);
+        m_skyVao = 0;
+    }
     glfwDestroyWindow(m_window);
     glfwTerminate();
 }
@@ -226,6 +233,41 @@ void App::render(float alpha) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     Mat4 vp = m_camera.viewProjection();
+
+    if (!m_skyShader) {
+        m_skyShader = m_assets.getShader("sky");
+    }
+    if (m_skyShader && m_skyVao) {
+        Mat4 view = m_camera.viewMatrix();
+        Vec3 right(view.m[0], view.m[4], view.m[8]);
+        Vec3 up(view.m[1], view.m[5], view.m[9]);
+        Vec3 forward(-view.m[2], -view.m[6], -view.m[10]);
+
+        right = right.normalize();
+        up = up.normalize();
+        forward = forward.normalize();
+
+        Mat4 proj = m_camera.projectionMatrix();
+        float tanHalfFov = (proj.m[5] != 0.0f) ? (1.0f / proj.m[5]) : 1.0f;
+        float aspect = (proj.m[0] != 0.0f) ? (proj.m[5] / proj.m[0]) : 1.0f;
+
+        Vec3 sunDir = m_atmosphere.getSunDirection();
+
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        m_skyShader->use();
+        m_skyShader->setVec3("uCameraRight", right);
+        m_skyShader->setVec3("uCameraUp", up);
+        m_skyShader->setVec3("uCameraForward", forward);
+        m_skyShader->setFloat("uAspect", aspect);
+        m_skyShader->setFloat("uTanHalfFov", tanHalfFov);
+        m_skyShader->setVec3("uSunDir", sunDir);
+        glBindVertexArray(m_skyVao);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindVertexArray(0);
+        glDepthMask(GL_TRUE);
+        glEnable(GL_DEPTH_TEST);
+    }
 
     if (m_terrainMesh && m_terrainShader) {
         m_terrainShader->use();

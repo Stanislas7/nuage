@@ -55,6 +55,13 @@ void Shader::setVec3(const char* name, const Vec3& vec) const {
     }
 }
 
+void Shader::setFloat(const char* name, float value) const {
+    GLint loc = getUniformLocation(name);
+    if (loc >= 0) {
+        glUniform1f(loc, value);
+    }
+}
+
 void Shader::setBool(const char* name, bool value) const {
     GLint loc = getUniformLocation(name);
     if (loc >= 0) {

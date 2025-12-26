@@ -20,6 +20,7 @@ public:
     
     void setMat4(const char* name, const Mat4& mat) const;
     void setVec3(const char* name, const Vec3& vec) const;
+    void setFloat(const char* name, float value) const;
     void setBool(const char* name, bool value) const;
     void setInt(const char* name, int value) const;
 

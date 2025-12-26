@@ -86,6 +86,8 @@ private:
 
     Mesh* m_terrainMesh = nullptr;
     Shader* m_terrainShader = nullptr;
+    Shader* m_skyShader = nullptr;
+    unsigned int m_skyVao = 0;
 
     Text* m_altitudeText = nullptr;
     Text* m_airspeedText = nullptr;
