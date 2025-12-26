@@ -3,6 +3,7 @@
 #include "utils/config_loader.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/shader.hpp"
+#include "graphics/model.hpp"
 #include <iostream>
 
 namespace nuage {
@@ -10,6 +11,7 @@ namespace nuage {
 void Scenery::init(AssetStore& assets) {
     m_assets = &assets;
     m_shader = m_assets->getShader("basic");
+    m_texturedShader = m_assets->getShader("textured");
 }
 
 void Scenery::loadConfig(const std::string& configPath) {
@@ -83,20 +85,47 @@ void Scenery::render(const Mat4& viewProjection) {
          m_shader = m_assets->getShader("basic");
          if (!m_shader) return;
     }
-
-    m_shader->use();
+    if (!m_texturedShader) {
+        m_texturedShader = m_assets->getShader("textured");
+    }
 
     for (const auto& obj : m_objects) {
+        Model* model = m_assets->getModel(obj.meshName);
+        Mat4 mvp = viewProjection * obj.transform.matrix();
+        if (model && !model->parts().empty()) {
+            for (const auto& part : model->parts()) {
+                if (!part.mesh) continue;
+                Shader* shader = (part.textured && part.texture && m_texturedShader)
+                    ? m_texturedShader
+                    : m_shader;
+                if (!shader) continue;
+                shader->use();
+                shader->setMat4("uMVP", mvp);
+                if (shader == m_texturedShader) {
+                    part.texture->bind(0);
+                    shader->setInt("uTexture", 0);
+                } else {
+                    shader->setVec3("uColor", obj.color);
+                    shader->setBool("uUseUniformColor", true);
+                }
+                part.mesh->draw();
+                if (shader == m_shader) {
+                    shader->setBool("uUseUniformColor", false);
+                }
+            }
+            continue;
+        }
+
         Mesh* mesh = m_assets->getMesh(obj.meshName);
-        if (mesh) {
-            Mat4 mvp = viewProjection * obj.transform.matrix();
+        if (mesh && m_shader) {
+            m_shader->use();
             m_shader->setMat4("uMVP", mvp);
             m_shader->setVec3("uColor", obj.color);
             m_shader->setBool("uUseUniformColor", true);
             mesh->draw();
+            m_shader->setBool("uUseUniformColor", false);
         }
     }
-    m_shader->setBool("uUseUniformColor", false);
 }
 
 }

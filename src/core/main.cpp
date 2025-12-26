@@ -12,7 +12,7 @@ int main() {
     nuage::AppConfig config;
     std::string windowTitle = "Nuage";
 
-    std::string aircraftPath = "assets/config/aircraft/a6m_zero.json";
+    std::string aircraftPath = "assets/config/aircraft/c172p.json";
 
     if (configJson) {
         if (configJson->contains("window")) {

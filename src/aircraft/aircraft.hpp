@@ -16,6 +16,7 @@ class Atmosphere;
 class Mesh;
 class Shader;
 class Texture;
+class Model;
 class Input;
 struct FlightInput;
 
@@ -72,6 +73,8 @@ public:
         Mesh* m_mesh = nullptr;
         Shader* m_shader = nullptr;
         Texture* m_texture = nullptr;
+        Model* m_model = nullptr;
+        Shader* m_texturedShader = nullptr;
         Vec3 m_color = {1, 1, 1};
         Vec3 m_modelScale = {1, 1, 1};
         Quat m_modelRotation = Quat::identity();

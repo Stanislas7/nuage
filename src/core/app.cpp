@@ -149,6 +149,8 @@ bool App::initWindow(const AppConfig& config) {
     }
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.5f, 0.7f, 0.9f, 1.0f);
     
     return true;

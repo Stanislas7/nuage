@@ -3,6 +3,7 @@
 #include "graphics/shader.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/texture.hpp"
+#include "graphics/model.hpp"
 #include <unordered_map>
 #include <memory>
 #include <string>
@@ -23,6 +24,7 @@ public:
                    std::string* outDiffuseTexture = nullptr,
                    bool* outHasTexcoords = nullptr);
     Mesh* getMesh(const std::string& name);
+    Model* getModel(const std::string& name);
 
     // Textures
     bool loadTexture(const std::string& name, const std::string& path);
@@ -34,6 +36,7 @@ private:
     std::unordered_map<std::string, std::unique_ptr<Shader>> m_shaders;
     std::unordered_map<std::string, std::unique_ptr<Mesh>> m_meshes;
     std::unordered_map<std::string, std::unique_ptr<Texture>> m_textures;
+    std::unordered_map<std::string, std::unique_ptr<Model>> m_models;
 };
 
 }

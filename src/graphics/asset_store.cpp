@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <unordered_map>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "utils/tiny_obj_loader.h"
@@ -19,6 +20,7 @@ namespace {
         buffer << f.rdbuf();
         return buffer.str();
     }
+
 }
 
 bool AssetStore::loadShader(const std::string& name,
@@ -87,24 +89,49 @@ bool AssetStore::loadModel(const std::string& name, const std::string& path,
         *outHasTexcoords = hasTexcoords;
     }
 
-    std::vector<float> vertices;
+    struct MaterialBuffers {
+        std::vector<float> textured;
+        std::vector<float> untextured;
+    };
 
-    // Iterate over shapes
+    std::unordered_map<int, MaterialBuffers> materialVertices;
+    std::vector<int> materialOrder;
+
     for (const auto& shape : shapes) {
-        // Iterate over faces
         size_t index_offset = 0;
         for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
             size_t fv = size_t(shape.mesh.num_face_vertices[f]);
+            int materialId = -1;
+            if (f < shape.mesh.material_ids.size()) {
+                materialId = shape.mesh.material_ids[f];
+            }
+            if (materialVertices.find(materialId) == materialVertices.end()) {
+                materialOrder.push_back(materialId);
+            }
+            auto& buffers = materialVertices[materialId];
 
-            // Triangulate if necessary (tinyobjloader usually handles this if requested, but let's assume triangles)
-            // Loop over vertices in the face.
             for (size_t v = 0; v < fv; v++) {
-                // access to vertex
                 tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
 
                 tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
                 tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
                 tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
+
+                tinyobj::real_t nx = 0.0f;
+                tinyobj::real_t ny = 1.0f;
+                tinyobj::real_t nz = 0.0f;
+                if (idx.normal_index >= 0) {
+                    nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
+                    ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
+                    nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
+                }
+
+                buffers.untextured.push_back(static_cast<float>(vx));
+                buffers.untextured.push_back(static_cast<float>(vy));
+                buffers.untextured.push_back(static_cast<float>(vz));
+                buffers.untextured.push_back(static_cast<float>(nx));
+                buffers.untextured.push_back(static_cast<float>(ny));
+                buffers.untextured.push_back(static_cast<float>(nz));
 
                 if (hasTexcoords) {
                     tinyobj::real_t tu = 0.0f;
@@ -113,48 +140,80 @@ bool AssetStore::loadModel(const std::string& name, const std::string& path,
                         tu = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
                         tv = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
                     }
-
-                    vertices.push_back(static_cast<float>(vx));
-                    vertices.push_back(static_cast<float>(vy));
-                    vertices.push_back(static_cast<float>(vz));
-                    vertices.push_back(static_cast<float>(tu));
-                    vertices.push_back(static_cast<float>(tv));
-                } else {
-                    tinyobj::real_t nx = 0.0f;
-                    tinyobj::real_t ny = 1.0f;
-                    tinyobj::real_t nz = 0.0f;
-
-                    if (idx.normal_index >= 0) {
-                        nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
-                        ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
-                        nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
-                    }
-
-                    vertices.push_back(static_cast<float>(vx));
-                    vertices.push_back(static_cast<float>(vy));
-                    vertices.push_back(static_cast<float>(vz));
-                    vertices.push_back(static_cast<float>(nx));
-                    vertices.push_back(static_cast<float>(ny));
-                    vertices.push_back(static_cast<float>(nz));
+                    buffers.textured.push_back(static_cast<float>(vx));
+                    buffers.textured.push_back(static_cast<float>(vy));
+                    buffers.textured.push_back(static_cast<float>(vz));
+                    buffers.textured.push_back(static_cast<float>(tu));
+                    buffers.textured.push_back(static_cast<float>(tv));
                 }
             }
             index_offset += fv;
         }
     }
 
-    if (hasTexcoords) {
+    auto model = std::make_unique<Model>();
+    size_t partIndex = 0;
+    for (int materialId : materialOrder) {
+        auto it = materialVertices.find(materialId);
+        if (it == materialVertices.end()) {
+            continue;
+        }
+
+        std::string meshName = (partIndex == 0) ? name : (name + "::part" + std::to_string(partIndex));
+        partIndex++;
+
+        bool hasDiffuse = false;
+        if (materialId >= 0 && materialId < static_cast<int>(materials.size())) {
+            hasDiffuse = !materials[materialId].diffuse_texname.empty();
+        }
+
         auto mesh = std::make_unique<Mesh>();
-        mesh->initTextured(vertices);
-        m_meshes[name] = std::move(mesh);
+        bool useTextured = hasTexcoords && hasDiffuse && !it->second.textured.empty();
+        if (useTextured) {
+            mesh->initTextured(it->second.textured);
+        } else {
+            if (!it->second.untextured.empty()) {
+                mesh->init(it->second.untextured);
+            } else {
+                continue;
+            }
+        }
+
+        Mesh* meshPtr = mesh.get();
+        m_meshes[meshName] = std::move(mesh);
+
+        Texture* texture = nullptr;
+        bool textured = false;
+        if (useTextured && materialId >= 0 && materialId < static_cast<int>(materials.size())) {
+            const auto& material = materials[materialId];
+            std::string texturePath = baseDir + material.diffuse_texname;
+            std::string textureName = name + "_mat_" + std::to_string(materialId);
+            if (loadTexture(textureName, texturePath)) {
+                texture = getTexture(textureName);
+                textured = true;
+            }
+        }
+
+        model->addPart(meshPtr, texture, textured);
+    }
+
+    m_models[name] = std::move(model);
+
+    if (!hasTexcoords) {
         return true;
     }
 
-    return loadMesh(name, vertices);
+    return true;
 }
 
 Mesh* AssetStore::getMesh(const std::string& name) {
     auto it = m_meshes.find(name);
     return it != m_meshes.end() ? it->second.get() : nullptr;
+}
+
+Model* AssetStore::getModel(const std::string& name) {
+    auto it = m_models.find(name);
+    return it != m_models.end() ? it->second.get() : nullptr;
 }
 
 bool AssetStore::loadTexture(const std::string& name, const std::string& path) {
@@ -175,6 +234,7 @@ void AssetStore::unloadAll() {
     m_shaders.clear();
     m_meshes.clear();
     m_textures.clear();
+    m_models.clear();
 }
 
 }

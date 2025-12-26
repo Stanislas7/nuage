@@ -8,6 +8,7 @@ namespace nuage {
 
 class AssetStore;
 class Shader;
+class Model;
 
 struct SceneryObject {
     std::string meshName;
@@ -25,6 +26,7 @@ private:
     AssetStore* m_assets = nullptr;
     std::vector<SceneryObject> m_objects;
     Shader* m_shader = nullptr;
+    Shader* m_texturedShader = nullptr;
 };
 
 }

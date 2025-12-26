@@ -5,6 +5,7 @@
 #include "graphics/shader.hpp"
 #include "graphics/asset_store.hpp"
 #include "graphics/texture.hpp"
+#include "graphics/model.hpp"
 #include "environment/atmosphere.hpp"
 #include "math/mat4.hpp"
 #include "utils/config_loader.hpp"
@@ -95,18 +96,20 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     bool modelHasTexcoords = false;
     
     if (assets.loadModel(modelName, modelPath, &modelTexturePath, &modelHasTexcoords)) {
-        m_mesh = assets.getMesh(modelName);
+        m_model = assets.getModel(modelName);
+        if (!m_model || m_model->parts().empty()) {
+            m_mesh = assets.getMesh(modelName);
+        }
     }
 
     auto c = mod[ConfigKeys::COLOR];
     m_color = Vec3(c[0], c[1], c[2]);
 
     std::string texturePath = mod.contains(ConfigKeys::TEXTURE) ? mod[ConfigKeys::TEXTURE].get<std::string>() : modelTexturePath;
-    if (!texturePath.empty() && modelHasTexcoords) {
+    if ((!m_model || m_model->parts().empty()) && !texturePath.empty() && modelHasTexcoords) {
         std::string textureName = modelName + "_diffuse";
         if (assets.loadTexture(textureName, texturePath)) {
             m_texture = assets.getTexture(textureName);
-            m_shader = assets.getShader("textured");
         }
     }
     
@@ -114,8 +117,11 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     m_modelRotation = parseRotation(mod[ConfigKeys::ROTATION], m_modelRotation);
     m_modelOffset = parseVec3(mod[ConfigKeys::OFFSET], m_modelOffset);
     
-    if (!m_mesh) m_mesh = assets.getMesh("aircraft");
-    if (!m_shader) m_shader = assets.getShader("basic");
+    if (!m_mesh && (!m_model || m_model->parts().empty())) {
+        m_mesh = assets.getMesh("aircraft");
+    }
+    m_shader = assets.getShader("basic");
+    m_texturedShader = assets.getShader("textured");
 
     // Physics
     const auto& phys = json[ConfigKeys::PHYSICS];
@@ -248,8 +254,6 @@ void Aircraft::Instance::update(float dt, const FlightInput& input) {
 }
 
 void Aircraft::Instance::render(const Mat4& viewProjection, float alpha) {
-    if (!m_mesh || !m_shader) return;
-
     Vec3 renderPos = interpolatedPosition(alpha);
     Quat renderRot = interpolatedOrientation(alpha);
 
@@ -258,19 +262,45 @@ void Aircraft::Instance::render(const Mat4& viewProjection, float alpha) {
         * Mat4::translate(m_modelOffset)
         * m_modelRotation.toMat4()
         * Mat4::scale(m_modelScale.x, m_modelScale.y, m_modelScale.z);
+
+    if (m_model && !m_model->parts().empty()) {
+        for (const auto& part : m_model->parts()) {
+            if (!part.mesh) continue;
+            Shader* shader = (part.textured && part.texture && m_texturedShader) ? m_texturedShader : m_shader;
+            if (!shader) continue;
+            shader->use();
+            shader->setMat4("uMVP", viewProjection * model);
+            if (part.textured && part.texture && shader == m_texturedShader) {
+                part.texture->bind(0);
+                shader->setInt("uTexture", 0);
+            } else {
+                shader->setVec3("uColor", m_color);
+                shader->setBool("uUseUniformColor", true);
+            }
+            part.mesh->draw();
+            if (shader == m_shader) {
+                shader->setBool("uUseUniformColor", false);
+            }
+        }
+        return;
+    }
+
+    if (!m_mesh || !m_shader) return;
+
     m_shader->use();
     m_shader->setMat4("uMVP", viewProjection * model);
-    if (m_texture) {
+    if (m_texture && m_texturedShader) {
+        m_texturedShader->use();
+        m_texturedShader->setMat4("uMVP", viewProjection * model);
         m_texture->bind(0);
-        m_shader->setInt("uTexture", 0);
-    } else {
-        m_shader->setVec3("uColor", m_color);
-        m_shader->setBool("uUseUniformColor", true);
+        m_texturedShader->setInt("uTexture", 0);
+        m_mesh->draw();
+        return;
     }
+    m_shader->setVec3("uColor", m_color);
+    m_shader->setBool("uUseUniformColor", true);
     m_mesh->draw();
-    if (!m_texture) {
-        m_shader->setBool("uUseUniformColor", false); // Reset
-    }
+    m_shader->setBool("uUseUniformColor", false);
 }
 
 Vec3 Aircraft::Instance::position() const {
