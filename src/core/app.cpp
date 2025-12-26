@@ -1,4 +1,5 @@
 #include "core/app.hpp"
+#include "core/property_paths.hpp"
 #include "ui/anchor.hpp"
 #include "graphics/glad.h"
 #include "graphics/mesh_builder.hpp"
@@ -9,6 +10,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 #include <string>
 #include <chrono>
 #include <iomanip>
@@ -266,6 +268,9 @@ void App::setupHUD() {
     m_positionText = &m_ui.text("POS: 0, 0, 0");
     setupText(*m_positionText, 20, 170, 2.0f, Anchor::TopLeft, 0.0f);
 
+    m_powerText = &m_ui.text("PWR: 0%");
+    setupText(*m_powerText, 20, -60, 2.0f, Anchor::BottomLeft, 10.0f);
+
 }
 
 void App::updatePhysics() {
@@ -301,6 +306,17 @@ void App::updateHUD() {
         m_positionText->content("POS: " + std::to_string(static_cast<int>(pos.x)) + ", " +
                                 std::to_string(static_cast<int>(pos.y)) + ", " +
                                 std::to_string(static_cast<int>(pos.z)));
+    }
+
+    if (m_powerText) {
+        if (player) {
+            double throttle = player->state().get(Properties::Input::THROTTLE, 0.0);
+            throttle = std::clamp(throttle, 0.0, 1.0);
+            int percent = static_cast<int>(std::round(throttle * 100.0));
+            m_powerText->content("PWR: " + std::to_string(percent) + "%");
+        } else {
+            m_powerText->content("PWR: --");
+        }
     }
 
     m_ui.update();

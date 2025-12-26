@@ -96,6 +96,7 @@ private:
     Text* m_airspeedText = nullptr;
     Text* m_headingText = nullptr;
     Text* m_positionText = nullptr;
+    Text* m_powerText = nullptr;
     
     // Helpers
     bool initWindow(const AppConfig& config);

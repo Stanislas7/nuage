@@ -5,8 +5,8 @@
         "roll": {"positive": "Q", "negative": "E"}
     },
     "buttons": {
-        "throttle_up": "Space",
-        "throttle_down": "LeftShift",
+        "throttle_up": ["ArrowUp", "PageUp", "KeypadAdd"],
+        "throttle_down": ["ArrowDown", "PageDown", "KeypadSubtract"],
         "brake": "B",
         "quit": "Escape"
     }

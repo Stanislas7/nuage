@@ -33,6 +33,11 @@ When `jsbsim.enabled` is true in an aircraft JSON, Nuage uses `JsbsimSystem` as 
 - `fcs/rudder-cmd-norm`    <- input yaw
 - `fcs/throttle-cmd-norm`  <- throttle
 
+Throttle is bound to the `ArrowUp` / `ArrowDown` keys by default (with `PageUp`/`PageDown` and keypad `+`/`-` as fallbacks) defined in `assets/config/controls.json`. Those keycaps still map into the correct GLFW codes through the layout-aware loader so both AZERTY and QWERTY users get consistent input. Adjust the JSON array if you want different keycaps; `Input::loadBindingsFromConfig` remaps letter or named keys into the layout-aware physical key codes before the JSBSim throttle property is updated.
+
+### UI throttle indicator
+The HUD now renders a bottom-left `PWR: xx%` indicator sourced from `input/throttle`. It shows the currently commanded throttle percentage (clamped 0–100%) so you can see how much throttle your JSBSim aircraft is being asked to deliver without fighting the JSBSim throttle curve itself.
+
 ### Environment mapping
 Nuage wind is in world axes (x=east, y=up, z=north). JSBSim expects NED (north/east/down) in ft/s. We convert and set:
 

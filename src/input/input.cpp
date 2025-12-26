@@ -93,9 +93,43 @@ namespace {
             {"SLASH", GLFW_KEY_SLASH},
             {"BACKSLASH", GLFW_KEY_BACKSLASH}
         };
+        static const std::unordered_map<std::string, int> kArrowKeys = {
+            {"UP", GLFW_KEY_UP},
+            {"ARROWUP", GLFW_KEY_UP},
+            {"DOWN", GLFW_KEY_DOWN},
+            {"ARROWDOWN", GLFW_KEY_DOWN},
+            {"LEFT", GLFW_KEY_LEFT},
+            {"ARROWLEFT", GLFW_KEY_LEFT},
+            {"RIGHT", GLFW_KEY_RIGHT},
+            {"ARROWRIGHT", GLFW_KEY_RIGHT}
+        };
+        static const std::unordered_map<std::string, int> kExtraKeys = {
+            {"PAGEUP", GLFW_KEY_PAGE_UP},
+            {"PGUP", GLFW_KEY_PAGE_UP},
+            {"PAGEDOWN", GLFW_KEY_PAGE_DOWN},
+            {"PGDN", GLFW_KEY_PAGE_DOWN},
+            {"KEYPADADD", GLFW_KEY_KP_ADD},
+            {"KEYPADPLUS", GLFW_KEY_KP_ADD},
+            {"KEYPADSUBTRACT", GLFW_KEY_KP_SUBTRACT},
+            {"KEYPADMINUS", GLFW_KEY_KP_SUBTRACT},
+            {"KEYPAD-", GLFW_KEY_KP_SUBTRACT},
+            {"KEYPAD_", GLFW_KEY_KP_SUBTRACT},
+            {"KEYPAD/", GLFW_KEY_KP_DIVIDE},
+            {"KEYPAD*", GLFW_KEY_KP_MULTIPLY},
+            {"KEYPADENTER", GLFW_KEY_KP_ENTER},
+            {"KEYPAD0", GLFW_KEY_KP_0}
+        };
         auto it = kSpecialKeys.find(normalized);
         if (it != kSpecialKeys.end()) {
             return it->second;
+        }
+        auto extraIt = kExtraKeys.find(normalized);
+        if (extraIt != kExtraKeys.end()) {
+            return extraIt->second;
+        }
+        auto arrowIt = kArrowKeys.find(normalized);
+        if (arrowIt != kArrowKeys.end()) {
+            return arrowIt->second;
         }
         return -1;
     }
