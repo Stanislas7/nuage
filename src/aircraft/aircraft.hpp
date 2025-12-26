@@ -3,6 +3,7 @@
 #include "core/property_bus.hpp"
 #include "aircraft/aircraft_component.hpp"
 #include "aircraft/aircraft_state.hpp"
+#include "aircraft/aircraft_visual.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
 #include "math/mat4.hpp"
@@ -28,11 +29,6 @@ public:
         void init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere);
         void update(float dt, const FlightInput& input);
         void render(const Mat4& viewProjection, float alpha = 1.0f);
-
-        void setMesh(Mesh* mesh) { m_mesh = mesh; }
-        void setShader(Shader* shader) { m_shader = shader; }
-        Mesh* mesh() const { return m_mesh; }
-        Shader* shader() const { return m_shader; }
 
         PropertyBus& state() { return m_state; }
         const PropertyBus& state() const { return m_state; }
@@ -73,15 +69,7 @@ public:
         AircraftState m_prevState;
         
         std::vector<std::unique_ptr<AircraftComponent>> m_systems;
-        Mesh* m_mesh = nullptr;
-        Shader* m_shader = nullptr;
-        Texture* m_texture = nullptr;
-        Model* m_model = nullptr;
-        Shader* m_texturedShader = nullptr;
-        Vec3 m_color = {1, 1, 1};
-        Vec3 m_modelScale = {1, 1, 1};
-        Quat m_modelRotation = Quat::identity();
-        Vec3 m_modelOffset = {0, 0, 0};
+        AircraftVisual m_visual;
     };
 
     void init(AssetStore& assets, Atmosphere& atmosphere);

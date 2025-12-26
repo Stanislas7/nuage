@@ -71,9 +71,9 @@ Separate the simulation state from the property container.
 Extract rendering logic into a visual component.
 
 #### TODOs
-- [ ] Create `AircraftVisual` class.
-- [ ] Move `render()` logic out of `Aircraft::Instance`.
-- [ ] `Aircraft::Instance` should only provide the transform (Position/Rotation) to the visual system.
+- [x] Create `AircraftVisual` class.
+- [x] Move `render()` logic out of `Aircraft::Instance`.
+- [x] `Aircraft::Instance` should only provide the transform (Position/Rotation) to the visual system.
 
 #### Example: Refactored Render Loop
 ```cpp
