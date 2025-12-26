@@ -67,19 +67,19 @@ void FlightSession::setupHUD() {
     };
 
     m_altitudeText = &ui.text("ALT: 0.0 ft");
-    setupText(*m_altitudeText, 20, 20, 2.0f, Anchor::TopLeft, 0.0f);
+    setupText(*m_altitudeText, 20, 20, 0.6f, Anchor::TopLeft, 0.0f);
 
     m_airspeedText = &ui.text("SPD: 0 kts");
-    setupText(*m_airspeedText, 20, 70, 2.0f, Anchor::TopLeft, 0.0f);
+    setupText(*m_airspeedText, 20, 70, 0.6f, Anchor::TopLeft, 0.0f);
 
     m_headingText = &ui.text("HDG: 000");
-    setupText(*m_headingText, 20, 120, 2.0f, Anchor::TopLeft, 0.0f);
+    setupText(*m_headingText, 20, 120, 0.6f, Anchor::TopLeft, 0.0f);
 
     m_positionText = &ui.text("POS: 0, 0, 0");
-    setupText(*m_positionText, 20, 170, 2.0f, Anchor::TopLeft, 0.0f);
+    setupText(*m_positionText, 20, 170, 0.6f, Anchor::TopLeft, 0.0f);
 
     m_powerText = &ui.text("PWR: 0%");
-    setupText(*m_powerText, 20, -60, 2.0f, Anchor::BottomLeft, 10.0f);
+    setupText(*m_powerText, 20, -60, 0.6f, Anchor::BottomLeft, 10.0f);
 }
 
 void FlightSession::updateHUD() {

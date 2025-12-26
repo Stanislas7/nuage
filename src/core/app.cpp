@@ -32,6 +32,14 @@ bool App::init(const AppConfig& config) {
         return false;
     }
 
+    m_mainMenu.init(this, [this]() {
+        FlightConfig flight;
+        flight.aircraftPath = "assets/config/aircraft/c172p.json";
+        flight.terrainPath = "assets/config/terrain.json";
+        flight.sceneryPath = "assets/config/scenery.json";
+        this->startFlight(flight);
+    });
+
     m_lastFrameTime = static_cast<float>(glfwGetTime());
     return true;
 }
@@ -46,13 +54,14 @@ bool App::startFlight(const FlightConfig& config) {
     }
 
     m_paused = false;
-    m_pauseOverlay.update(m_paused, m_ui);
+    m_state = AppState::InFlight;
     return true;
 }
 
 void App::endFlight() {
     m_session.reset();
     m_physicsAccumulator = 0.0f;
+    m_state = AppState::StartMenu;
 }
 
 void App::run() {
@@ -70,52 +79,74 @@ void App::run() {
         m_input.update(m_deltaTime);
         auto inputEnd = clock::now();
 
-        if (m_input.isKeyPressed(GLFW_KEY_TAB) && m_session) {
-            m_session->camera().toggleOrbitMode();
-        }
-
-        if (m_input.isKeyPressed(GLFW_KEY_SPACE)) {
-            m_paused = !m_paused;
-            m_physicsAccumulator = 0.0f;
-        }
-
         if (m_input.quitRequested()) {
             m_shouldQuit = true;
             continue;
         }
 
-        auto physicsStart = clock::now();
-        updatePhysics();
-        auto physicsEnd = clock::now();
-        
-        float alpha = m_physicsAccumulator / FIXED_DT;
+        if (m_state == AppState::StartMenu) {
+            m_mainMenu.update(true, m_ui);
+        } else if (m_state == AppState::InFlight) {
+            m_mainMenu.update(false, m_ui);
 
-        if (m_session) {
-            m_session->update(m_deltaTime);
-            m_session->camera().update(m_deltaTime, m_session->aircraft().player(), alpha);
+            if (m_input.isKeyPressed(GLFW_KEY_TAB)) {
+                m_session->camera().toggleOrbitMode();
+            }
+
+            if (m_input.isKeyPressed(GLFW_KEY_SPACE)) {
+                m_paused = !m_paused;
+                m_physicsAccumulator = 0.0f;
+            }
+
+            if (m_input.isKeyPressed(GLFW_KEY_ESCAPE)) {
+                endFlight();
+            }
+
+            updatePhysics();
+
+            if (m_session) {
+                m_session->update(m_deltaTime);
+                float alpha = m_physicsAccumulator / FIXED_DT;
+                m_session->camera().update(m_deltaTime, m_session->aircraft().player(), alpha);
+            }
+
+            m_pauseOverlay.update(m_paused, m_ui);
         }
 
-        m_pauseOverlay.update(m_paused, m_ui);
+        m_ui.update();
 
         auto renderStart = clock::now();
-        render(alpha);
+        float alpha = m_physicsAccumulator / FIXED_DT;
+        
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        if (m_state == AppState::InFlight && m_session) {
+            m_session->render(alpha);
+        }
+
+        m_ui.begin();
+        if (m_state == AppState::InFlight && m_session) {
+            m_pauseOverlay.draw(m_paused, m_ui);
+        } else if (m_state == AppState::StartMenu) {
+            m_mainMenu.draw(true, m_ui);
+        }
+        m_ui.drawPersistent();
+        m_ui.end();
         auto renderEnd = clock::now();
 
-        auto swapStart = clock::now();
         glfwSwapBuffers(m_window);
         glfwPollEvents();
-        auto swapEnd = clock::now();
+        auto frameEnd = clock::now();
 
         auto toMs = [](const clock::time_point& start, const clock::time_point& end) {
             return std::chrono::duration<double, std::milli>(end - start).count();
         };
 
         FrameProfile profile;
-        profile.frameMs = static_cast<float>(toMs(frameStart, swapEnd));
+        profile.frameMs = static_cast<float>(toMs(frameStart, frameEnd));
         profile.inputMs = static_cast<float>(toMs(inputStart, inputEnd));
-        profile.physicsMs = static_cast<float>(toMs(physicsStart, physicsEnd));
+        profile.physicsMs = static_cast<float>(toMs(inputEnd, renderStart)); 
         profile.renderMs = static_cast<float>(toMs(renderStart, renderEnd));
-        profile.swapMs = static_cast<float>(toMs(swapStart, swapEnd));
 
         updateFrameStats(profile);
     }
@@ -159,7 +190,7 @@ bool App::initWindow(const AppConfig& config) {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glClearColor(0.5f, 0.7f, 0.9f, 1.0f);
+    glClearColor(0.1f, 0.12f, 0.15f, 1.0f);
     
     return true;
 }
@@ -175,16 +206,6 @@ void App::updatePhysics() {
     }
 }
 
-void App::render(float alpha) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    if (m_session) {
-        m_session->render(alpha);
-    }
-    
-    m_ui.draw();
-}
-
 void App::updateFrameStats(const FrameProfile& profile) {
     m_framesSinceFps++;
     m_totalFrames++;
@@ -195,7 +216,6 @@ void App::updateFrameStats(const FrameProfile& profile) {
     m_profileAccum.inputMs += profile.inputMs;
     m_profileAccum.physicsMs += profile.physicsMs;
     m_profileAccum.renderMs += profile.renderMs;
-    m_profileAccum.swapMs += profile.swapMs;
 
     if (m_fpsTimer < 1.0f) return;
 
@@ -205,7 +225,6 @@ void App::updateFrameStats(const FrameProfile& profile) {
     m_lastProfile.inputMs = static_cast<float>(m_profileAccum.inputMs * invFrames);
     m_lastProfile.physicsMs = static_cast<float>(m_profileAccum.physicsMs * invFrames);
     m_lastProfile.renderMs = static_cast<float>(m_profileAccum.renderMs * invFrames);
-    m_lastProfile.swapMs = static_cast<float>(m_profileAccum.swapMs * invFrames);
 
     m_framesSinceFps = 0;
     m_fpsTimer = 0.0f;

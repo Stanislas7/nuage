@@ -32,7 +32,7 @@ bool UIManager::init(App* app) {
     }
     testFile.close();
 
-    if (!m_font->init(fontPath, 24.0f)) {
+    if (!m_font->init(fontPath, 64.0f)) {
         std::cerr << "Failed to load font" << std::endl;
         return false;
     }
@@ -69,6 +69,7 @@ bool UIManager::init(App* app) {
 
 void UIManager::shutdown() {
     m_texts.clear();
+    m_buttons.clear();
     m_font.reset();
     m_shader = nullptr;
 
@@ -91,12 +92,32 @@ void UIManager::update() {
         m_projection = Mat4::ortho(0.0f, static_cast<float>(width),
                                     static_cast<float>(height), 0.0f, -1.0f, 1.0f);
     }
+
+    Vec2 mousePos = m_app->input().mousePosition();
+    bool mousePressed = m_app->input().isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+
+    for (auto& btn : m_buttons) {
+        if (!btn->visible || !btn->enabled) {
+            btn->setHovered(false);
+            continue;
+        }
+
+        Vec3 pos = btn->getAnchoredPosition(m_windowWidth, m_windowHeight);
+        Vec3 size = btn->getSize();
+
+        bool hovered = (mousePos.x >= pos.x && mousePos.x <= pos.x + size.x &&
+                        mousePos.y >= pos.y && mousePos.y <= pos.y + size.y);
+        
+        btn->setHovered(hovered);
+
+        if (hovered && mousePressed) {
+            btn->triggerClick();
+        }
+    }
 }
 
-void UIManager::draw() {
-    if (!m_shader || !m_font) {
-        return;
-    }
+void UIManager::begin() {
+    if (!m_shader || !m_font) return;
 
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -107,94 +128,86 @@ void UIManager::draw() {
 
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+}
 
-    if (m_overlayActive && m_windowWidth > 0 && m_windowHeight > 0) {
-        float w = static_cast<float>(m_windowWidth);
-        float h = static_cast<float>(m_windowHeight);
-        const std::array<float, 24> overlayVerts = {
-            0.0f, 0.0f, 0.0f, 0.0f,
-            w,    0.0f, 1.0f, 0.0f,
-            w,    h,    1.0f, 1.0f,
-            0.0f, 0.0f, 0.0f, 0.0f,
-            w,    h,    1.0f, 1.0f,
-            0.0f, h,    0.0f, 1.0f
-        };
-
-        m_shader->setVec3("uColor", m_overlayColor);
-        m_shader->setFloat("uAlpha", m_overlayAlpha);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, m_whiteTexture);
-        m_shader->setInt("uTexture", 0);
-        m_shader->setMat4("uModel", Mat4::identity());
-        glBufferSubData(GL_ARRAY_BUFFER, 0, overlayVerts.size() * sizeof(float), overlayVerts.data());
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        if (!m_overlayTitle.empty()) {
-            drawImmediateText(m_overlayTitle, 0.0f, -40.0f, Anchor::Center, 3.0f,
-                              Vec3(1.0f, 1.0f, 1.0f), 1.0f);
-        }
-        if (!m_overlayHint.empty()) {
-            drawImmediateText(m_overlayHint, 0.0f, 40.0f, Anchor::Center, 1.8f,
-                              Vec3(1.0f, 1.0f, 1.0f), 1.0f);
-        }
-    }
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_font->getTexture());
-
-    for (const auto& text : m_texts) {
-        if (!text) continue;
-        if (text->getContent().empty()) continue;
-
-        Vec3 pos = text->getAnchoredPosition(m_windowWidth, m_windowHeight);
-
-        std::vector<float> vertices;
-        buildTextVertexData(*text, vertices, pos);
-
-        if (vertices.empty()) continue;
-
-        glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());
-        m_shader->setMat4("uModel", Mat4::identity());
-        m_shader->setVec3("uColor", text->color);
-        m_shader->setFloat("uAlpha", 1.0f);
-        m_shader->setInt("uTexture", 0);
-
-        int quadCount = static_cast<int>(vertices.size()) / 24;
-        glDrawArrays(GL_TRIANGLES, 0, quadCount * 6);
-    }
-
+void UIManager::end() {
     glBindVertexArray(0);
-    glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 }
 
-void UIManager::setOverlay(bool active, const Vec3& color, float alpha) {
-    m_overlayActive = active;
-    m_overlayColor = color;
-    m_overlayAlpha = std::clamp(alpha, 0.0f, 1.0f);
+void UIManager::drawPersistent() {
+    // 1. Draw Buttons
+    for (const auto& btn : m_buttons) {
+        if (!btn->visible) continue;
+        drawRect(btn->position.x, btn->position.y, btn->getSize().x, btn->getSize().y,
+                 btn->isHovered() ? btn->getHoverColor() : btn->color, 1.0f, btn->anchor);
+
+        Text tempText(btn->getText(), m_font.get(), m_app);
+        tempText.scaleVal(btn->scale);
+        Vec3 textSize = tempText.getSize();
+        Vec3 bPos = btn->getAnchoredPosition(m_windowWidth, m_windowHeight);
+        float tx = bPos.x + (btn->getSize().x - textSize.x) / 2.0f;
+        float ty = bPos.y + (btn->getSize().y - textSize.y) / 2.0f;
+
+        drawText(btn->getText(), tx, ty, Anchor::TopLeft, btn->scale, Vec3(1, 1, 1), 1.0f);
+    }
+
+    // 2. Draw Texts
+    for (const auto& text : m_texts) {
+        if (!text || !text->visible) continue;
+        if (text->getContent().empty()) continue;
+
+        Vec3 pos = text->getAnchoredPosition(m_windowWidth, m_windowHeight);
+        drawText(text->getContent(), pos.x, pos.y, Anchor::TopLeft, text->scale, text->color, 1.0f);
+    }
 }
 
-void UIManager::setOverlayText(std::string title, std::string hint) {
-    m_overlayTitle = std::move(title);
-    m_overlayHint = std::move(hint);
+void UIManager::drawRect(float x, float y, float w, float h, const Vec3& color, float alpha, Anchor anchor) {
+    float rx = x;
+    float ry = y;
+
+    switch (anchor) {
+        case Anchor::TopRight:    rx = m_windowWidth - x - w; break;
+        case Anchor::BottomLeft:  ry = m_windowHeight - y - h; break;
+        case Anchor::BottomRight: rx = m_windowWidth - x - w; ry = m_windowHeight - y - h; break;
+        case Anchor::Center:      rx = m_windowWidth / 2.0f + x - w / 2.0f;
+                                  ry = m_windowHeight / 2.0f + y - h / 2.0f; break;
+        default: break;
+    }
+
+    const std::array<float, 24> verts = {
+        rx,     ry,     0.0f, 0.0f,
+        rx + w, ry,     1.0f, 0.0f,
+        rx + w, ry + h, 1.0f, 1.0f,
+        rx,     ry,     0.0f, 0.0f,
+        rx + w, ry + h, 1.0f, 1.0f,
+        rx,     ry + h, 0.0f, 1.0f
+    };
+
+    m_shader->setMat4("uModel", Mat4::identity());
+    m_shader->setVec3("uColor", color);
+    m_shader->setFloat("uAlpha", alpha);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_whiteTexture);
+    m_shader->setInt("uTexture", 0);
+    
+    glBufferSubData(GL_ARRAY_BUFFER, 0, verts.size() * sizeof(float), verts.data());
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
-void UIManager::drawImmediateText(const std::string& content, float x, float y, Anchor anchor,
-                                  float scale, const Vec3& color, float alpha) {
-    if (content.empty() || !m_font) return;
+void UIManager::drawText(const std::string& content, float x, float y, Anchor anchor,
+                         float scale, const Vec3& color, float alpha) {
+    if (content.empty() || !m_font || !m_shader) return;
 
     Text text(content, m_font.get(), m_app);
-    text.pos(x, y);
-    text.scaleVal(scale);
-    text.anchorMode(anchor);
-    text.color = color;
+    text.pos(x, y).scaleVal(scale).anchorMode(anchor);
 
     Vec3 pos = text.getAnchoredPosition(m_windowWidth, m_windowHeight);
+    
     std::vector<float> vertices;
     buildTextVertexData(text, vertices, pos);
     if (vertices.empty()) return;
 
-    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());
     m_shader->setMat4("uModel", Mat4::identity());
     m_shader->setVec3("uColor", color);
     m_shader->setFloat("uAlpha", std::clamp(alpha, 0.0f, 1.0f));
@@ -202,6 +215,7 @@ void UIManager::drawImmediateText(const std::string& content, float x, float y, 
     glBindTexture(GL_TEXTURE_2D, m_font->getTexture());
     m_shader->setInt("uTexture", 0);
 
+    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());
     int quadCount = static_cast<int>(vertices.size()) / 24;
     glDrawArrays(GL_TRIANGLES, 0, quadCount * 6);
 }
@@ -209,6 +223,11 @@ void UIManager::drawImmediateText(const std::string& content, float x, float y, 
 Text& UIManager::text(const std::string& content) {
     m_texts.push_back(std::make_unique<Text>(content, m_font.get(), m_app));
     return *m_texts.back();
+}
+
+Button& UIManager::button(const std::string& text) {
+    m_buttons.push_back(std::make_unique<Button>(text, m_font.get(), m_app));
+    return *m_buttons.back();
 }
 
 void UIManager::buildTextVertexData(const Text& text, std::vector<float>& vertices, Vec3& pos) const {

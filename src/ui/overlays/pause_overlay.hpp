@@ -12,18 +12,24 @@ namespace nuage {
 class PauseOverlay {
 public:
     void update(bool paused, UIManager& ui) {
-        if (paused == m_lastPaused) return;
-        m_lastPaused = paused;
-
-        std::string title = paused ? "PAUSED" : "";
-        std::string hint = paused ? "Press SPACE to resume" : "";
-        
-        ui.setOverlayText(title, hint);
-        ui.setOverlay(paused, Vec3(0.0f, 0.0f, 0.0f), paused ? 0.45f : 0.0f);
+        // state logic, maybe someday
     }
 
-private:
-    bool m_lastPaused = false;
+    void draw(bool paused, UIManager& ui) {
+        if (!paused) return;
+
+        // Draw background tint
+        ui.drawRect(0, 0, (float)ui.getWindowWidth(), (float)ui.getWindowHeight(), 
+                    Vec3(0.0f, 0.0f, 0.0f), 0.45f);
+
+        // Draw text
+        ui.drawText("PAUSED", 0, -40, Anchor::Center, 1.5f, Vec3(1, 1, 1), 1.0f);
+        ui.drawText("Press SPACE to resume", 0, 40, Anchor::Center, 0.6f, Vec3(1, 1, 1), 1.0f);
+    }
+
+    void reset() {
+        // No state to reset currently
+    }
 };
 
 } // namespace nuage

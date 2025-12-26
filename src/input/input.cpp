@@ -383,7 +383,16 @@ bool Input::isKeyPressed(int key) const {
 void Input::pollMouse() {
     double x, y;
     glfwGetCursorPos(m_window, &x, &y);
-    m_mousePos = Vec2(static_cast<float>(x), static_cast<float>(y));
+    
+    // Scale mouse points to framebuffer pixels (High-DPI / Retina fix)
+    int winW, winH, fbW, fbH;
+    glfwGetWindowSize(m_window, &winW, &winH);
+    glfwGetFramebufferSize(m_window, &fbW, &fbH);
+    
+    float scaleX = static_cast<float>(fbW) / winW;
+    float scaleY = static_cast<float>(fbH) / winH;
+
+    m_mousePos = Vec2(static_cast<float>(x) * scaleX, static_cast<float>(y) * scaleY);
 
     m_mouseDelta = m_mousePos - m_prevMousePos;
     m_prevMousePos = m_mousePos;
