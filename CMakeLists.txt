@@ -34,13 +34,12 @@ file(GLOB_RECURSE SOURCES
 add_executable(nuage ${SOURCES})
 
 # Copy assets to the build directory
+set(JSBSIM_MODELS c172p)
+
 add_custom_command(TARGET nuage POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/assets
     $<TARGET_FILE_DIR:nuage>/assets
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/external/jsbsim/aircraft
-    $<TARGET_FILE_DIR:nuage>/assets/jsbsim/aircraft
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/external/jsbsim/engine
     $<TARGET_FILE_DIR:nuage>/assets/jsbsim/engine
@@ -48,6 +47,16 @@ add_custom_command(TARGET nuage POST_BUILD
     ${CMAKE_SOURCE_DIR}/external/jsbsim/systems
     $<TARGET_FILE_DIR:nuage>/assets/jsbsim/systems
 )
+
+foreach(model ${JSBSIM_MODELS})
+    add_custom_command(TARGET nuage POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+        $<TARGET_FILE_DIR:nuage>/assets/jsbsim/aircraft/${model}
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/external/jsbsim/aircraft/${model}
+        $<TARGET_FILE_DIR:nuage>/assets/jsbsim/aircraft/${model}
+    )
+endforeach()
 
 target_include_directories(nuage PRIVATE
     ${CMAKE_SOURCE_DIR}/src

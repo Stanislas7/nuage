@@ -107,22 +107,22 @@ The build copies JSBSim aircraft/engine/systems into the build output under `ass
 
 ## 5) Adding a New JSBSim Aircraft
 
-1) **Add the JSBSim XML**
-   - Drop the aircraft folder into `assets/jsbsim/aircraft/<model>/`.
-   - The primary XML should be `<model>.xml`.
+Nuage only copies a **small subset** of JSBSim aircraft by default (see `CMakeLists.txt` and the `JSBSIM_MODELS` list). That keeps your `assets/jsbsim/aircraft/` folder lean. To add a new aircraft (e.g., a Piper):
 
-2) **Create a JSON config**
-   - Add a new file under `assets/config/aircraft/` with a `jsbsim` block.
-   - Set `jsbsim.model` to the JSBSim aircraft folder name.
+1. **Provide the JSBSim XMLs**  
+   - Copy or download the JSBSim aircraft folder into `external/jsbsim/aircraft/<model>/` (the same layout JSBSim expects).  
+   - Update `JSBSIM_MODELS` in `CMakeLists.txt` to include `<model>` so the build copies it into `assets/jsbsim/aircraft/<model>/`.  
+   - If you prefer not to touch `external/`, you can manually place the folder under `assets/jsbsim/aircraft/<model>/` and omit it from `JSBSIM_MODELS`; just ensure `jsbsim.rootPath` points to `assets/jsbsim` in your aircraft JSON.
 
-3) **Use the model**
-   - Spawn the aircraft as usual. The JSBSim system will run the flight dynamics.
+2. **Create the aircraft JSON**  
+   - Use `assets/config/aircraft/template_jsbsim.json` as a starting point.  
+   - Set `jsbsim.model` to the folder name and optionally `jsbsim.rootPath` if you moved the XMLs elsewhere.  
+   - You can ignore the old `physics`, `engine`, and `lift` sections—the JSBSim path handles those.
 
-## 6) Useful Runtime Properties
+3. **Run the sim**  
+   - The build copies the selected XMLs into your binary’s `assets/jsbsim/` tree at build time.  
+   - The JSBSim system will read from `assets/jsbsim` and keep the rest of Nuage untouched.
 
-- `physics/air_speed` (meters/sec)
-- `velocity/*` (world m/s)
-- `orientation` (quaternion)
-- `input/pitch`, `input/roll`, `input/yaw`, `input/throttle`
+If you ever want to add more JSBSim aircraft, just drop the XMLs (external or assets) and update `JSBSIM_MODELS`. No need to modify game code beyond the JSON config.
 
 If you want to expose more JSBSim internals (AOA, CL, gear state), we can mirror those into the PropertyBus as needed.
