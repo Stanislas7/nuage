@@ -8,6 +8,7 @@ struct ThrustConfig {
     float thrustScale = 0.0f;
     float propEfficiency = 0.0f;
     float minAirspeed = 0.0f;
+    float maxStaticThrust = 0.0f;
 };
 
 class ThrustForce : public AircraftComponent {

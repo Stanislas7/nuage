@@ -10,6 +10,10 @@ struct LiftConfig {
     float clAlpha = 0.0f;
     float clMax = 0.0f;
     float clMin = 0.0f;
+    float stallAlphaRad = 0.0f;
+    float postStallAlphaRad = 0.0f;
+    float clPostStall = 0.6f;
+    float clPostStallNeg = -0.6f;
     float wingArea = 0.0f;
 };
 

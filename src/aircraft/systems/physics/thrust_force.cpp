@@ -24,7 +24,12 @@ void ThrustForce::update(float dt) {
         Vec3 wind = m_state->getVec3(Properties::Atmosphere::WIND_PREFIX);
         float airspeed = (velocity - wind).length();
         float effectiveSpeed = std::max(airspeed, m_config.minAirspeed);
-        thrustForce = static_cast<float>((power * m_config.propEfficiency) / effectiveSpeed);
+        double density = m_state->get(Properties::Atmosphere::DENSITY, 1.225);
+        double densityRatio = density / 1.225;
+        thrustForce = static_cast<float>((power * m_config.propEfficiency * densityRatio) / effectiveSpeed);
+        if (m_config.maxStaticThrust > 0.0f) {
+            thrustForce = std::min(thrustForce, m_config.maxStaticThrust);
+        }
     } else {
         thrustForce = static_cast<float>(thrust);
     }

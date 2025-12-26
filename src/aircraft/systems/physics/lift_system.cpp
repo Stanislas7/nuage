@@ -3,6 +3,7 @@
 #include "core/property_bus.hpp"
 #include "core/property_paths.hpp"
 #include <algorithm>
+#include <cmath>
 
 namespace nuage {
 
@@ -33,7 +34,41 @@ void LiftSystem::update(float dt) {
     }
 
     float cl = m_config.cl0 + m_config.clAlpha * data.aoa;
-    cl = std::clamp(cl, m_config.clMin, m_config.clMax);
+
+    float stallAlphaPos = m_config.stallAlphaRad;
+    if (stallAlphaPos <= 0.0f && std::abs(m_config.clAlpha) > 0.0001f) {
+        stallAlphaPos = (m_config.clMax - m_config.cl0) / m_config.clAlpha;
+    }
+    if (stallAlphaPos <= 0.0f) {
+        stallAlphaPos = 0.35f;
+    }
+
+    float postStallAlphaPos = m_config.postStallAlphaRad;
+    if (postStallAlphaPos <= stallAlphaPos) {
+        postStallAlphaPos = stallAlphaPos + 0.35f;
+    }
+
+    float stallAlphaNeg = -stallAlphaPos;
+    if (std::abs(m_config.clAlpha) > 0.0001f) {
+        float derivedNeg = (m_config.clMin - m_config.cl0) / m_config.clAlpha;
+        if (derivedNeg < 0.0f) {
+            stallAlphaNeg = derivedNeg;
+        }
+    }
+
+    float postStallAlphaNeg = stallAlphaNeg - (postStallAlphaPos - stallAlphaPos);
+
+    if (data.aoa > stallAlphaPos) {
+        float t = (data.aoa - stallAlphaPos) / std::max(postStallAlphaPos - stallAlphaPos, 0.001f);
+        t = std::clamp(t, 0.0f, 1.0f);
+        cl = (1.0f - t) * m_config.clMax + t * m_config.clPostStall;
+    } else if (data.aoa < stallAlphaNeg) {
+        float t = (data.aoa - stallAlphaNeg) / std::min(postStallAlphaNeg - stallAlphaNeg, -0.001f);
+        t = std::clamp(t, 0.0f, 1.0f);
+        cl = (1.0f - t) * m_config.clMin + t * m_config.clPostStallNeg;
+    } else {
+        cl = std::clamp(cl, m_config.clMin, m_config.clMax);
+    }
 
     float liftMagnitude = cl * data.dynamicPressure * m_config.wingArea;
 

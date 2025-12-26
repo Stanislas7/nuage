@@ -21,19 +21,37 @@
     "engineForce": {
         "thrustScale": 1.0,
         "propEfficiency": 0.82,
-        "minAirspeed": 10.0
+        "minAirspeed": 12.0,
+        "maxStaticThrust": 2300.0
     },
     "lift": {
         "cl0": 0.1,
         "clAlpha": 4.5,
         "clMax": 1.4,
         "clMin": -1.0,
+        "stallAlphaDeg": 15.0,
+        "postStallAlphaDeg": 25.0,
+        "clPostStall": 0.35,
+        "clPostStallNeg": -0.35,
         "wingArea": 16.2
     },
     "drag": {
-        "cd0": 0.035,
-        "inducedDragFactor": 0.1,
+        "cd0": 0.04,
+        "cdStall": 1.8,
+        "inducedDragFactor": 0.16,
         "wingArea": 16.2
+    },
+    "stability": {
+        "pitchStability": 0.35,
+        "yawStability": 0.25,
+        "rollStability": 0.15,
+        "pitchDamping": 0.45,
+        "yawDamping": 0.35,
+        "rollDamping": 0.45,
+        "referenceArea": 16.2,
+        "referenceLength": 1.5,
+        "momentScale": 0.015,
+        "minAirspeed": 12.0
     },
     "engine": {
         "maxThrust": 0.0,

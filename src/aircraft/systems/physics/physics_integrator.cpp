@@ -51,7 +51,8 @@ void PhysicsIntegrator::integrate(float dt) {
     velocity = velocity + acceleration * dt;
     m_state->setVec3(Properties::Velocity::PREFIX, velocity);
 
-    float airSpeed = velocity.length();
+    Vec3 wind = m_state->getVec3(Properties::Atmosphere::WIND_PREFIX);
+    float airSpeed = (velocity - wind).length();
     m_state->set(Properties::Physics::AIR_SPEED, static_cast<double>(airSpeed));
 
     position = position + velocity * dt;

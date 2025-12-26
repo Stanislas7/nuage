@@ -21,7 +21,8 @@ void OrientationSystem::update(float dt) {
     double roll = m_state->get(Properties::Input::ROLL);
 
     Vec3 velocity = m_state->getVec3(Properties::Velocity::PREFIX);
-    float speed = velocity.length();
+    Vec3 wind = m_state->getVec3(Properties::Atmosphere::WIND_PREFIX);
+    float speed = (velocity - wind).length();
     
     // Scale control authority with speed
     // This approximates dynamic pressure (q = 0.5 * rho * v^2)

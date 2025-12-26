@@ -16,6 +16,7 @@
 #include "aircraft/systems/physics/thrust_force.hpp"
 #include "aircraft/systems/physics/lift_system.hpp"
 #include "aircraft/systems/physics/drag_system.hpp"
+#include "aircraft/systems/physics/stability_system.hpp"
 #include "aircraft/systems/engine/engine_system.hpp"
 #include "aircraft/systems/fuel/fuel_system.hpp"
 #include "aircraft/systems/environment/environment_system.hpp"
@@ -53,6 +54,18 @@ namespace {
         Quat qy = Quat::fromAxisAngle(Vec3(0, 1, 0), ry);
         Quat qz = Quat::fromAxisAngle(Vec3(0, 0, 1), rz);
         return (qz * qy * qx).normalized();
+    }
+
+    void finalizeLiftConfig(LiftConfig& config) {
+        if (config.stallAlphaRad <= 0.0f && std::abs(config.clAlpha) > 0.0001f) {
+            config.stallAlphaRad = (config.clMax - config.cl0) / config.clAlpha;
+        }
+        if (config.stallAlphaRad <= 0.0f) {
+            config.stallAlphaRad = 0.35f;
+        }
+        if (config.postStallAlphaRad <= config.stallAlphaRad) {
+            config.postStallAlphaRad = config.stallAlphaRad + 0.35f;
+        }
     }
 }
 
@@ -148,6 +161,20 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     orientConfig.dampingFactor = orient[ConfigKeys::DAMPING_FACTOR];
     addSystem<OrientationSystem>(orientConfig);
 
+    const auto& stab = json[ConfigKeys::STABILITY];
+    StabilityConfig stabilityConfig;
+    stabilityConfig.pitchStability = stab[ConfigKeys::PITCH_STABILITY];
+    stabilityConfig.yawStability = stab[ConfigKeys::YAW_STABILITY];
+    stabilityConfig.rollStability = stab[ConfigKeys::ROLL_STABILITY];
+    stabilityConfig.pitchDamping = stab[ConfigKeys::PITCH_DAMPING];
+    stabilityConfig.yawDamping = stab[ConfigKeys::YAW_DAMPING];
+    stabilityConfig.rollDamping = stab[ConfigKeys::ROLL_DAMPING];
+    stabilityConfig.referenceArea = stab[ConfigKeys::REFERENCE_AREA];
+    stabilityConfig.referenceLength = stab[ConfigKeys::REFERENCE_LENGTH];
+    stabilityConfig.momentScale = stab[ConfigKeys::MOMENT_SCALE];
+    stabilityConfig.minAirspeed = stab[ConfigKeys::STABILITY_MIN_AIRSPEED];
+    addSystem<StabilitySystem>(stabilityConfig);
+
     // Forces
     addSystem<GravitySystem>();
 
@@ -156,6 +183,7 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     thrustConfig.thrustScale = ef[ConfigKeys::THRUST_SCALE];
     thrustConfig.propEfficiency = ef[ConfigKeys::PROP_EFFICIENCY];
     thrustConfig.minAirspeed = ef[ConfigKeys::MIN_AIRSPEED];
+    thrustConfig.maxStaticThrust = ef[ConfigKeys::MAX_STATIC_THRUST];
     addSystem<ThrustForce>(thrustConfig);
 
     const auto& lift = json[ConfigKeys::LIFT];
@@ -165,6 +193,11 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     liftConfig.clMax = lift[ConfigKeys::CL_MAX];
     liftConfig.clMin = lift[ConfigKeys::CL_MIN];
     liftConfig.wingArea = lift[ConfigKeys::WING_AREA];
+    liftConfig.stallAlphaRad = lift.value(ConfigKeys::STALL_ALPHA_DEG, 0.0f) * kDegToRad;
+    liftConfig.postStallAlphaRad = lift.value(ConfigKeys::POST_STALL_ALPHA_DEG, 0.0f) * kDegToRad;
+    liftConfig.clPostStall = lift.value(ConfigKeys::CL_POST_STALL, liftConfig.clPostStall);
+    liftConfig.clPostStallNeg = lift.value(ConfigKeys::CL_POST_STALL_NEG, liftConfig.clPostStallNeg);
+    finalizeLiftConfig(liftConfig);
     addSystem<LiftSystem>(liftConfig);
 
     const auto& drag = json[ConfigKeys::DRAG];
@@ -172,6 +205,10 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     dragConfig.cd0 = drag[ConfigKeys::CD0];
     dragConfig.inducedDragFactor = drag[ConfigKeys::INDUCED_DRAG_FACTOR];
     dragConfig.wingArea = drag[ConfigKeys::WING_AREA];
+    dragConfig.frontalArea = drag.value(ConfigKeys::FRONTAL_AREA, dragConfig.frontalArea);
+    dragConfig.cdStall = drag.value(ConfigKeys::CD_STALL, dragConfig.cdStall);
+    dragConfig.stallAlphaRad = liftConfig.stallAlphaRad;
+    dragConfig.postStallAlphaRad = liftConfig.postStallAlphaRad;
     addSystem<DragSystem>(dragConfig);
 
     // Initial State

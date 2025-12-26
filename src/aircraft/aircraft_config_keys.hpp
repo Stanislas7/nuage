@@ -12,6 +12,7 @@ namespace ConfigKeys {
     inline constexpr char ENGINE_FORCE[] = "engineForce";
     inline constexpr char LIFT[] = "lift";
     inline constexpr char DRAG[] = "drag";
+    inline constexpr char STABILITY[] = "stability";
     inline constexpr char SPAWN[] = "spawn";
 
     // Model
@@ -58,18 +59,36 @@ namespace ConfigKeys {
     inline constexpr char THRUST_SCALE[] = "thrustScale";
     inline constexpr char PROP_EFFICIENCY[] = "propEfficiency";
     inline constexpr char MIN_AIRSPEED[] = "minAirspeed";
+    inline constexpr char MAX_STATIC_THRUST[] = "maxStaticThrust";
 
     // Lift
     inline constexpr char CL0[] = "cl0";
     inline constexpr char CL_ALPHA[] = "clAlpha";
     inline constexpr char CL_MAX[] = "clMax";
     inline constexpr char CL_MIN[] = "clMin";
+    inline constexpr char STALL_ALPHA_DEG[] = "stallAlphaDeg";
+    inline constexpr char POST_STALL_ALPHA_DEG[] = "postStallAlphaDeg";
+    inline constexpr char CL_POST_STALL[] = "clPostStall";
+    inline constexpr char CL_POST_STALL_NEG[] = "clPostStallNeg";
     inline constexpr char WING_AREA[] = "wingArea";
 
     // Drag
     inline constexpr char CD0[] = "cd0";
+    inline constexpr char CD_STALL[] = "cdStall";
     inline constexpr char INDUCED_DRAG_FACTOR[] = "inducedDragFactor";
     inline constexpr char FRONTAL_AREA[] = "frontalArea";
+
+    // Stability
+    inline constexpr char PITCH_STABILITY[] = "pitchStability";
+    inline constexpr char YAW_STABILITY[] = "yawStability";
+    inline constexpr char ROLL_STABILITY[] = "rollStability";
+    inline constexpr char PITCH_DAMPING[] = "pitchDamping";
+    inline constexpr char YAW_DAMPING[] = "yawDamping";
+    inline constexpr char ROLL_DAMPING[] = "rollDamping";
+    inline constexpr char REFERENCE_AREA[] = "referenceArea";
+    inline constexpr char REFERENCE_LENGTH[] = "referenceLength";
+    inline constexpr char MOMENT_SCALE[] = "momentScale";
+    inline constexpr char STABILITY_MIN_AIRSPEED[] = "minAirspeed";
 
     // Spawn 
     inline constexpr char POSITION[] = "position";
