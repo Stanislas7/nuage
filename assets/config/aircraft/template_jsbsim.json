@@ -1,0 +1,23 @@
+{
+    "name": "Aircraft Name",
+    "model": {
+        "name": "aircraft_mesh",
+        "path": "assets/models/aircraft.obj",
+        "texture": "",
+        "color": [0.8, 0.8, 0.8],
+        "scale": 1.0,
+        "rotation": [0.0, 0.0, 0.0],
+        "offset": [0.0, 0.0, 0.0]
+    },
+    "spawn": {
+        "position": [0.0, 1000.0, 0.0],
+        "airspeed": 60.0
+    },
+    "jsbsim": {
+        "enabled": true,
+        "model": "c172p",
+        "rootPath": "assets/jsbsim",
+        "latitudeDeg": 0.0,
+        "longitudeDeg": 0.0
+    }
+}

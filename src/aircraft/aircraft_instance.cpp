@@ -18,6 +18,7 @@
 #include "aircraft/systems/physics/lift_system.hpp"
 #include "aircraft/systems/physics/drag_system.hpp"
 #include "aircraft/systems/physics/stability_system.hpp"
+#include "aircraft/systems/physics/jsbsim_system.hpp"
 #include "aircraft/systems/engine/engine_system.hpp"
 #include "aircraft/systems/fuel/fuel_system.hpp"
 #include "aircraft/systems/environment/environment_system.hpp"
@@ -87,6 +88,16 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     }
 
     const auto& json = *jsonOpt;
+    bool useJsbsim = false;
+    JsbsimConfig jsbsimConfig;
+    if (json.contains(ConfigKeys::JSBSIM)) {
+        const auto& jsb = json[ConfigKeys::JSBSIM];
+        useJsbsim = jsb.value(ConfigKeys::JSBSIM_ENABLED, useJsbsim);
+        jsbsimConfig.modelName = jsb.value(ConfigKeys::JSBSIM_MODEL, jsbsimConfig.modelName);
+        jsbsimConfig.rootPath = jsb.value(ConfigKeys::JSBSIM_ROOT, jsbsimConfig.rootPath);
+        jsbsimConfig.initLatDeg = jsb.value(ConfigKeys::JSBSIM_LAT, jsbsimConfig.initLatDeg);
+        jsbsimConfig.initLonDeg = jsb.value(ConfigKeys::JSBSIM_LON, jsbsimConfig.initLonDeg);
+    }
 
     // Load Model
     const auto& mod = json[ConfigKeys::MODEL];
@@ -124,105 +135,117 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     m_texturedShader = assets.getShader("textured");
 
     // Physics
-    const auto& phys = json[ConfigKeys::PHYSICS];
-    PhysicsConfig physicsConfig;
-    physicsConfig.minAltitude = phys[ConfigKeys::MIN_ALTITUDE];
-    physicsConfig.maxClimbRate = phys[ConfigKeys::MAX_CLIMB_RATE];
-    physicsConfig.groundFriction = phys[ConfigKeys::GROUND_FRICTION];
-    physicsConfig.inertia = parseVec3(phys[ConfigKeys::INERTIA], physicsConfig.inertia);
-    // PhysicsIntegrator moved to end
-
-
-    // Engine
-    const auto& eng = json[ConfigKeys::ENGINE];
-    EngineConfig engConfig;
-    engConfig.maxThrust = eng[ConfigKeys::MAX_THRUST];
-    engConfig.maxPowerKw = eng[ConfigKeys::MAX_POWER_KW];
-    engConfig.idleN1 = eng[ConfigKeys::IDLE_N1];
-    engConfig.maxN1 = eng[ConfigKeys::MAX_N1];
-    engConfig.spoolRate = eng[ConfigKeys::SPOOL_RATE];
-    engConfig.fuelFlowIdle = eng[ConfigKeys::FUEL_FLOW_IDLE];
-    engConfig.fuelFlowMax = eng[ConfigKeys::FUEL_FLOW_MAX];
-    addSystem<EngineSystem>(engConfig);
-
-    // Fuel
-    const auto& f = json[ConfigKeys::FUEL];
-    FuelConfig fuelConfig;
-    fuelConfig.capacity = f[ConfigKeys::CAPACITY];
-    fuelConfig.initialFuel = f[ConfigKeys::INITIAL];
-    addSystem<FuelSystem>(fuelConfig);
-
     addSystem<EnvironmentSystem>(atmosphere);
 
-    // Orientation
-    const auto& orient = json[ConfigKeys::ORIENTATION];
-    OrientationConfig orientConfig;
-    orientConfig.pitchRate = orient[ConfigKeys::PITCH_RATE];
-    orientConfig.yawRate = orient[ConfigKeys::YAW_RATE];
-    orientConfig.rollRate = orient[ConfigKeys::ROLL_RATE];
-    orientConfig.controlRefSpeed = orient[ConfigKeys::CONTROL_REF_SPEED];
-    orientConfig.minControlScale = orient[ConfigKeys::MIN_CONTROL_SCALE];
-    orientConfig.maxControlScale = orient[ConfigKeys::MAX_CONTROL_SCALE];
-    orientConfig.torqueMultiplier = orient[ConfigKeys::TORQUE_MULTIPLIER];
-    orientConfig.dampingFactor = orient[ConfigKeys::DAMPING_FACTOR];
-    addSystem<OrientationSystem>(orientConfig);
+    PhysicsConfig physicsConfig;
+    if (json.contains(ConfigKeys::PHYSICS)) {
+        const auto& phys = json[ConfigKeys::PHYSICS];
+        physicsConfig.minAltitude = phys[ConfigKeys::MIN_ALTITUDE];
+        physicsConfig.maxClimbRate = phys[ConfigKeys::MAX_CLIMB_RATE];
+        physicsConfig.groundFriction = phys[ConfigKeys::GROUND_FRICTION];
+        physicsConfig.inertia = parseVec3(phys[ConfigKeys::INERTIA], physicsConfig.inertia);
+    }
+    // PhysicsIntegrator added at the end when not using JSBSim
 
-    const auto& stab = json[ConfigKeys::STABILITY];
-    StabilityConfig stabilityConfig;
-    stabilityConfig.pitchStability = stab[ConfigKeys::PITCH_STABILITY];
-    stabilityConfig.yawStability = stab[ConfigKeys::YAW_STABILITY];
-    stabilityConfig.rollStability = stab[ConfigKeys::ROLL_STABILITY];
-    stabilityConfig.pitchDamping = stab[ConfigKeys::PITCH_DAMPING];
-    stabilityConfig.yawDamping = stab[ConfigKeys::YAW_DAMPING];
-    stabilityConfig.rollDamping = stab[ConfigKeys::ROLL_DAMPING];
-    stabilityConfig.referenceArea = stab[ConfigKeys::REFERENCE_AREA];
-    stabilityConfig.referenceLength = stab[ConfigKeys::REFERENCE_LENGTH];
-    stabilityConfig.momentScale = stab[ConfigKeys::MOMENT_SCALE];
-    stabilityConfig.minAirspeed = stab[ConfigKeys::STABILITY_MIN_AIRSPEED];
-    addSystem<StabilitySystem>(stabilityConfig);
+    if (!useJsbsim) {
+        // Engine
+        const auto& eng = json[ConfigKeys::ENGINE];
+        EngineConfig engConfig;
+        engConfig.maxThrust = eng[ConfigKeys::MAX_THRUST];
+        engConfig.maxPowerKw = eng[ConfigKeys::MAX_POWER_KW];
+        engConfig.idleN1 = eng[ConfigKeys::IDLE_N1];
+        engConfig.maxN1 = eng[ConfigKeys::MAX_N1];
+        engConfig.spoolRate = eng[ConfigKeys::SPOOL_RATE];
+        engConfig.fuelFlowIdle = eng[ConfigKeys::FUEL_FLOW_IDLE];
+        engConfig.fuelFlowMax = eng[ConfigKeys::FUEL_FLOW_MAX];
+        addSystem<EngineSystem>(engConfig);
 
-    // Forces
-    addSystem<GravitySystem>();
+        // Fuel
+        const auto& f = json[ConfigKeys::FUEL];
+        FuelConfig fuelConfig;
+        fuelConfig.capacity = f[ConfigKeys::CAPACITY];
+        fuelConfig.initialFuel = f[ConfigKeys::INITIAL];
+        addSystem<FuelSystem>(fuelConfig);
 
-    const auto& ef = json[ConfigKeys::ENGINE_FORCE];
-    ThrustConfig thrustConfig;
-    thrustConfig.thrustScale = ef[ConfigKeys::THRUST_SCALE];
-    thrustConfig.propEfficiency = ef[ConfigKeys::PROP_EFFICIENCY];
-    thrustConfig.minAirspeed = ef[ConfigKeys::MIN_AIRSPEED];
-    thrustConfig.maxStaticThrust = ef[ConfigKeys::MAX_STATIC_THRUST];
-    addSystem<ThrustForce>(thrustConfig);
+        // Orientation
+        const auto& orient = json[ConfigKeys::ORIENTATION];
+        OrientationConfig orientConfig;
+        orientConfig.pitchRate = orient[ConfigKeys::PITCH_RATE];
+        orientConfig.yawRate = orient[ConfigKeys::YAW_RATE];
+        orientConfig.rollRate = orient[ConfigKeys::ROLL_RATE];
+        orientConfig.controlRefSpeed = orient[ConfigKeys::CONTROL_REF_SPEED];
+        orientConfig.minControlScale = orient[ConfigKeys::MIN_CONTROL_SCALE];
+        orientConfig.maxControlScale = orient[ConfigKeys::MAX_CONTROL_SCALE];
+        orientConfig.torqueMultiplier = orient[ConfigKeys::TORQUE_MULTIPLIER];
+        orientConfig.dampingFactor = orient[ConfigKeys::DAMPING_FACTOR];
+        addSystem<OrientationSystem>(orientConfig);
 
-    const auto& lift = json[ConfigKeys::LIFT];
-    LiftConfig liftConfig;
-    liftConfig.cl0 = lift[ConfigKeys::CL0];
-    liftConfig.clAlpha = lift[ConfigKeys::CL_ALPHA];
-    liftConfig.clMax = lift[ConfigKeys::CL_MAX];
-    liftConfig.clMin = lift[ConfigKeys::CL_MIN];
-    liftConfig.wingArea = lift[ConfigKeys::WING_AREA];
-    liftConfig.stallAlphaRad = lift.value(ConfigKeys::STALL_ALPHA_DEG, 0.0f) * kDegToRad;
-    liftConfig.postStallAlphaRad = lift.value(ConfigKeys::POST_STALL_ALPHA_DEG, 0.0f) * kDegToRad;
-    liftConfig.clPostStall = lift.value(ConfigKeys::CL_POST_STALL, liftConfig.clPostStall);
-    liftConfig.clPostStallNeg = lift.value(ConfigKeys::CL_POST_STALL_NEG, liftConfig.clPostStallNeg);
-    finalizeLiftConfig(liftConfig);
-    addSystem<LiftSystem>(liftConfig);
+        const auto& stab = json[ConfigKeys::STABILITY];
+        StabilityConfig stabilityConfig;
+        stabilityConfig.pitchStability = stab[ConfigKeys::PITCH_STABILITY];
+        stabilityConfig.yawStability = stab[ConfigKeys::YAW_STABILITY];
+        stabilityConfig.rollStability = stab[ConfigKeys::ROLL_STABILITY];
+        stabilityConfig.pitchDamping = stab[ConfigKeys::PITCH_DAMPING];
+        stabilityConfig.yawDamping = stab[ConfigKeys::YAW_DAMPING];
+        stabilityConfig.rollDamping = stab[ConfigKeys::ROLL_DAMPING];
+        stabilityConfig.referenceArea = stab[ConfigKeys::REFERENCE_AREA];
+        stabilityConfig.referenceLength = stab[ConfigKeys::REFERENCE_LENGTH];
+        stabilityConfig.momentScale = stab[ConfigKeys::MOMENT_SCALE];
+        stabilityConfig.minAirspeed = stab[ConfigKeys::STABILITY_MIN_AIRSPEED];
+        addSystem<StabilitySystem>(stabilityConfig);
 
-    const auto& drag = json[ConfigKeys::DRAG];
-    DragConfig dragConfig;
-    dragConfig.cd0 = drag[ConfigKeys::CD0];
-    dragConfig.inducedDragFactor = drag[ConfigKeys::INDUCED_DRAG_FACTOR];
-    dragConfig.wingArea = drag[ConfigKeys::WING_AREA];
-    dragConfig.frontalArea = drag.value(ConfigKeys::FRONTAL_AREA, dragConfig.frontalArea);
-    dragConfig.cdStall = drag.value(ConfigKeys::CD_STALL, dragConfig.cdStall);
-    dragConfig.stallAlphaRad = liftConfig.stallAlphaRad;
-    dragConfig.postStallAlphaRad = liftConfig.postStallAlphaRad;
-    addSystem<DragSystem>(dragConfig);
+        // Forces
+        addSystem<GravitySystem>();
+
+        const auto& ef = json[ConfigKeys::ENGINE_FORCE];
+        ThrustConfig thrustConfig;
+        thrustConfig.thrustScale = ef[ConfigKeys::THRUST_SCALE];
+        thrustConfig.propEfficiency = ef[ConfigKeys::PROP_EFFICIENCY];
+        thrustConfig.minAirspeed = ef[ConfigKeys::MIN_AIRSPEED];
+        thrustConfig.maxStaticThrust = ef[ConfigKeys::MAX_STATIC_THRUST];
+        addSystem<ThrustForce>(thrustConfig);
+
+        const auto& lift = json[ConfigKeys::LIFT];
+        LiftConfig liftConfig;
+        liftConfig.cl0 = lift[ConfigKeys::CL0];
+        liftConfig.clAlpha = lift[ConfigKeys::CL_ALPHA];
+        liftConfig.clMax = lift[ConfigKeys::CL_MAX];
+        liftConfig.clMin = lift[ConfigKeys::CL_MIN];
+        liftConfig.wingArea = lift[ConfigKeys::WING_AREA];
+        liftConfig.stallAlphaRad = lift.value(ConfigKeys::STALL_ALPHA_DEG, 0.0f) * kDegToRad;
+        liftConfig.postStallAlphaRad = lift.value(ConfigKeys::POST_STALL_ALPHA_DEG, 0.0f) * kDegToRad;
+        liftConfig.clPostStall = lift.value(ConfigKeys::CL_POST_STALL, liftConfig.clPostStall);
+        liftConfig.clPostStallNeg = lift.value(ConfigKeys::CL_POST_STALL_NEG, liftConfig.clPostStallNeg);
+        finalizeLiftConfig(liftConfig);
+        addSystem<LiftSystem>(liftConfig);
+
+        const auto& drag = json[ConfigKeys::DRAG];
+        DragConfig dragConfig;
+        dragConfig.cd0 = drag[ConfigKeys::CD0];
+        dragConfig.inducedDragFactor = drag[ConfigKeys::INDUCED_DRAG_FACTOR];
+        dragConfig.wingArea = drag[ConfigKeys::WING_AREA];
+        dragConfig.frontalArea = drag.value(ConfigKeys::FRONTAL_AREA, dragConfig.frontalArea);
+        dragConfig.cdStall = drag.value(ConfigKeys::CD_STALL, dragConfig.cdStall);
+        dragConfig.stallAlphaRad = liftConfig.stallAlphaRad;
+        dragConfig.postStallAlphaRad = liftConfig.postStallAlphaRad;
+        addSystem<DragSystem>(dragConfig);
+    } else {
+        addSystem<JsbsimSystem>(jsbsimConfig);
+    }
 
     // Initial State
-    m_state.set(Properties::Physics::MASS, static_cast<double>(phys[ConfigKeys::MASS]));
+    if (json.contains(ConfigKeys::PHYSICS)) {
+        const auto& phys = json[ConfigKeys::PHYSICS];
+        m_state.set(Properties::Physics::MASS, static_cast<double>(phys[ConfigKeys::MASS]));
+    }
     
-    const auto& spawn = json[ConfigKeys::SPAWN];
-    Vec3 initialPos = parseVec3(spawn[ConfigKeys::POSITION], Vec3(0, 100, 0));
-    Vec3 initialVel(0, 0, spawn[ConfigKeys::AIRSPEED]);
+    Vec3 initialPos(0, 100, 0);
+    Vec3 initialVel(0, 0, 0);
+    if (json.contains(ConfigKeys::SPAWN)) {
+        const auto& spawn = json[ConfigKeys::SPAWN];
+        initialPos = parseVec3(spawn[ConfigKeys::POSITION], initialPos);
+        initialVel = Vec3(0, 0, spawn.value(ConfigKeys::AIRSPEED, 0.0f));
+    }
     
     m_state.setVec3(Properties::Position::PREFIX, initialPos);
     m_state.setVec3(Properties::Velocity::PREFIX, initialVel);
@@ -232,7 +255,9 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     m_prevState = m_state;
 
     // Add Integrator last (Semi-Implicit: Calculate Forces -> Integrate)
-    addSystem<PhysicsIntegrator>(physicsConfig);
+    if (!useJsbsim) {
+        addSystem<PhysicsIntegrator>(physicsConfig);
+    }
 }
 
 void Aircraft::Instance::update(float dt, const FlightInput& input) {

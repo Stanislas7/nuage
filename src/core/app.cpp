@@ -3,6 +3,7 @@
 #include "graphics/glad.h"
 #include "graphics/mesh_builder.hpp"
 #include "aircraft/aircraft.hpp"
+#include "core/property_paths.hpp"
 #include "utils/config_loader.hpp"
 
 #define GLFW_INCLUDE_NONE
@@ -372,21 +373,32 @@ void App::printDebugInfo() {
     if (m_time - m_lastDebugTime < 2.0f) return;
     m_lastDebugTime = m_time;
 
-    std::cout << "\n=== DEBUG (t=" << m_time << ") ===\n";
-
     Aircraft::Instance* player = m_aircraft.player();
     if (!player) {
-        std::cout << "[AIRCRAFT] Player is NULL!\n";
-    } else {
-        Vec3 pos = player->position();
-        Vec3 fwd = player->forward();
-        std::cout << "[AIRCRAFT] Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")\n";
-        std::cout << "[AIRCRAFT] Forward:  (" << fwd.x << ", " << fwd.y << ", " << fwd.z << ")\n";
-        std::cout << "[AIRCRAFT] Airspeed: " << player->airspeed() << " m/s\n";
+        std::cout << "[PHYSICS] Player is NULL!\n";
+        return;
     }
 
-    Vec3 camPos = m_camera.position();
-    std::cout << "[CAMERA] Position: (" << camPos.x << ", " << camPos.y << ", " << camPos.z << ")\n";
+    const PropertyBus& state = player->state();
+    Vec3 pos = player->position();
+    Vec3 vel = state.getVec3(Properties::Velocity::PREFIX);
+    Vec3 force = state.getVec3(Properties::Physics::FORCE_PREFIX);
+    Vec3 torque = state.getVec3(Properties::Physics::TORQUE_PREFIX);
+    double airspeed = state.get(Properties::Physics::AIR_SPEED, player->airspeed());
+
+    double pitch = state.get(Properties::Input::PITCH);
+    double roll = state.get(Properties::Input::ROLL);
+    double yaw = state.get(Properties::Input::YAW);
+    double throttle = state.get(Properties::Input::THROTTLE);
+
+    std::cout << "\n=== PHYSICS (t=" << m_time << ") ===\n";
+    std::cout << "pos (" << pos.x << ", " << pos.y << ", " << pos.z << ") m\n";
+    std::cout << "vel (" << vel.x << ", " << vel.y << ", " << vel.z << ") m/s\n";
+    std::cout << "airspeed " << airspeed << " m/s\n";
+    std::cout << "input pitch " << pitch << " roll " << roll
+              << " yaw " << yaw << " thr " << throttle << "\n";
+    std::cout << "force (" << force.x << ", " << force.y << ", " << force.z << ") N\n";
+    std::cout << "torque (" << torque.x << ", " << torque.y << ", " << torque.z << ") N*m\n";
     std::cout << "==========================\n" << std::flush;
 }
 
@@ -417,19 +429,6 @@ void App::updateFrameStats(const FrameProfile& profile) {
     m_lastProfile.hudMs = static_cast<float>(m_profileAccum.hudMs * invFrames);
     m_lastProfile.renderMs = static_cast<float>(m_profileAccum.renderMs * invFrames);
     m_lastProfile.swapMs = static_cast<float>(m_profileAccum.swapMs * invFrames);
-
-    std::cout << std::fixed << std::setprecision(1)
-              << "FPS avg 1s: " << m_lastFps
-              << " | Frame " << m_totalFrames
-              << " | ms (frame " << m_lastProfile.frameMs
-              << ", input " << m_lastProfile.inputMs
-              << ", physics " << m_lastProfile.physicsMs
-              << ", atmos " << m_lastProfile.atmosphereMs
-              << ", camera " << m_lastProfile.cameraMs
-              << ", hud " << m_lastProfile.hudMs
-              << ", render " << m_lastProfile.renderMs
-              << ", swap " << m_lastProfile.swapMs
-              << ")\n";
 
     m_framesSinceFps = 0;
     m_fpsTimer = 0.0f;

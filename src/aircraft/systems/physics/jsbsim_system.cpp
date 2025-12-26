@@ -1,0 +1,227 @@
+#include "jsbsim_system.hpp"
+#include "core/property_bus.hpp"
+#include "core/property_paths.hpp"
+#include <FGFDMExec.h>
+#include <models/FGPropagate.h>
+#include <math/FGColumnVector3.h>
+#include <math/FGMatrix33.h>
+#include <simgear/misc/sg_path.hxx>
+#include <initialization/FGInitialCondition.h>
+#include <algorithm>
+#include <cmath>
+
+namespace nuage {
+
+namespace {
+constexpr double kFtToM = 0.3048;
+constexpr double kMToFt = 1.0 / kFtToM;
+constexpr double kEarthRadiusM = 6378137.0; // WGS84 semi-major
+
+float clampInput(double v) {
+    return static_cast<float>(std::clamp(v, -1.0, 1.0));
+}
+
+Vec3 nedToWorld(const JSBSim::FGColumnVector3& ned) {
+    float north = static_cast<float>(ned(1)) * static_cast<float>(kFtToM);
+    float east = static_cast<float>(ned(2)) * static_cast<float>(kFtToM);
+    float down = static_cast<float>(ned(3)) * static_cast<float>(kFtToM);
+    return Vec3(east, -down, north);
+}
+
+Vec3 jsbBodyToNuage(const JSBSim::FGColumnVector3& body) {
+    // JSBSim body axes: X forward, Y right, Z down
+    // Nuage body axes:  X right,   Y up,    Z forward
+    return Vec3(
+        static_cast<float>(body(2)),       // right
+        static_cast<float>(-body(3)),      // up
+        static_cast<float>(body(1))        // forward
+    );
+}
+
+Quat quatFromMatrix(const float m[3][3]) {
+    float trace = m[0][0] + m[1][1] + m[2][2];
+    if (trace > 0.0f) {
+        float s = std::sqrt(trace + 1.0f) * 2.0f;
+        float w = 0.25f * s;
+        float x = (m[2][1] - m[1][2]) / s;
+        float y = (m[0][2] - m[2][0]) / s;
+        float z = (m[1][0] - m[0][1]) / s;
+        return Quat(w, x, y, z).normalized();
+    }
+    if (m[0][0] > m[1][1] && m[0][0] > m[2][2]) {
+        float s = std::sqrt(1.0f + m[0][0] - m[1][1] - m[2][2]) * 2.0f;
+        float w = (m[2][1] - m[1][2]) / s;
+        float x = 0.25f * s;
+        float y = (m[0][1] + m[1][0]) / s;
+        float z = (m[0][2] + m[2][0]) / s;
+        return Quat(w, x, y, z).normalized();
+    }
+    if (m[1][1] > m[2][2]) {
+        float s = std::sqrt(1.0f + m[1][1] - m[0][0] - m[2][2]) * 2.0f;
+        float w = (m[0][2] - m[2][0]) / s;
+        float x = (m[0][1] + m[1][0]) / s;
+        float y = 0.25f * s;
+        float z = (m[1][2] + m[2][1]) / s;
+        return Quat(w, x, y, z).normalized();
+    }
+    float s = std::sqrt(1.0f + m[2][2] - m[0][0] - m[1][1]) * 2.0f;
+    float w = (m[1][0] - m[0][1]) / s;
+    float x = (m[0][2] + m[2][0]) / s;
+    float y = (m[1][2] + m[2][1]) / s;
+    float z = 0.25f * s;
+    return Quat(w, x, y, z).normalized();
+}
+}
+
+JsbsimSystem::JsbsimSystem(JsbsimConfig config)
+    : m_config(std::move(config))
+{
+}
+
+void JsbsimSystem::init(PropertyBus* state) {
+    m_state = state;
+    m_originLatRad = m_config.initLatDeg * 3.1415926535 / 180.0;
+    m_originLonRad = m_config.initLonDeg * 3.1415926535 / 180.0;
+}
+
+void JsbsimSystem::ensureInitialized(float dt) {
+    if (m_initialized) return;
+
+    m_fdm = std::make_unique<JSBSim::FGFDMExec>();
+    SGPath rootPath(m_config.rootPath);
+    m_fdm->SetRootDir(rootPath);
+    m_fdm->SetAircraftPath(SGPath("aircraft"));
+    m_fdm->SetEnginePath(SGPath("engine"));
+    m_fdm->SetSystemsPath(SGPath("systems"));
+    m_fdm->Setdt(dt);
+
+    // Initial conditions derived from current bus state (spawn)
+    Vec3 pos = m_state->getVec3(Properties::Position::PREFIX);
+    Vec3 vel = m_state->getVec3(Properties::Velocity::PREFIX);
+
+    m_fdm->SetPropertyValue("ic/long-gc-deg", m_config.initLonDeg);
+    m_fdm->SetPropertyValue("ic/lat-gc-deg", m_config.initLatDeg);
+    m_fdm->SetPropertyValue("ic/h-sl-ft", pos.y * kMToFt);
+    m_fdm->SetPropertyValue("ic/psi-true-deg", 0.0);
+    m_fdm->SetPropertyValue("ic/theta-deg", 0.0);
+    m_fdm->SetPropertyValue("ic/phi-deg", 0.0);
+
+    // Map Nuage velocity (east, up, north) to JSBSim body u/v/w
+    m_fdm->SetPropertyValue("ic/u-fps", vel.z * kMToFt);   // forward along body X
+    m_fdm->SetPropertyValue("ic/v-fps", vel.x * kMToFt);   // right
+    m_fdm->SetPropertyValue("ic/w-fps", -vel.y * kMToFt);  // down
+
+    if (!m_fdm->LoadModel(m_config.modelName)) {
+        // Leave m_initialized false; downstream update will no-op.
+        return;
+    }
+
+    m_fdm->RunIC();
+    m_initialized = true;
+}
+
+void JsbsimSystem::syncInputs() {
+    double pitch = m_state->get(Properties::Input::PITCH);
+    double roll = m_state->get(Properties::Input::ROLL);
+    double yaw = m_state->get(Properties::Input::YAW);
+    double throttle = m_state->get(Properties::Input::THROTTLE);
+
+    m_fdm->SetPropertyValue("fcs/elevator-cmd-norm", clampInput(pitch));
+    m_fdm->SetPropertyValue("fcs/aileron-cmd-norm", clampInput(-roll));
+    m_fdm->SetPropertyValue("fcs/rudder-cmd-norm", clampInput(yaw));
+    m_fdm->SetPropertyValue("fcs/throttle-cmd-norm", clampInput(throttle));
+
+    Vec3 wind = m_state->getVec3(Properties::Atmosphere::WIND_PREFIX);
+    double windNorth = wind.z * kMToFt;
+    double windEast = wind.x * kMToFt;
+    double windDown = -wind.y * kMToFt;
+    m_fdm->SetPropertyValue("atmosphere/wind-north-fps", windNorth);
+    m_fdm->SetPropertyValue("atmosphere/wind-east-fps", windEast);
+    m_fdm->SetPropertyValue("atmosphere/wind-down-fps", windDown);
+}
+
+void JsbsimSystem::syncOutputs() {
+    std::shared_ptr<JSBSim::FGPropagate> prop = m_fdm->GetPropagate();
+    if (!prop) {
+        return;
+    }
+
+    const auto& velNed = prop->GetVel();
+    Vec3 worldVel = nedToWorld(velNed);
+    m_state->setVec3(Properties::Velocity::PREFIX, worldVel);
+
+    const auto& pqr = prop->GetPQR();
+    Vec3 angVel = jsbBodyToNuage(pqr);
+    m_state->setVec3(Properties::Physics::ANGULAR_VELOCITY_PREFIX, angVel);
+
+    // Orientation: JSBSim body -> NED matrix, then align body axes to Nuage
+    JSBSim::FGMatrix33 b2l = prop->GetTb2l();
+    float b2lMat[3][3];
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            b2lMat[r][c] = static_cast<float>(b2l(r + 1, c + 1));
+        }
+    }
+    const float jsbToNuageBodyT[3][3] = {
+        {0.f, 0.f, 1.f},
+        {1.f, 0.f, 0.f},
+        {0.f, -1.f, 0.f}
+    };
+    float b2n[3][3] = {};
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            b2n[r][c] = b2lMat[r][0] * jsbToNuageBodyT[0][c]
+                      + b2lMat[r][1] * jsbToNuageBodyT[1][c]
+                      + b2lMat[r][2] * jsbToNuageBodyT[2][c];
+        }
+    }
+    const float nedToWorldMat[3][3] = {
+        {0.f, 1.f, 0.f},
+        {0.f, 0.f, -1.f},
+        {1.f, 0.f, 0.f}
+    };
+    float b2w[3][3] = {};
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            b2w[r][c] = nedToWorldMat[r][0] * b2n[0][c]
+                      + nedToWorldMat[r][1] * b2n[1][c]
+                      + nedToWorldMat[r][2] * b2n[2][c];
+        }
+    }
+    Quat orientation = quatFromMatrix(b2w);
+    m_state->setQuat(Properties::Orientation::PREFIX, orientation);
+
+    double lat = m_fdm->GetPropertyValue("position/lat-gc-rad");
+    double lon = m_fdm->GetPropertyValue("position/long-gc-rad");
+    double altFt = m_fdm->GetPropertyValue("position/h-sl-ft");
+
+    double dLat = lat - m_originLatRad;
+    double dLon = lon - m_originLonRad;
+
+    double north = dLat * kEarthRadiusM;
+    double east = dLon * kEarthRadiusM * std::cos(m_originLatRad);
+    double alt = altFt * kFtToM;
+
+    m_state->setVec3(Properties::Position::PREFIX, Vec3(
+        static_cast<float>(east),
+        static_cast<float>(alt),
+        static_cast<float>(north)
+    ));
+
+    double airspeedFps = m_fdm->GetPropertyValue("velocities/vtrue-fps");
+    m_state->set(Properties::Physics::AIR_SPEED, airspeedFps * kFtToM);
+}
+
+void JsbsimSystem::update(float dt) {
+    ensureInitialized(dt);
+    if (!m_initialized) {
+        return;
+    }
+
+    m_fdm->Setdt(dt);
+    syncInputs();
+    m_fdm->Run();
+    syncOutputs();
+}
+
+} // namespace nuage

@@ -8,6 +8,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
+# JSBSim options (keep the dependency lean)
+set(BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(BUILD_PYTHON_MODULE OFF CACHE BOOL "" FORCE)
+set(BUILD_JULIA_PACKAGE OFF CACHE BOOL "" FORCE)
+set(BUILD_MATLAB_SFUNCTION OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/jsbsim EXCLUDE_FROM_ALL)
+
 file(GLOB_RECURSE SOURCES
     "src/core/*.cpp"
     "src/environment/*.cpp"
@@ -29,6 +38,15 @@ add_custom_command(TARGET nuage POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/assets
     $<TARGET_FILE_DIR:nuage>/assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/external/jsbsim/aircraft
+    $<TARGET_FILE_DIR:nuage>/assets/jsbsim/aircraft
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/external/jsbsim/engine
+    $<TARGET_FILE_DIR:nuage>/assets/jsbsim/engine
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/external/jsbsim/systems
+    $<TARGET_FILE_DIR:nuage>/assets/jsbsim/systems
 )
 
 target_include_directories(nuage PRIVATE
@@ -44,12 +62,25 @@ target_include_directories(nuage PRIVATE
     ${CMAKE_SOURCE_DIR}/src/ui
     ${CMAKE_SOURCE_DIR}/src/ui/font
     ${CMAKE_SOURCE_DIR}/src/utils
+    ${CMAKE_SOURCE_DIR}/external/jsbsim/src
 )
 
 target_link_libraries(nuage
     glfw
     OpenGL::GL
+    libJSBSim
 )
+
+# Avoid building JSBSim utilities/binaries on every build.
+if (TARGET JSBSim)
+    set_target_properties(JSBSim PROPERTIES EXCLUDE_FROM_ALL TRUE)
+endif()
+if (TARGET Aeromatic++)
+    set_target_properties(Aeromatic++ PROPERTIES EXCLUDE_FROM_ALL TRUE)
+endif()
+if (TARGET aeromatic)
+    set_target_properties(aeromatic PROPERTIES EXCLUDE_FROM_ALL TRUE)
+endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set_target_properties(flightsim PROPERTIES

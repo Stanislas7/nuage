@@ -1,70 +1,10 @@
 {
     "name": "Cessna 172P",
-    "physics": {
-        "mass": 1000.0,
-        "inertia": [1932.0, 2618.0, 3884.0],
-        "cruiseSpeed": 62.8,
-        "minAltitude": 5.0,
-        "maxClimbRate": 4.0,
-        "groundFriction": 0.02
-    },
-    "orientation": {
-        "pitchRate": 1.2,
-        "yawRate": 0.6,
-        "rollRate": 1.6,
-        "controlRefSpeed": 35.0,
-        "minControlScale": 0.2,
-        "maxControlScale": 1.1,
-        "torqueMultiplier": 3500.0,
-        "dampingFactor": 3600.0
-    },
-    "engineForce": {
-        "thrustScale": 1.0,
-        "propEfficiency": 0.82,
-        "minAirspeed": 12.0,
-        "maxStaticThrust": 2300.0
-    },
-    "lift": {
-        "cl0": 0.2,
-        "clAlpha": 5.4,
-        "clMax": 1.5,
-        "clMin": -1.2,
-        "stallAlphaDeg": 15.0,
-        "postStallAlphaDeg": 25.0,
-        "clPostStall": 0.35,
-        "clPostStallNeg": -0.35,
-        "wingArea": 16.165
-    },
-    "drag": {
-        "cd0": 0.033,
-        "cdStall": 1.8,
-        "inducedDragFactor": 0.055,
-        "wingArea": 16.165
-    },
-    "stability": {
-        "pitchStability": 0.35,
-        "yawStability": 0.25,
-        "rollStability": 0.15,
-        "pitchDamping": 0.45,
-        "yawDamping": 0.35,
-        "rollDamping": 0.45,
-        "referenceArea": 16.165,
-        "referenceLength": 1.494,
-        "momentScale": 0.015,
-        "minAirspeed": 12.0
-    },
-    "engine": {
-        "maxThrust": 0.0,
-        "maxPowerKw": 119.0,
-        "idleN1": 12.0,
-        "maxN1": 100.0,
-        "spoolRate": 1.2,
-        "fuelFlowIdle": 0.001,
-        "fuelFlowMax": 0.007
-    },
-    "fuel": {
-        "capacity": 117.0,
-        "initial": 90.0
+    "jsbsim": {
+        "enabled": true,
+        "model": "c172p",
+        "latitudeDeg": 0.0,
+        "longitudeDeg": 0.0
     },
     "spawn": {
         "position": [0.0, 1500.0, -500.0],

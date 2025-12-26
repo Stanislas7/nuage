@@ -9,6 +9,7 @@ namespace ConfigKeys {
     inline constexpr char ENGINE[] = "engine";
     inline constexpr char FUEL[] = "fuel";
     inline constexpr char ORIENTATION[] = "orientation";
+    inline constexpr char JSBSIM[] = "jsbsim";
     inline constexpr char ENGINE_FORCE[] = "engineForce";
     inline constexpr char LIFT[] = "lift";
     inline constexpr char DRAG[] = "drag";
@@ -23,6 +24,13 @@ namespace ConfigKeys {
     inline constexpr char SCALE[] = "scale";
     inline constexpr char ROTATION[] = "rotation";
     inline constexpr char OFFSET[] = "offset";
+
+    // JSBSim
+    inline constexpr char JSBSIM_ENABLED[] = "enabled";
+    inline constexpr char JSBSIM_MODEL[] = "model";
+    inline constexpr char JSBSIM_ROOT[] = "rootPath";
+    inline constexpr char JSBSIM_LAT[] = "latitudeDeg";
+    inline constexpr char JSBSIM_LON[] = "longitudeDeg";
 
     // Physics
     inline constexpr char MASS[] = "mass";
