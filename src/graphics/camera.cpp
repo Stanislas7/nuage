@@ -37,8 +37,6 @@ void Camera::updateChaseCamera(float dt, Aircraft::Instance* target, float alpha
     }
 
     Vec3 targetPos = target->interpolatedPosition(alpha);
-    // Interpolated forward vector isn't strictly necessary for direction if it changes slowly, 
-    // but good for correctness.
     Vec3 targetForward = target->interpolatedOrientation(alpha).rotate(Vec3(0, 0, 1));
 
     float forwardLen = std::sqrt(targetForward.x * targetForward.x + 

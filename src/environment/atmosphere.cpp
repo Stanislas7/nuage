@@ -14,11 +14,8 @@ void Atmosphere::update(float dt) {
 }
 
 float Atmosphere::getAirDensity(float altitude) const {
-    // ISA atmosphere model
-    // Sea level: 1.225 kg/m³
-    // Decreases ~12% per 1000m up to 11km
     constexpr float seaLevelDensity = 1.225f;
-    constexpr float scaleHeight = 8500.0f;  // meters
+    constexpr float scaleHeight = 8500.0f;
     
     return seaLevelDensity * std::exp(-altitude / scaleHeight);
 }
@@ -37,13 +34,11 @@ Vec3 Atmosphere::getWind(const Vec3& position) const {
 }
 
 Vec3 Atmosphere::getSunDirection() const {
-    // Simple sun position based on time of day
-    // 6:00 = east, 12:00 = overhead, 18:00 = west
     float hourAngle = (m_timeOfDay - 12.0f) * 15.0f * 3.14159265f / 180.0f;
     
     return Vec3(
         std::sin(hourAngle),
-        std::cos(hourAngle * 0.5f),  // simplified elevation
+        std::cos(hourAngle * 0.5f),
         0.0f
     ).normalized();
 }

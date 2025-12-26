@@ -5,8 +5,6 @@
 #include <string>
 
 int main() {
-    std::cout << "Current working directory: " << std::filesystem::current_path() << "\n";
-
     auto configJson = nuage::loadJsonConfig("assets/config/simulator.json");
     
     nuage::AppConfig config;

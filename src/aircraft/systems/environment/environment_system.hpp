@@ -10,12 +10,13 @@ class EnvironmentSystem : public AircraftComponent {
 public:
     explicit EnvironmentSystem(Atmosphere& atmosphere);
 
-    const char* name() const override { return "Environment"; }
-    void init(PropertyBus* state) override;
+    const char* name() const override { return "EnvironmentSystem"; }
+    void init(AircraftState& state, PropertyBus& bus) override;
     void update(float dt) override;
 
 private:
-    PropertyBus* m_state = nullptr;
+    AircraftState* m_acState = nullptr;
+    PropertyBus* m_bus = nullptr;
     Atmosphere* m_atmosphere = nullptr;
 };
 

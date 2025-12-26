@@ -5,7 +5,6 @@ namespace ConfigKeys {
 
     // Root
     inline constexpr char MODEL[] = "model";
-    inline constexpr char PHYSICS[] = "physics";
     inline constexpr char JSBSIM[] = "jsbsim";
     inline constexpr char SPAWN[] = "spawn";
 
@@ -23,9 +22,6 @@ namespace ConfigKeys {
     inline constexpr char JSBSIM_ROOT[] = "rootPath";
     inline constexpr char JSBSIM_LAT[] = "latitudeDeg";
     inline constexpr char JSBSIM_LON[] = "longitudeDeg";
-
-    // Physics
-    inline constexpr char MASS[] = "mass";
 
     // Spawn 
     inline constexpr char POSITION[] = "position";

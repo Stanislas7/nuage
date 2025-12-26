@@ -27,16 +27,18 @@ We should split state into **Core State** (fast, struct-based) and **Generic Pro
 
 ```cpp
 // 1. Core State (The "Hot Path")
-struct PhysicsState {
+struct AircraftState {
     Vec3 position;
     Quat orientation;
     Vec3 velocity;
+    Vec3 angularVelocity;
+    double airspeed;
 };
 
 // 2. Optimized Property System (The "Dynamic Path")
 // Now supports direct storage of Vec3, Quat, double, etc.
-m_state.setVec3("position", myVec3); // Stored as a single Vec3 object
-m_state.set("engine/running", true); // Type-safe bool storage
+m_bus.set(Properties::Atmosphere::WIND_PREFIX, myVec3); // Stored as a single Vec3 object
+m_bus.set(Properties::Atmosphere::DENSITY, 1.225); // Type-safe double storage
 ```
 
 ---
@@ -51,8 +53,8 @@ m_state.set("engine/running", true); // Type-safe bool storage
 Separate the simulation state from the property container.
 
 #### TODOs
-- [ ] Store `current` and `previous` frames using the new `PhysicsState` struct.
-- [ ] Only use the generic PropertyBus for aircraft-specific systems (e.g., "gear_extension_pct", "fuel_pump_state").
+- [x] Store `current` and `previous` frames using the new `AircraftState` struct.
+- [x] Only use the generic PropertyBus for aircraft-specific systems (e.g., "gear_extension_pct", "fuel_pump_state").
 
 ---
 

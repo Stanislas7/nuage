@@ -53,7 +53,7 @@ public:
         T* addSystem(Args&&... args) {
             auto system = std::make_unique<T>(std::forward<Args>(args)...);
             T* ptr = system.get();
-            system->init(&m_state);
+            system->init(m_currentState, m_state);
             m_systems.push_back(std::move(system));
             return ptr;
         }
@@ -68,8 +68,6 @@ public:
         }
 
     private:
-        void updateCacheFromBus();
-
         PropertyBus m_state;
         AircraftState m_currentState;
         AircraftState m_prevState;

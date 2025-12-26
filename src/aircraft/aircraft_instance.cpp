@@ -65,8 +65,6 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         jsbsimConfig.rootPath = jsb.value(ConfigKeys::JSBSIM_ROOT, jsbsimConfig.rootPath);
         jsbsimConfig.initLatDeg = jsb.value(ConfigKeys::JSBSIM_LAT, jsbsimConfig.initLatDeg);
         jsbsimConfig.initLonDeg = jsb.value(ConfigKeys::JSBSIM_LON, jsbsimConfig.initLonDeg);
-    } else {
-        std::cerr << "Aircraft config missing JSBSim block; defaulting to " << jsbsimConfig.modelName << std::endl;
     }
 
     // Load Model
@@ -107,31 +105,23 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     addSystem<EnvironmentSystem>(atmosphere);
     addSystem<JsbsimSystem>(jsbsimConfig);
 
-    // Initial State
-    if (json.contains(ConfigKeys::PHYSICS)) {
-        const auto& phys = json[ConfigKeys::PHYSICS];
-        m_state.set(Properties::Physics::MASS, static_cast<double>(phys[ConfigKeys::MASS]));
-    }
-    
     Vec3 initialPos(0, 100, 0);
-    Vec3 initialVel(0, 0, 0);
+    double initialAirspeed = 0.0;
     if (json.contains(ConfigKeys::SPAWN)) {
         const auto& spawn = json[ConfigKeys::SPAWN];
         initialPos = parseVec3(spawn[ConfigKeys::POSITION], initialPos);
-        initialVel = Vec3(0, 0, spawn.value(ConfigKeys::AIRSPEED, 0.0f));
+        initialAirspeed = spawn.value(ConfigKeys::AIRSPEED, 0.0);
     }
     
-    m_state.set(Properties::Position::PREFIX, initialPos);
-    m_state.set(Properties::Velocity::PREFIX, initialVel);
-    m_state.set(Properties::Orientation::PREFIX, Quat::identity());
+    m_currentState.position = initialPos;
+    m_currentState.airspeed = initialAirspeed;
+    m_currentState.orientation = Quat::identity();
+    m_currentState.velocity = Vec3(0, 0, static_cast<float>(initialAirspeed));
     
-    // Initial State Cache
-    updateCacheFromBus();
     m_prevState = m_currentState;
 }
 
 void Aircraft::Instance::update(float dt, const FlightInput& input) {
-    // Save previous state for interpolation
     m_prevState = m_currentState;
 
     m_state.set(Properties::Input::PITCH, input.pitch);
@@ -139,15 +129,9 @@ void Aircraft::Instance::update(float dt, const FlightInput& input) {
     m_state.set(Properties::Input::YAW, input.yaw);
     m_state.set(Properties::Input::THROTTLE, input.throttle);
 
-    // Clear forces and torques for the new frame accumulation
-    m_state.set(Properties::Physics::FORCE_PREFIX, Vec3(0.0f, 0.0f, 0.0f));
-    m_state.set(Properties::Physics::TORQUE_PREFIX, Vec3(0.0f, 0.0f, 0.0f));
-
     for (auto& system : m_systems) {
         system->update(dt);
     }
-
-    updateCacheFromBus();
 }
 
 void Aircraft::Instance::render(const Mat4& viewProjection, float alpha) {
@@ -218,13 +202,6 @@ Quat Aircraft::Instance::interpolatedOrientation(float alpha) const {
 
 float Aircraft::Instance::airspeed() const {
     return static_cast<float>(m_currentState.airspeed);
-}
-
-void Aircraft::Instance::updateCacheFromBus() {
-    m_currentState.position = m_state.get(Properties::Position::PREFIX);
-    m_currentState.orientation = m_state.get(Properties::Orientation::PREFIX);
-    m_currentState.velocity = m_state.get(Properties::Velocity::PREFIX);
-    m_currentState.airspeed = m_state.get(Properties::Physics::AIR_SPEED);
 }
 
 Vec3 Aircraft::Instance::forward() const {

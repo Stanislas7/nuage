@@ -1,6 +1,7 @@
 #include "jsbsim_system.hpp"
 #include "core/property_bus.hpp"
 #include "core/property_paths.hpp"
+#include "aircraft/aircraft_state.hpp"
 #include <FGFDMExec.h>
 #include <models/FGPropagate.h>
 #include <math/FGColumnVector3.h>
@@ -78,8 +79,9 @@ JsbsimSystem::JsbsimSystem(JsbsimConfig config)
 {
 }
 
-void JsbsimSystem::init(PropertyBus* state) {
-    m_state = state;
+void JsbsimSystem::init(AircraftState& state, PropertyBus& bus) {
+    m_acState = &state;
+    m_bus = &bus;
     m_originLatRad = m_config.initLatDeg * 3.1415926535 / 180.0;
     m_originLonRad = m_config.initLonDeg * 3.1415926535 / 180.0;
 }
@@ -95,24 +97,20 @@ void JsbsimSystem::ensureInitialized(float dt) {
     m_fdm->SetSystemsPath(SGPath("systems"));
     m_fdm->Setdt(dt);
 
-    // Initial conditions derived from current bus state (spawn)
-    Vec3 pos = m_state->get(Properties::Position::PREFIX);
-    Vec3 vel = m_state->get(Properties::Velocity::PREFIX);
-
+    // Initial conditions derived from current state
     m_fdm->SetPropertyValue("ic/long-gc-deg", m_config.initLonDeg);
     m_fdm->SetPropertyValue("ic/lat-gc-deg", m_config.initLatDeg);
-    m_fdm->SetPropertyValue("ic/h-sl-ft", pos.y * kMToFt);
+    m_fdm->SetPropertyValue("ic/h-sl-ft", m_acState->position.y * kMToFt);
     m_fdm->SetPropertyValue("ic/psi-true-deg", 0.0);
     m_fdm->SetPropertyValue("ic/theta-deg", 0.0);
     m_fdm->SetPropertyValue("ic/phi-deg", 0.0);
 
     // Map Nuage velocity (east, up, north) to JSBSim body u/v/w
-    m_fdm->SetPropertyValue("ic/u-fps", vel.z * kMToFt);   // forward along body X
-    m_fdm->SetPropertyValue("ic/v-fps", vel.x * kMToFt);   // right
-    m_fdm->SetPropertyValue("ic/w-fps", -vel.y * kMToFt);  // down
+    m_fdm->SetPropertyValue("ic/u-fps", m_acState->velocity.z * kMToFt);   // forward along body X
+    m_fdm->SetPropertyValue("ic/v-fps", m_acState->velocity.x * kMToFt);   // right
+    m_fdm->SetPropertyValue("ic/w-fps", -m_acState->velocity.y * kMToFt);  // down
 
     if (!m_fdm->LoadModel(m_config.modelName)) {
-        // Leave m_initialized false; downstream update will no-op.
         return;
     }
 
@@ -121,17 +119,17 @@ void JsbsimSystem::ensureInitialized(float dt) {
 }
 
 void JsbsimSystem::syncInputs() {
-    double pitch = m_state->get(Properties::Input::PITCH);
-    double roll = m_state->get(Properties::Input::ROLL);
-    double yaw = m_state->get(Properties::Input::YAW);
-    double throttle = m_state->get(Properties::Input::THROTTLE);
+    double pitch = m_bus->get(Properties::Input::PITCH);
+    double roll = m_bus->get(Properties::Input::ROLL);
+    double yaw = m_bus->get(Properties::Input::YAW);
+    double throttle = m_bus->get(Properties::Input::THROTTLE);
 
     m_fdm->SetPropertyValue("fcs/elevator-cmd-norm", clampInput(pitch));
     m_fdm->SetPropertyValue("fcs/aileron-cmd-norm", clampInput(-roll));
     m_fdm->SetPropertyValue("fcs/rudder-cmd-norm", clampInput(yaw));
     m_fdm->SetPropertyValue("fcs/throttle-cmd-norm", clampInput(throttle));
 
-    Vec3 wind = m_state->get(Properties::Atmosphere::WIND_PREFIX);
+    Vec3 wind = m_bus->get(Properties::Atmosphere::WIND_PREFIX);
     double windNorth = wind.z * kMToFt;
     double windEast = wind.x * kMToFt;
     double windDown = -wind.y * kMToFt;
@@ -147,12 +145,10 @@ void JsbsimSystem::syncOutputs() {
     }
 
     const auto& velNed = prop->GetVel();
-    Vec3 worldVel = nedToWorld(velNed);
-    m_state->set(Properties::Velocity::PREFIX, worldVel);
+    m_acState->velocity = nedToWorld(velNed);
 
     const auto& pqr = prop->GetPQR();
-    Vec3 angVel = jsbBodyToNuage(pqr);
-    m_state->set(Properties::Physics::ANGULAR_VELOCITY_PREFIX, angVel);
+    m_acState->angularVelocity = jsbBodyToNuage(pqr);
 
     // Orientation: JSBSim body -> NED matrix, then align body axes to Nuage
     JSBSim::FGMatrix33 b2l = prop->GetTb2l();
@@ -188,8 +184,7 @@ void JsbsimSystem::syncOutputs() {
                       + nedToWorldMat[r][2] * b2n[2][c];
         }
     }
-    Quat orientation = quatFromMatrix(b2w);
-    m_state->set(Properties::Orientation::PREFIX, orientation);
+    m_acState->orientation = quatFromMatrix(b2w);
 
     double lat = m_fdm->GetPropertyValue("position/lat-gc-rad");
     double lon = m_fdm->GetPropertyValue("position/long-gc-rad");
@@ -202,14 +197,14 @@ void JsbsimSystem::syncOutputs() {
     double east = dLon * kEarthRadiusM * std::cos(m_originLatRad);
     double alt = altFt * kFtToM;
 
-    m_state->set(Properties::Position::PREFIX, Vec3(
+    m_acState->position = Vec3(
         static_cast<float>(east),
         static_cast<float>(alt),
         static_cast<float>(north)
-    ));
+    );
 
     double airspeedFps = m_fdm->GetPropertyValue("velocities/vtrue-fps");
-    m_state->set(Properties::Physics::AIR_SPEED, airspeedFps * kFtToM);
+    m_acState->airspeed = airspeedFps * kFtToM;
 }
 
 void JsbsimSystem::update(float dt) {

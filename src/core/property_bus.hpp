@@ -10,7 +10,7 @@
 
 namespace nuage {
 
-using PropertyValue = std::variant<double, Vec3, Quat, int, bool, std::string>;
+using PropertyValue = std::variant<double, Vec3, Quat, int, bool>;
 
 class PropertyBus {
 public:

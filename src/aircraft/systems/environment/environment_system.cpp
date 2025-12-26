@@ -2,6 +2,7 @@
 #include "core/property_bus.hpp"
 #include "core/property_paths.hpp"
 #include "environment/atmosphere.hpp"
+#include "aircraft/aircraft_state.hpp"
 
 namespace nuage {
 
@@ -10,18 +11,18 @@ EnvironmentSystem::EnvironmentSystem(Atmosphere& atmosphere)
 {
 }
 
-void EnvironmentSystem::init(PropertyBus* state) {
-    m_state = state;
+void EnvironmentSystem::init(AircraftState& state, PropertyBus& bus) {
+    m_acState = &state;
+    m_bus = &bus;
 }
 
 void EnvironmentSystem::update(float dt) {
-    Vec3 position = m_state->get(Properties::Position::PREFIX);
-    float altitude = position.y;
+    float altitude = m_acState->position.y;
     float density = m_atmosphere->getAirDensity(altitude);
-    m_state->set(Properties::Atmosphere::DENSITY, density);
+    m_bus->set(Properties::Atmosphere::DENSITY, density);
 
-    Vec3 wind = m_atmosphere->getWind(position);
-    m_state->set(Properties::Atmosphere::WIND_PREFIX, wind);
+    Vec3 wind = m_atmosphere->getWind(m_acState->position);
+    m_bus->set(Properties::Atmosphere::WIND_PREFIX, wind);
 }
 
 }
