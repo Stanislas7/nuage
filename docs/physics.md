@@ -19,7 +19,7 @@ while accumulator >= FIXED_DT:
 
 ## 2) JSBSim Path (Primary)
 
-When `jsbsim.enabled` is true in an aircraft JSON, Nuage uses `JsbsimSystem` as the flight dynamics engine.
+When an aircraft JSON includes a `jsbsim` block (it no longer needs an `enabled` flag), Nuage uses `JsbsimSystem` as the flight dynamics engine.
 
 ### Flow per timestep
 1) **Inputs**: Nuage inputs are mapped to JSBSim control properties.
@@ -59,17 +59,9 @@ JSBSim outputs are converted to Nuage coordinates:
 
 The adapter handles the axis conversion so the renderer and HUD behave consistently.
 
-## 3) Legacy Custom Physics (Fallback)
+## 3) Legacy Custom Physics
 
-If `jsbsim.enabled` is false or missing, Nuage uses the older force-based physics stack:
-
-- EngineSystem -> ThrustForce
-- LiftSystem / DragSystem
-- StabilitySystem + OrientationSystem
-- GravitySystem
-- PhysicsIntegrator
-
-This path is intact but not the preferred model for realism.
+The legacy force-based stack (EngineSystem, ThrustForce, PhysicsIntegrator, etc.) is no longer driven by any active aircraft configuration; we only ship JSBSim aircraft now (see `assets/config/aircraft/c172p.json`). If you ever need to resurrect the old model you can reintroduce the physics blocks, but the runtime no longer instantiates those systems by default.
 
 ## 4) Aircraft Configuration (JSON + JSBSim XML)
 

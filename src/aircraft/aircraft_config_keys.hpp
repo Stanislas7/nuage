@@ -25,7 +25,6 @@ namespace ConfigKeys {
     inline constexpr char OFFSET[] = "offset";
 
     // JSBSim
-    inline constexpr char JSBSIM_ENABLED[] = "enabled";
     inline constexpr char JSBSIM_MODEL[] = "model";
     inline constexpr char JSBSIM_ROOT[] = "rootPath";
     inline constexpr char JSBSIM_LAT[] = "latitudeDeg";
