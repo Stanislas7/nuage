@@ -1,7 +1,9 @@
 #pragma once
 
-#include "ui/text.hpp"
+#include "math/vec3.hpp"
+#include "ui/anchor.hpp"
 #include "ui/font/font.hpp"
+#include "ui/text.hpp"
 #include "graphics/shader.hpp"
 #include "math/mat4.hpp"
 #include <vector>
@@ -23,12 +25,16 @@ public:
     void draw();
 
     Text& text(const std::string& content);
+    void setOverlay(bool active, const Vec3& color, float alpha);
+    void setOverlayText(std::string title, std::string hint);
 
     int getWindowWidth() const { return m_windowWidth; }
     int getWindowHeight() const { return m_windowHeight; }
 
 private:
     void buildTextVertexData(const Text& text, std::vector<float>& vertices, Vec3& pos) const;
+    void drawImmediateText(const std::string& content, float x, float y, Anchor anchor,
+                           float scale, const Vec3& color, float alpha);
 
     App* m_app = nullptr;
     std::unique_ptr<Font> m_font;
@@ -43,6 +49,11 @@ private:
 
     int m_windowWidth = 0;
     int m_windowHeight = 0;
+    bool m_overlayActive = false;
+    Vec3 m_overlayColor = Vec3(0, 0, 0);
+    float m_overlayAlpha = 0.0f;
+    std::string m_overlayTitle;
+    std::string m_overlayHint;
 };
 
 }

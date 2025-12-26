@@ -66,6 +66,12 @@ void App::run() {
             m_camera.toggleOrbitMode();
         }
 
+        if (m_input.isKeyPressed(GLFW_KEY_SPACE)) {
+            m_paused = !m_paused;
+            m_physicsAccumulator = 0.0f;
+            refreshPauseUI();
+        }
+
         if (m_input.quitRequested()) {
             m_shouldQuit = true;
             continue;
@@ -271,9 +277,14 @@ void App::setupHUD() {
     m_powerText = &m_ui.text("PWR: 0%");
     setupText(*m_powerText, 20, -60, 2.0f, Anchor::BottomLeft, 10.0f);
 
+    refreshPauseUI();
+
 }
 
 void App::updatePhysics() {
+    if (m_paused) {
+        return;
+    }
     m_physicsAccumulator += m_deltaTime;
     while (m_physicsAccumulator >= FIXED_DT) {
         m_aircraft.fixedUpdate(FIXED_DT, m_input);
@@ -282,6 +293,7 @@ void App::updatePhysics() {
 }
 
 void App::updateHUD() {
+    refreshPauseUI();
     Aircraft::Instance* player = m_aircraft.player();
     if (player && m_altitudeText && m_airspeedText && m_headingText && m_positionText) {
         Vec3 pos = player->position();
@@ -320,6 +332,13 @@ void App::updateHUD() {
     }
 
     m_ui.update();
+}
+
+void App::refreshPauseUI() {
+    std::string title = m_paused ? "PAUSED" : "";
+    std::string hint = m_paused ? "Press SPACE to resume" : "";
+    m_ui.setOverlayText(title, hint);
+    m_ui.setOverlay(m_paused, Vec3(0.0f, 0.0f, 0.0f), m_paused ? 0.45f : 0.0f);
 }
 
 void App::render(float alpha) {

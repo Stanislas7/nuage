@@ -80,6 +80,7 @@ private:
     float m_deltaTime = 0.0f;
     float m_lastFrameTime = 0.0f;
     bool m_shouldQuit = false;
+    bool m_paused = false;
 
     float m_physicsAccumulator = 0.0f;
     static constexpr float FIXED_DT = 1.0f / 120.0f;
@@ -107,6 +108,7 @@ private:
     void updateHUD();
     void render(float alpha);
     void updateFrameStats(const FrameProfile& profile);
+    void refreshPauseUI();
     
     float m_lastFps = 0.0f;
     float m_fpsTimer = 0.0f;

@@ -2,6 +2,8 @@
 #include "core/app.hpp"
 #include "graphics/glad.h"
 #include <GLFW/glfw3.h>
+#include <array>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 
@@ -58,9 +60,10 @@ bool UIManager::init(App* app) {
 
         uniform sampler2D uTexture;
         uniform vec3 uColor;
+        uniform float uAlpha;
 
         void main() {
-            float alpha = texture(uTexture, vTexCoord).r;
+            float alpha = texture(uTexture, vTexCoord).r * uAlpha;
             FragColor = vec4(uColor, alpha);
         }
     )";
@@ -136,7 +139,44 @@ void UIManager::draw() {
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 
+    if (m_overlayActive && m_windowWidth > 0 && m_windowHeight > 0) {
+        float w = static_cast<float>(m_windowWidth);
+        float h = static_cast<float>(m_windowHeight);
+        const std::array<float, 24> overlayVerts = {
+            0.0f, 0.0f, 0.0f, 0.0f,
+            w,    0.0f, 1.0f, 0.0f,
+            w,    h,    1.0f, 1.0f,
+            0.0f, 0.0f, 0.0f, 0.0f,
+            w,    h,    1.0f, 1.0f,
+            0.0f, h,    0.0f, 1.0f
+        };
+
+        m_shader->setVec3("uColor", m_overlayColor);
+        m_shader->setFloat("uAlpha", m_overlayAlpha);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_whiteTexture);
+        m_shader->setInt("uTexture", 0);
+        m_shader->setMat4("uModel", Mat4::identity());
+        glBufferSubData(GL_ARRAY_BUFFER, 0, overlayVerts.size() * sizeof(float), overlayVerts.data());
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        if (!m_overlayTitle.empty()) {
+            drawImmediateText(m_overlayTitle, 0.0f, -40.0f, Anchor::Center, 3.0f,
+                              Vec3(1.0f, 1.0f, 1.0f), 1.0f);
+        }
+        if (!m_overlayHint.empty()) {
+            drawImmediateText(m_overlayHint, 0.0f, 40.0f, Anchor::Center, 1.8f,
+                              Vec3(1.0f, 1.0f, 1.0f), 1.0f);
+        }
+    }
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_font->getTexture());
+
     for (const auto& text : m_texts) {
+        if (!text) continue;
+        if (text->getContent().empty()) continue;
+
         Vec3 pos = text->getAnchoredPosition(m_windowWidth, m_windowHeight);
 
         std::vector<float> vertices;
@@ -145,20 +185,56 @@ void UIManager::draw() {
         if (vertices.empty()) continue;
 
         glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());
-
         m_shader->setMat4("uModel", Mat4::identity());
         m_shader->setVec3("uColor", text->color);
+        m_shader->setFloat("uAlpha", 1.0f);
+        m_shader->setInt("uTexture", 0);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, m_font->getTexture());
-
-        int quadCount = static_cast<int>(vertices.size()) / 16;
+        int quadCount = static_cast<int>(vertices.size()) / 24;
         glDrawArrays(GL_TRIANGLES, 0, quadCount * 6);
     }
 
     glBindVertexArray(0);
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
+}
+
+void UIManager::setOverlay(bool active, const Vec3& color, float alpha) {
+    m_overlayActive = active;
+    m_overlayColor = color;
+    m_overlayAlpha = std::clamp(alpha, 0.0f, 1.0f);
+}
+
+void UIManager::setOverlayText(std::string title, std::string hint) {
+    m_overlayTitle = std::move(title);
+    m_overlayHint = std::move(hint);
+}
+
+void UIManager::drawImmediateText(const std::string& content, float x, float y, Anchor anchor,
+                                  float scale, const Vec3& color, float alpha) {
+    if (content.empty() || !m_font) return;
+
+    Text text(content, m_font.get(), m_app);
+    text.pos(x, y);
+    text.scaleVal(scale);
+    text.anchorMode(anchor);
+    text.color = color;
+
+    Vec3 pos = text.getAnchoredPosition(m_windowWidth, m_windowHeight);
+    std::vector<float> vertices;
+    buildTextVertexData(text, vertices, pos);
+    if (vertices.empty()) return;
+
+    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());
+    m_shader->setMat4("uModel", Mat4::identity());
+    m_shader->setVec3("uColor", color);
+    m_shader->setFloat("uAlpha", std::clamp(alpha, 0.0f, 1.0f));
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_font->getTexture());
+    m_shader->setInt("uTexture", 0);
+
+    int quadCount = static_cast<int>(vertices.size()) / 24;
+    glDrawArrays(GL_TRIANGLES, 0, quadCount * 6);
 }
 
 Text& UIManager::text(const std::string& content) {
