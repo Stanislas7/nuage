@@ -17,19 +17,6 @@
 
 namespace nuage {
 
-namespace {
-    constexpr float kDegToRad = 3.1415926535f / 180.0f;
-
-    Vec3 parseVec3(const json& value, const Vec3& fallback) {
-        if (!value.is_array() || value.size() != 3) return fallback;
-        return Vec3(
-            value[0].get<float>(),
-            value[1].get<float>(),
-            value[2].get<float>()
-        );
-    }
-}
-
 void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere) {
     auto jsonOpt = loadJsonConfig(configPath);
     if (!jsonOpt) {
@@ -57,7 +44,9 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     double initialAirspeed = 0.0;
     if (json.contains(ConfigKeys::SPAWN)) {
         const auto& spawn = json[ConfigKeys::SPAWN];
-        initialPos = parseVec3(spawn[ConfigKeys::POSITION], initialPos);
+        if (spawn.contains(ConfigKeys::POSITION)) {
+            from_json(spawn[ConfigKeys::POSITION], initialPos);
+        }
         initialAirspeed = spawn.value(ConfigKeys::AIRSPEED, 0.0);
     }
     

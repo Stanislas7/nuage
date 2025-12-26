@@ -98,14 +98,14 @@ return Vec3(value[0].get<float>(), ...);
 Centralize config parsing.
 
 #### TODOs
-- [ ] Enhance `src/utils/config_loader.hpp` or `src/utils/json.hpp`.
-- [ ] Add explicit conversion operators for `Vec3` and `Quat` from JSON.
+- [x] Enhance `src/utils/config_loader.hpp` or math headers with JSON integration.
+- [x] Add explicit conversion operators for `Vec3` and `Quat` from JSON.
 
 ---
 
 ## Summary of Action Plan
 
-1.  **Refactor `PropertyBus`**: Replace string keys with integer handles/hashes.
-2.  **Struct-ify Core State**: Create `PhysicsState` struct to hold position/rotation/velocity.
-3.  **Clean up Renderer**: Extract visual logic from the aircraft physics class.
-4.  **Standardize Config**: Create robust JSON helpers.
+1.  [x] **Refactor `PropertyBus`**: Replace string keys with integer handles/hashes.
+2.  [x] **Struct-ify Core State**: Create `AircraftState` struct to hold position/rotation/velocity.
+3.  [x] **Clean up Renderer**: Extract visual logic from the aircraft physics class.
+4.  [x] **Standardize Config**: Create robust JSON helpers.

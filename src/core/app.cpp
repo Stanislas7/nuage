@@ -355,9 +355,9 @@ void App::render(float alpha) {
         Vec3 up(view.m[1], view.m[5], view.m[9]);
         Vec3 forward(-view.m[2], -view.m[6], -view.m[10]);
 
-        right = right.normalize();
-        up = up.normalize();
-        forward = forward.normalize();
+        right = right.normalized();
+        up = up.normalized();
+        forward = forward.normalized();
 
         Mat4 proj = m_camera.projectionMatrix();
         float tanHalfFov = (proj.m[5] != 0.0f) ? (1.0f / proj.m[5]) : 1.0f;

@@ -10,38 +10,6 @@
 
 namespace nuage {
 
-namespace {
-    constexpr float kDegToRad = 3.1415926535f / 180.0f;
-
-    Vec3 parseVec3(const json& value, const Vec3& fallback) {
-        if (!value.is_array() || value.size() != 3) return fallback;
-        return Vec3(
-            value[0].get<float>(),
-            value[1].get<float>(),
-            value[2].get<float>()
-        );
-    }
-
-    Vec3 parseScale(const json& value, const Vec3& fallback) {
-        if (value.is_number()) {
-            float s = value.get<float>();
-            return Vec3(s, s, s);
-        }
-        return parseVec3(value, fallback);
-    }
-
-    Quat parseRotation(const json& value, const Quat& fallback) {
-        if (!value.is_array() || value.size() != 3) return fallback;
-        float rx = value[0].get<float>() * kDegToRad;
-        float ry = value[1].get<float>() * kDegToRad;
-        float rz = value[2].get<float>() * kDegToRad;
-        Quat qx = Quat::fromAxisAngle(Vec3(1, 0, 0), rx);
-        Quat qy = Quat::fromAxisAngle(Vec3(0, 1, 0), ry);
-        Quat qz = Quat::fromAxisAngle(Vec3(0, 0, 1), rz);
-        return (qz * qy * qx).normalized();
-    }
-}
-
 void AircraftVisual::init(const std::string& configPath, AssetStore& assets) {
     auto jsonOpt = loadJsonConfig(configPath);
     if (!jsonOpt) return;
@@ -62,8 +30,9 @@ void AircraftVisual::init(const std::string& configPath, AssetStore& assets) {
         }
     }
 
-    auto c = mod[ConfigKeys::COLOR];
-    m_color = Vec3(c[0], c[1], c[2]);
+    if (mod.contains(ConfigKeys::COLOR)) {
+        from_json(mod[ConfigKeys::COLOR], m_color);
+    }
 
     std::string texturePath = mod.contains(ConfigKeys::TEXTURE) ? mod[ConfigKeys::TEXTURE].get<std::string>() : modelTexturePath;
     if ((!m_model || m_model->parts().empty()) && !texturePath.empty() && modelHasTexcoords) {
@@ -73,9 +42,22 @@ void AircraftVisual::init(const std::string& configPath, AssetStore& assets) {
         }
     }
     
-    m_modelScale = parseScale(mod[ConfigKeys::SCALE], m_modelScale);
-    m_modelRotation = parseRotation(mod[ConfigKeys::ROTATION], m_modelRotation);
-    m_modelOffset = parseVec3(mod[ConfigKeys::OFFSET], m_modelOffset);
+    if (mod.contains(ConfigKeys::SCALE)) {
+        if (mod[ConfigKeys::SCALE].is_number()) {
+            float s = mod[ConfigKeys::SCALE].get<float>();
+            m_modelScale = Vec3(s, s, s);
+        } else {
+            from_json(mod[ConfigKeys::SCALE], m_modelScale);
+        }
+    }
+
+    if (mod.contains(ConfigKeys::ROTATION)) {
+        from_json(mod[ConfigKeys::ROTATION], m_modelRotation);
+    }
+    
+    if (mod.contains(ConfigKeys::OFFSET)) {
+        from_json(mod[ConfigKeys::OFFSET], m_modelOffset);
+    }
     
     if (!m_mesh && (!m_model || m_model->parts().empty())) {
         m_mesh = assets.getMesh("aircraft");

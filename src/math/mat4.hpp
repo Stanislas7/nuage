@@ -23,8 +23,8 @@ struct Mat4 {
     }
 
     static Mat4 lookAt(Vec3 eye, Vec3 center, Vec3 up) {
-        Vec3 f = (center - eye).normalize();
-        Vec3 s = f.cross(up).normalize();
+        Vec3 f = (center - eye).normalized();
+        Vec3 s = f.cross(up).normalized();
         Vec3 u = s.cross(f);
         Mat4 r;
         r.m[0] = s.x;  r.m[4] = s.y;  r.m[8] = s.z;
