@@ -1,0 +1,35 @@
+{
+    "layouts": [
+        {
+            "name": "qwerty",
+            "default": true,
+            "detect": {},
+            "controls": {}
+        },
+        {
+            "name": "azerty",
+            "detect": {
+                "W": "z",
+                "Q": "a",
+                "A": "q"
+            },
+            "controls": {
+                "axes": {
+                "pitch": {
+                    "positive": "S",
+                    "negative": "Z",
+                    "invert": true
+                    },
+                    "yaw": {
+                        "positive": "A",
+                        "negative": "E"
+                    },
+                    "roll": {
+                        "positive": "D",
+                        "negative": "Q"
+                    }
+                }
+            }
+        }
+    ]
+}

@@ -5,6 +5,7 @@
 #include "math/vec2.hpp"
 #include <GLFW/glfw3.h>
 #include <string>
+#include <vector>
 
 namespace nuage {
 
@@ -38,6 +39,9 @@ public:
 
     void setCursorMode(int mode);
     void centerCursor();
+
+    void loadBindingsFromConfig();
+    bool isKeyListDown(const std::vector<int>& keys) const;
 
 private:
     void pollKeyboard();
