@@ -43,4 +43,6 @@ assets/*_mosaic.vrt
 assets/*_mosaic.vrt.ovr
 assets/heights.tif
 assets/heights.png
-assets/scenery/*/imagery/
+assets/scenery/
+assets/terrain/compiled/
+assets/terrain/sources/

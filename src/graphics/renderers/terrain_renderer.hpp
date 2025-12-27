@@ -50,6 +50,10 @@ private:
     Vec3 proceduralTileTint(int tileX, int tileY) const;
     std::int64_t packedTileKey(int x, int y) const;
     bool loadCompiledMesh(const std::string& path, std::vector<float>& out) const;
+    bool loadCompiledMask(const std::string& path, int expectedRes, std::vector<std::uint8_t>& out) const;
+    void applyMaskToVerts(std::vector<float>& verts, const std::vector<std::uint8_t>& mask,
+                          int maskRes, float tileMinX, float tileMinZ) const;
+    Vec3 maskClassColor(std::uint8_t cls) const;
 
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
@@ -77,6 +81,7 @@ private:
     float m_compiledMinZ = 0.0f;
     float m_compiledMaxX = 0.0f;
     float m_compiledMaxZ = 0.0f;
+    int m_compiledMaskResolution = 0;
     std::unordered_set<std::int64_t> m_compiledTiles;
     int m_compiledTilesLoadedThisFrame = 0;
 

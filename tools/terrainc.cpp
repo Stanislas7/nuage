@@ -1,16 +1,19 @@
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "utils/stb_image.h"
+#include "utils/json.hpp"
 #include "math/vec2.hpp"
 #include "math/vec3.hpp"
 
@@ -97,6 +100,7 @@ nuage::Vec3 heightColor(float t) {
 
 struct Config {
     std::string heightmapPath;
+    std::string osmPath;
     std::string outDir;
     float sizeX = 0.0f;
     float sizeZ = 0.0f;
@@ -104,6 +108,12 @@ struct Config {
     float heightMax = 1000.0f;
     float tileSize = 2000.0f;
     int gridResolution = 129;
+    int maskResolution = 0;
+    double xmin = 0.0;
+    double ymin = 0.0;
+    double xmax = 0.0;
+    double ymax = 0.0;
+    bool hasBbox = false;
     double originLat = 0.0;
     double originLon = 0.0;
     double originAlt = 0.0;
@@ -113,7 +123,9 @@ void printUsage() {
     std::cout << "Usage: terrainc --heightmap <path> --size-x <meters> --size-z <meters>\n"
               << "               --height-min <m> --height-max <m> --tile-size <m>\n"
               << "               --grid <cells> --out <dir>\n"
-              << "               [--origin-lat <deg>] [--origin-lon <deg>] [--origin-alt <m>]\n";
+              << "               [--origin-lat <deg>] [--origin-lon <deg>] [--origin-alt <m>]\n"
+              << "               [--osm <path> --mask-res <pixels> --xmin <lon> --ymin <lat>\n"
+              << "                --xmax <lon> --ymax <lat>]\n";
 }
 
 bool parseArgs(int argc, char** argv, Config& cfg) {
@@ -153,6 +165,32 @@ bool parseArgs(int argc, char** argv, Config& cfg) {
             cfg.gridResolution = std::stoi(v);
         } else if (arg == "--out") {
             if (!next(cfg.outDir)) return false;
+        } else if (arg == "--osm") {
+            if (!next(cfg.osmPath)) return false;
+        } else if (arg == "--mask-res") {
+            std::string v;
+            if (!next(v)) return false;
+            cfg.maskResolution = std::stoi(v);
+        } else if (arg == "--xmin") {
+            std::string v;
+            if (!next(v)) return false;
+            cfg.xmin = std::stod(v);
+            cfg.hasBbox = true;
+        } else if (arg == "--ymin") {
+            std::string v;
+            if (!next(v)) return false;
+            cfg.ymin = std::stod(v);
+            cfg.hasBbox = true;
+        } else if (arg == "--xmax") {
+            std::string v;
+            if (!next(v)) return false;
+            cfg.xmax = std::stod(v);
+            cfg.hasBbox = true;
+        } else if (arg == "--ymax") {
+            std::string v;
+            if (!next(v)) return false;
+            cfg.ymax = std::stod(v);
+            cfg.hasBbox = true;
         } else if (arg == "--origin-lat") {
             std::string v;
             if (!next(v)) return false;
@@ -171,7 +209,7 @@ bool parseArgs(int argc, char** argv, Config& cfg) {
         }
     }
 
-    if (cfg.heightmapPath.empty() || cfg.outDir.empty() || cfg.sizeX <= 0.0f || cfg.sizeZ <= 0.0f) {
+    if (cfg.heightmapPath.empty() || cfg.outDir.empty()) {
         return false;
     }
     if (cfg.tileSize <= 0.0f) cfg.tileSize = 2000.0f;
@@ -201,12 +239,229 @@ void writeTileMeta(const std::filesystem::path& path, int tx, int ty, float minH
     out << "}\n";
 }
 
+struct Polygon {
+    std::vector<nuage::Vec2> ring;
+    float minX = 0.0f;
+    float minZ = 0.0f;
+    float maxX = 0.0f;
+    float maxZ = 0.0f;
+    int classId = 0;
+};
+
+bool pointInPolygon(const std::vector<nuage::Vec2>& poly, float x, float z) {
+    bool inside = false;
+    size_t count = poly.size();
+    for (size_t i = 0, j = count - 1; i < count; j = i++) {
+        const auto& a = poly[i];
+        const auto& b = poly[j];
+        bool intersect = ((a.y > z) != (b.y > z)) &&
+            (x < (b.x - a.x) * (z - a.y) / (b.y - a.y + 1e-9f) + a.x);
+        if (intersect) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
+int classFromTags(const nlohmann::json& tags) {
+    if (tags.contains("landuse")) {
+        std::string v = tags["landuse"].get<std::string>();
+        if (v == "residential" || v == "commercial" || v == "industrial" || v == "retail") {
+            return 2;
+        }
+        if (v == "forest" || v == "wood") {
+            return 3;
+        }
+        if (v == "meadow" || v == "grass" || v == "grassland" || v == "farmland" ||
+            v == "orchard" || v == "vineyard" || v == "plant_nursery" || v == "greenfield") {
+            return 4;
+        }
+        return 4;
+    }
+    if (tags.contains("natural")) {
+        std::string v = tags["natural"].get<std::string>();
+        if (v == "wood" || v == "forest") {
+            return 3;
+        }
+        if (v == "grassland" || v == "scrub" || v == "heath") {
+            return 4;
+        }
+    }
+    return 0;
+}
+
+struct Projection {
+    double lon0 = 0.0;
+    double lat0 = 0.0;
+    double metersPerLon = 0.0;
+    double metersPerLat = 0.0;
+};
+
+Projection makeProjection(double xmin, double ymin, double xmax, double ymax) {
+    Projection proj;
+    proj.lon0 = (xmin + xmax) * 0.5;
+    proj.lat0 = (ymin + ymax) * 0.5;
+    double latRad = proj.lat0 * 3.141592653589793 / 180.0;
+    proj.metersPerLat = 111320.0;
+    proj.metersPerLon = 111320.0 * std::cos(latRad);
+    return proj;
+}
+
+nuage::Vec2 projectLonLat(const Projection& proj, double lon, double lat) {
+    float x = static_cast<float>((lon - proj.lon0) * proj.metersPerLon);
+    float z = static_cast<float>((lat - proj.lat0) * proj.metersPerLat);
+    return nuage::Vec2(x, z);
+}
+
+bool runCommand(const std::string& command) {
+    int result = std::system(command.c_str());
+    return result == 0;
+}
+
+std::vector<Polygon> loadPolygonsFromGeoJson(const std::string& path, int defaultClass,
+                                             const Projection& proj, bool useTags) {
+    std::ifstream in(path);
+    if (!in.is_open()) {
+        std::cerr << "Failed to open GeoJSON: " << path << "\n";
+        return {};
+    }
+    nlohmann::json doc;
+    in >> doc;
+    if (!doc.contains("features") || !doc["features"].is_array()) {
+        return {};
+    }
+
+    std::vector<Polygon> polys;
+    for (const auto& feature : doc["features"]) {
+        if (!feature.contains("geometry")) continue;
+        const auto& geom = feature["geometry"];
+        if (!geom.contains("type") || !geom.contains("coordinates")) continue;
+
+        int classId = defaultClass;
+        if (useTags && feature.contains("properties") && feature["properties"].contains("tags")) {
+            classId = classFromTags(feature["properties"]["tags"]);
+        }
+        if (classId == 0) {
+            continue;
+        }
+
+        std::string type = geom["type"].get<std::string>();
+        const auto& coords = geom["coordinates"];
+        auto addRing = [&](const nlohmann::json& ring) {
+            if (!ring.is_array() || ring.size() < 3) return;
+            Polygon poly;
+            poly.classId = classId;
+            poly.minX = poly.minZ = std::numeric_limits<float>::max();
+            poly.maxX = poly.maxZ = std::numeric_limits<float>::lowest();
+            for (const auto& pt : ring) {
+                if (!pt.is_array() || pt.size() < 2) continue;
+                double lon = pt[0].get<double>();
+                double lat = pt[1].get<double>();
+                nuage::Vec2 p = projectLonLat(proj, lon, lat);
+                poly.minX = std::min(poly.minX, p.x);
+                poly.maxX = std::max(poly.maxX, p.x);
+                poly.minZ = std::min(poly.minZ, p.y);
+                poly.maxZ = std::max(poly.maxZ, p.y);
+                poly.ring.push_back(p);
+            }
+            if (poly.ring.size() >= 3) {
+                polys.push_back(std::move(poly));
+            }
+        };
+
+        if (type == "Polygon") {
+            if (coords.is_array() && !coords.empty()) {
+                addRing(coords[0]);
+            }
+        } else if (type == "MultiPolygon") {
+            if (coords.is_array()) {
+                for (const auto& poly : coords) {
+                    if (poly.is_array() && !poly.empty()) {
+                        addRing(poly[0]);
+                    }
+                }
+            }
+        }
+    }
+    return polys;
+}
+
+void rasterizePolygonsToMask(std::vector<std::uint8_t>& mask, int maskRes,
+                             float tileMinX, float tileMinZ, float tileSize,
+                             const std::vector<Polygon>& polys, int classPriority) {
+    if (maskRes <= 0) return;
+    for (const auto& poly : polys) {
+        if (poly.classId != classPriority) continue;
+        if (poly.maxX <= tileMinX || poly.minX >= tileMinX + tileSize ||
+            poly.maxZ <= tileMinZ || poly.minZ >= tileMinZ + tileSize) {
+            continue;
+        }
+        int x0 = static_cast<int>(std::floor((poly.minX - tileMinX) / tileSize * maskRes));
+        int x1 = static_cast<int>(std::ceil((poly.maxX - tileMinX) / tileSize * maskRes));
+        int z0 = static_cast<int>(std::floor((poly.minZ - tileMinZ) / tileSize * maskRes));
+        int z1 = static_cast<int>(std::ceil((poly.maxZ - tileMinZ) / tileSize * maskRes));
+        x0 = std::clamp(x0, 0, maskRes - 1);
+        x1 = std::clamp(x1, 0, maskRes - 1);
+        z0 = std::clamp(z0, 0, maskRes - 1);
+        z1 = std::clamp(z1, 0, maskRes - 1);
+
+        for (int z = z0; z <= z1; ++z) {
+            for (int x = x0; x <= x1; ++x) {
+                float fx = (static_cast<float>(x) + 0.5f) / maskRes;
+                float fz = (static_cast<float>(z) + 0.5f) / maskRes;
+                float worldX = tileMinX + fx * tileSize;
+                float worldZ = tileMinZ + fz * tileSize;
+                if (pointInPolygon(poly.ring, worldX, worldZ)) {
+                    std::uint8_t& cell = mask[z * maskRes + x];
+                    if (classPriority == 1) {
+                        cell = 1;
+                    } else if (cell == 0) {
+                        cell = static_cast<std::uint8_t>(classPriority);
+                    }
+                }
+            }
+        }
+    }
+}
+
+bool writeMask(const std::filesystem::path& path, const std::vector<std::uint8_t>& mask) {
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open()) return false;
+    out.write(reinterpret_cast<const char*>(mask.data()), static_cast<std::streamsize>(mask.size()));
+    return static_cast<bool>(out);
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
     Config cfg;
     if (!parseArgs(argc, argv, cfg)) {
         printUsage();
+        return 1;
+    }
+
+    if (cfg.maskResolution > 0 && cfg.osmPath.empty()) {
+        std::cerr << "Mask resolution set but no OSM file provided.\n";
+        return 1;
+    }
+    if (!cfg.osmPath.empty() && !cfg.hasBbox) {
+        std::cerr << "OSM provided but bbox missing; use --xmin/--ymin/--xmax/--ymax.\n";
+        return 1;
+    }
+
+    Projection proj;
+    if (cfg.hasBbox) {
+        proj = makeProjection(cfg.xmin, cfg.ymin, cfg.xmax, cfg.ymax);
+        double widthMeters = (cfg.xmax - cfg.xmin) * proj.metersPerLon;
+        double heightMeters = (cfg.ymax - cfg.ymin) * proj.metersPerLat;
+        if (cfg.sizeX <= 0.0f) cfg.sizeX = static_cast<float>(std::abs(widthMeters));
+        if (cfg.sizeZ <= 0.0f) cfg.sizeZ = static_cast<float>(std::abs(heightMeters));
+        cfg.originLat = proj.lat0;
+        cfg.originLon = proj.lon0;
+    }
+
+    if (cfg.sizeX <= 0.0f || cfg.sizeZ <= 0.0f) {
+        std::cerr << "Size must be set via --size-x/--size-z or bbox.\n";
         return 1;
     }
 
@@ -235,6 +490,66 @@ int main(int argc, char** argv) {
     tileIndex.reserve(static_cast<size_t>((maxTileX - minTileX + 1) * (maxTileZ - minTileZ + 1)));
 
     float heightRange = cfg.heightMax - cfg.heightMin;
+
+    std::vector<Polygon> waterPolys;
+    std::vector<Polygon> landPolys;
+    if (!cfg.osmPath.empty()) {
+        std::filesystem::path outDir(cfg.outDir);
+        std::filesystem::path tmpDir = outDir / "osm_tmp";
+        std::filesystem::create_directories(tmpDir);
+
+        std::filesystem::path areaPbf = tmpDir / "area.pbf";
+        std::filesystem::path waterPbf = tmpDir / "water.pbf";
+        std::filesystem::path landPbf = tmpDir / "landuse.pbf";
+        std::filesystem::path waterGeo = tmpDir / "water.geojson";
+        std::filesystem::path landGeo = tmpDir / "landuse.geojson";
+
+        std::ostringstream bbox;
+        bbox << cfg.xmin << "," << cfg.ymin << "," << cfg.xmax << "," << cfg.ymax;
+
+        std::ostringstream extractCmd;
+        extractCmd << "osmium extract -b " << bbox.str()
+                   << " \"" << cfg.osmPath << "\" -o \"" << areaPbf.string() << "\"";
+        if (!runCommand(extractCmd.str())) {
+            std::cerr << "Failed to extract OSM bbox.\n";
+            return 1;
+        }
+
+        std::ostringstream waterCmd;
+        waterCmd << "osmium tags-filter -o \"" << waterPbf.string() << "\" \"" << areaPbf.string()
+                 << "\" w/natural=water w/waterway=riverbank w/water=* w/natural=wetland";
+        if (!runCommand(waterCmd.str())) {
+            std::cerr << "Failed to filter water from OSM.\n";
+            return 1;
+        }
+
+        std::ostringstream landCmd;
+        landCmd << "osmium tags-filter -o \"" << landPbf.string() << "\" \"" << areaPbf.string()
+                << "\" w/landuse=* w/natural=wood w/natural=grassland w/natural=heath w/natural=scrub";
+        if (!runCommand(landCmd.str())) {
+            std::cerr << "Failed to filter landuse from OSM.\n";
+            return 1;
+        }
+
+        std::ostringstream waterExport;
+        waterExport << "osmium export -f geojson -o \"" << waterGeo.string() << "\" \"" << waterPbf.string() << "\"";
+        if (!runCommand(waterExport.str())) {
+            std::cerr << "Failed to export water GeoJSON.\n";
+            return 1;
+        }
+
+        std::ostringstream landExport;
+        landExport << "osmium export -f geojson -o \"" << landGeo.string() << "\" \"" << landPbf.string() << "\"";
+        if (!runCommand(landExport.str())) {
+            std::cerr << "Failed to export landuse GeoJSON.\n";
+            return 1;
+        }
+
+        landPolys = loadPolygonsFromGeoJson(landGeo.string(), 0, proj, true);
+        waterPolys = loadPolygonsFromGeoJson(waterGeo.string(), 1, proj, false);
+        std::cout << "Loaded landuse polygons: " << landPolys.size() << "\n";
+        std::cout << "Loaded water polygons: " << waterPolys.size() << "\n";
+    }
 
     for (int ty = minTileZ; ty <= maxTileZ; ++ty) {
         for (int tx = minTileX; tx <= maxTileX; ++tx) {
@@ -339,6 +654,20 @@ int main(int argc, char** argv) {
             std::filesystem::path metaPath = tilesDir / ("tile_" + std::to_string(tx) + "_" + std::to_string(ty) + ".meta.json");
             writeTileMeta(metaPath, tx, ty, localMinH, localMaxH, cfg.gridResolution);
 
+            if (cfg.maskResolution > 0 && (!landPolys.empty() || !waterPolys.empty())) {
+                std::vector<std::uint8_t> mask(static_cast<size_t>(cfg.maskResolution * cfg.maskResolution), 0);
+                rasterizePolygonsToMask(mask, cfg.maskResolution, tileMinX, tileMinZ, cfg.tileSize, landPolys, 2);
+                rasterizePolygonsToMask(mask, cfg.maskResolution, tileMinX, tileMinZ, cfg.tileSize, landPolys, 3);
+                rasterizePolygonsToMask(mask, cfg.maskResolution, tileMinX, tileMinZ, cfg.tileSize, landPolys, 4);
+                rasterizePolygonsToMask(mask, cfg.maskResolution, tileMinX, tileMinZ, cfg.tileSize, waterPolys, 1);
+
+                std::filesystem::path maskPath = tilesDir / ("tile_" + std::to_string(tx) + "_" + std::to_string(ty) + ".mask");
+                if (!writeMask(maskPath, mask)) {
+                    std::cerr << "Failed to write mask: " << maskPath << "\n";
+                    return 1;
+                }
+            }
+
             tileIndex.emplace_back(tx, ty);
         }
     }
@@ -352,7 +681,12 @@ int main(int argc, char** argv) {
     manifest << "  \"gridResolution\": " << cfg.gridResolution << ",\n";
     manifest << "  \"heightScaleMeters\": 1.0,\n";
     manifest << "  \"boundsENU\": [" << minX << ", " << minZ << ", " << maxX << ", " << maxZ << "],\n";
-    manifest << "  \"availableLayers\": [\"height\"],\n";
+    if (cfg.maskResolution > 0 && !cfg.osmPath.empty()) {
+        manifest << "  \"maskResolution\": " << cfg.maskResolution << ",\n";
+        manifest << "  \"availableLayers\": [\"height\", \"mask\"],\n";
+    } else {
+        manifest << "  \"availableLayers\": [\"height\"],\n";
+    }
     manifest << "  \"tileCount\": " << tileIndex.size() << ",\n";
     manifest << "  \"tileIndex\": [\n";
     for (size_t i = 0; i < tileIndex.size(); ++i) {

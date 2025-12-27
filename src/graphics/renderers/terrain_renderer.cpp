@@ -146,6 +146,7 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
     m_compiledManifestDir = std::filesystem::path(manifestPath).parent_path().string();
     m_compiledTileSizeMeters = manifest.value("tileSizeMeters", 2000.0f);
     m_compiledGridResolution = manifest.value("gridResolution", 129);
+    m_compiledMaskResolution = manifest.value("maskResolution", 0);
     if (manifest.contains("boundsENU") && manifest["boundsENU"].is_array() && manifest["boundsENU"].size() == 4) {
         m_compiledMinX = manifest["boundsENU"][0].get<float>();
         m_compiledMinZ = manifest["boundsENU"][1].get<float>();
@@ -241,6 +242,56 @@ bool TerrainRenderer::loadCompiledMesh(const std::string& path, std::vector<floa
     out.resize(count);
     in.read(reinterpret_cast<char*>(out.data()), static_cast<std::streamsize>(count * sizeof(float)));
     return static_cast<std::size_t>(in.gcount()) == count * sizeof(float);
+}
+
+bool TerrainRenderer::loadCompiledMask(const std::string& path, int expectedRes, std::vector<std::uint8_t>& out) const {
+    if (expectedRes <= 0) {
+        return false;
+    }
+    std::ifstream in(path, std::ios::binary);
+    if (!in.is_open()) {
+        return false;
+    }
+    size_t size = static_cast<size_t>(expectedRes * expectedRes);
+    out.resize(size);
+    in.read(reinterpret_cast<char*>(out.data()), static_cast<std::streamsize>(size));
+    return static_cast<std::size_t>(in.gcount()) == size;
+}
+
+Vec3 TerrainRenderer::maskClassColor(std::uint8_t cls) const {
+    switch (cls) {
+        case 1: return Vec3(0.1f, 0.35f, 0.8f);
+        case 2: return Vec3(0.6f, 0.6f, 0.6f);
+        case 3: return Vec3(0.1f, 0.5f, 0.1f);
+        case 4: return Vec3(0.55f, 0.7f, 0.25f);
+        default: return Vec3(1.0f, 1.0f, 1.0f);
+    }
+}
+
+void TerrainRenderer::applyMaskToVerts(std::vector<float>& verts, const std::vector<std::uint8_t>& mask,
+                                       int maskRes, float tileMinX, float tileMinZ) const {
+    if (maskRes <= 0 || mask.empty()) {
+        return;
+    }
+    float tileSize = m_compiledTileSizeMeters;
+    int stride = 9;
+    size_t vertexCount = verts.size() / stride;
+    for (size_t i = 0; i < vertexCount; ++i) {
+        float px = verts[i * stride + 0];
+        float pz = verts[i * stride + 2];
+        float fx = (px - tileMinX) / tileSize;
+        float fz = (pz - tileMinZ) / tileSize;
+        int mx = std::clamp(static_cast<int>(std::floor(fx * maskRes)), 0, maskRes - 1);
+        int mz = std::clamp(static_cast<int>(std::floor(fz * maskRes)), 0, maskRes - 1);
+        std::uint8_t cls = mask[mz * maskRes + mx];
+        if (cls == 0) {
+            continue;
+        }
+        Vec3 color = maskClassColor(cls);
+        verts[i * stride + 6] = color.x;
+        verts[i * stride + 7] = color.y;
+        verts[i * stride + 8] = color.z;
+    }
 }
 
 TerrainRenderer::TileResource* TerrainRenderer::ensureProceduralTileLoaded(int x, int y) {
@@ -406,6 +457,17 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
             std::cout << "[terrain] missing compiled tile " << x << "," << y << "\n";
         }
         return nullptr;
+    }
+
+    if (m_compiledMaskResolution > 0) {
+        std::filesystem::path maskPath = std::filesystem::path(m_compiledManifestDir)
+            / "tiles" / ("tile_" + std::to_string(x) + "_" + std::to_string(y) + ".mask");
+        std::vector<std::uint8_t> mask;
+        if (loadCompiledMask(maskPath.string(), m_compiledMaskResolution, mask)) {
+            float tileMinX = static_cast<float>(x) * m_compiledTileSizeMeters;
+            float tileMinZ = static_cast<float>(y) * m_compiledTileSizeMeters;
+            applyMaskToVerts(verts, mask, m_compiledMaskResolution, tileMinX, tileMinZ);
+        }
     }
 
     auto mesh = std::make_unique<Mesh>();
