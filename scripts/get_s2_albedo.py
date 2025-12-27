@@ -7,7 +7,7 @@ import sys
 import urllib.request
 from collections import defaultdict
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 EARTH_SEARCH = "https://earth-search.aws.element84.com/v1"
 GDAL_GIS_ORDER = ["--config", "OGR_CT_FORCE_TRADITIONAL_GIS_ORDER", "YES"]
@@ -32,11 +32,27 @@ def http_get_json(url: str) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def download_asset(href: str, out_path: str) -> None:
+def flag_true(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.lower() in {"true", "1", "yes"}
+    return False
+
+
+def download_asset(href: str, out_path: str, requester_pays: bool = False) -> None:
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     if href.startswith("s3://"):
         # Public bucket/object; no credentials needed
-        run(["aws", "s3", "cp", "--no-sign-request", href, out_path])
+        cmd = ["aws", "s3", "cp"]
+        if not requester_pays:
+            cmd.append("--no-sign-request")
+        if requester_pays:
+            cmd += ["--request-payer", "requester"]
+        cmd += [href, out_path]
+        run(cmd)
     else:
         # HTTPS fallback
         print(f"+ curl -L {href} -o {out_path}", flush=True)
@@ -48,9 +64,36 @@ def iso_dt(s: str) -> datetime:
     return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
+def pick_asset(assets: dict[str, Any], preferred: Optional[str]) -> tuple[Optional[str], Optional[dict[str, Any]]]:
+    if preferred:
+        asset = assets.get(preferred)
+        if asset:
+            return preferred, asset
+
+    for key in ("visual", "image"):
+        asset = assets.get(key)
+        if asset:
+            return key, asset
+
+    for key, asset in assets.items():
+        roles = [r.lower() for r in asset.get("roles", []) if isinstance(r, str)]
+        if "visual" in roles:
+            return key, asset
+
+    for key, asset in assets.items():
+        roles = [r.lower() for r in asset.get("roles", []) if isinstance(r, str)]
+        if "data" in roles or "analytic" in roles:
+            return key, asset
+
+    for key, asset in assets.items():
+        return key, asset
+
+    return None, None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Download Sentinel-2 L2A RGB (visual) over bbox, mosaic, clip, reproject, export."
+        description="Download STAC visual imagery (Sentinel-2 by default) over bbox, mosaic, clip, reproject, export."
     )
     ap.add_argument("--xmin", type=float, required=True)
     ap.add_argument("--ymin", type=float, required=True)
@@ -59,8 +102,11 @@ def main() -> int:
     ap.add_argument("--start", type=str, required=True, help="ISO8601 start, e.g. 2025-06-01T00:00:00Z")
     ap.add_argument("--end", type=str, required=True, help="ISO8601 end, e.g. 2025-10-31T23:59:59Z")
     ap.add_argument("--cloud-lt", type=float, default=5.0, help="Cloud cover threshold (percent). Default 5")
+    ap.add_argument("--skip-cloud-filter", action="store_true", help="Skip the cloud-cover query (useful for collections without eo:cloud_cover).")
+    ap.add_argument("--collection", type=str, default="sentinel-2-l2a", help="STAC collection to search")
+    ap.add_argument("--asset", type=str, default="", help="Preferred STAC asset key (falls back to visual/data if unset)")
     ap.add_argument("--limit", type=int, default=50, help="How many candidates to fetch from STAC. Default 50")
-    ap.add_argument("--outdir", type=str, default="assets/imagery", help="Output directory")
+    ap.add_argument("--outdir", type=str, default="assets/scenery/sfo/imagery", help="Output directory")
     ap.add_argument("--export", choices=["png", "jpg", "both"], default="png")
     ap.add_argument("--quality", type=int, default=92, help="JPG quality if exporting jpg/both")
     ap.add_argument("--utm", type=str, default="EPSG:32610", help="Target projected CRS (Bay Area: EPSG:32610)")
@@ -69,16 +115,18 @@ def main() -> int:
     args = ap.parse_args()
 
     bbox = [args.xmin, args.ymin, args.xmax, args.ymax]
+    os.makedirs(args.outdir, exist_ok=True)
     dt = f"{args.start}/{args.end}"
 
     # 1) STAC search
     search_payload = {
-        "collections": ["sentinel-2-l2a"],
+        "collections": [args.collection],
         "bbox": bbox,
         "datetime": dt,
         "limit": args.limit,
-        "query": {"eo:cloud_cover": {"lt": args.cloud_lt}},
     }
+    if not args.skip_cloud_filter:
+        search_payload["query"] = {"eo:cloud_cover": {"lt": args.cloud_lt}}
     res = http_json(f"{EARTH_SEARCH}/search", search_payload)
     feats = res.get("features", [])
     if not feats:
@@ -143,19 +191,26 @@ def main() -> int:
     local_tifs = []
     for item in best_items:
         item_id = item["id"]
-        item_url = f"{EARTH_SEARCH}/collections/sentinel-2-l2a/items/{item_id}"
+        item_url = f"{EARTH_SEARCH}/collections/{args.collection}/items/{item_id}"
         full = http_get_json(item_url)
 
-        visual = full.get("assets", {}).get("visual", {})
-        href = visual.get("href")
-        if not href:
-            print(f"Skipping {item_id}: no visual asset", file=sys.stderr)
+        assets = full.get("assets", {})
+        asset_key, asset = pick_asset(assets, args.asset or None)
+        if not asset:
+            print(f"Skipping {item_id}: no suitable visual asset", file=sys.stderr)
             continue
+        href = asset.get("href")
+        if not href:
+            print(f"Skipping {item_id}: asset '{asset_key}' missing href", file=sys.stderr)
+            continue
+
+        props = full.get("properties", {})
+        requester_pays = flag_true(props.get("storage:requester_pays")) or flag_true(asset.get("storage:requester_pays"))
 
         out_tif = os.path.join(dl_dir, f"{item_id}_visual.tif")
         if not os.path.exists(out_tif):
             print(f"Downloading {item_id}")
-            download_asset(href, out_tif)
+            download_asset(href, out_tif, requester_pays=requester_pays)
         else:
             print(f"Already exists: {out_tif}")
         local_tifs.append(out_tif)

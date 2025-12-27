@@ -1,10 +1,10 @@
 {
-  "heightmap": "../heights_keywest.png",
-  "sizeX": 52950.0,
-  "sizeZ": 39810.0,
-  "heightMin": -3.0,
-  "heightMax": 24.480110168457,
+  "heightmap": "../scenery/sfo/heights/sfo_dem.png",
+  "sizeX": 17770.0,
+  "sizeZ": 22300.0,
+  "heightMin": -17.612146377563,
+  "heightMax": 391.82073974609,
   "maxResolution": 512,
   "flipY": true,
-  "albedo": "../imagery/albedo.jpg"
+  "albedo": "../scenery/sfo/imagery/albedo_texture.jpg"
 }

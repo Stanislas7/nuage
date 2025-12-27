@@ -36,27 +36,28 @@ add_executable(nuage ${SOURCES})
 # Copy assets to the build directory
 set(JSBSIM_MODELS c172p)
 
-add_custom_command(TARGET nuage POST_BUILD
+set(copy_assets_commands
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/assets
-    $<TARGET_FILE_DIR:nuage>/assets
+    ${CMAKE_BINARY_DIR}/assets
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/external/jsbsim/engine
-    $<TARGET_FILE_DIR:nuage>/assets/jsbsim/engine
+    ${CMAKE_BINARY_DIR}/assets/jsbsim/engine
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/external/jsbsim/systems
-    $<TARGET_FILE_DIR:nuage>/assets/jsbsim/systems
+    ${CMAKE_BINARY_DIR}/assets/jsbsim/systems
 )
 
 foreach(model ${JSBSIM_MODELS})
-    add_custom_command(TARGET nuage POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory
-        $<TARGET_FILE_DIR:nuage>/assets/jsbsim/aircraft/${model}
+    list(APPEND copy_assets_commands
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/external/jsbsim/aircraft/${model}
-        $<TARGET_FILE_DIR:nuage>/assets/jsbsim/aircraft/${model}
+        ${CMAKE_BINARY_DIR}/assets/jsbsim/aircraft/${model}
     )
 endforeach()
+
+add_custom_target(copy_assets ALL ${copy_assets_commands})
+add_dependencies(nuage copy_assets)
 
 target_include_directories(nuage PRIVATE
     ${CMAKE_SOURCE_DIR}/src
