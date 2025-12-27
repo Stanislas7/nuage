@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdint>
 #include <memory>
+#include <unordered_set>
 
 namespace nuage {
 
@@ -55,6 +56,7 @@ private:
         int y = 0;
         bool textured = false;
         bool procedural = false;
+        bool compiled = false;
     };
 
     struct HeightTile {
@@ -65,15 +67,20 @@ private:
 
     void setupTiled(const std::string& configPath, AssetStore& assets);
     void setupProcedural(const std::string& configPath);
+    void setupCompiled(const std::string& configPath);
     void renderTiled(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
     void renderProcedural(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
+    void renderCompiled(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
     TileResource* ensureTileLoaded(const TileLevel& level, int x, int y);
     TileResource* ensureProceduralTileLoaded(int x, int y);
+    TileResource* ensureCompiledTileLoaded(int x, int y);
     bool loadHeightTileFile(const std::string& path, HeightTile& out);
     float bilinearSample(const HeightTile& tile, float x, float y) const;
     float sampleHeightAt(const TileLevel& heightLevel, float u, float v);
     float proceduralHeight(float worldX, float worldZ) const;
     Vec3 proceduralTileTint(int tileX, int tileY) const;
+    std::int64_t packedTileKey(int x, int y) const;
+    bool loadCompiledMesh(const std::string& path, std::vector<float>& out) const;
 
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
@@ -83,6 +90,7 @@ private:
 
     bool m_tiled = false;
     bool m_procedural = false;
+    bool m_compiled = false;
     AssetStore* m_assets = nullptr;
     std::string m_manifestDir;
     TileLayer m_heightLayer;
@@ -107,6 +115,21 @@ private:
     std::unordered_map<std::string, HeightTile> m_heightTileCache;
     std::unordered_map<std::string, int> m_procTileCreateCounts;
     int m_procTileRebuilds = 0;
+    std::unordered_map<std::string, int> m_compiledTileCreateCounts;
+    int m_compiledTileRebuilds = 0;
+
+    std::string m_compiledManifestDir;
+    float m_compiledTileSizeMeters = 2000.0f;
+    int m_compiledGridResolution = 129;
+    int m_compiledVisibleRadius = 1;
+    int m_compiledLoadsPerFrame = 2;
+    bool m_compiledDebugLog = true;
+    float m_compiledMinX = 0.0f;
+    float m_compiledMinZ = 0.0f;
+    float m_compiledMaxX = 0.0f;
+    float m_compiledMaxZ = 0.0f;
+    std::unordered_set<std::int64_t> m_compiledTiles;
+    int m_compiledTilesLoadedThisFrame = 0;
 
     float m_procTileSizeMeters = 2000.0f;
     int m_procGridResolution = 129;

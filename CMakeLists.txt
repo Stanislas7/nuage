@@ -33,6 +33,13 @@ file(GLOB_RECURSE SOURCES
 
 add_executable(nuage ${SOURCES})
 
+add_executable(terrainc tools/terrainc.cpp)
+target_include_directories(terrainc PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/math
+    ${CMAKE_SOURCE_DIR}/src/utils
+)
+
 # Copy assets to the build directory
 set(JSBSIM_MODELS c172p)
 

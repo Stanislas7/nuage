@@ -14,6 +14,7 @@
 #include <cmath>
 #include <unordered_map>
 #include <unordered_set>
+#include <fstream>
 
 namespace nuage {
 
@@ -27,10 +28,13 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_assets = &assets;
     m_tiled = false;
     m_procedural = false;
+    m_compiled = false;
     m_tileCache.clear();
     m_heightTileCache.clear();
     m_procTileCreateCounts.clear();
     m_procTileRebuilds = 0;
+    m_compiledTileCreateCounts.clear();
+    m_compiledTileRebuilds = 0;
     m_heightLayer = {};
     m_albedoLayer = {};
     m_albedoLevelForHeight.clear();
@@ -49,6 +53,12 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     if (terrainConfigOpt && terrainConfigOpt->value("procedural", false)) {
         setupProcedural(configPath);
         if (m_procedural) {
+            return;
+        }
+    }
+    if (terrainConfigOpt && terrainConfigOpt->contains("compiledManifest")) {
+        setupCompiled(configPath);
+        if (m_compiled) {
             return;
         }
     }
@@ -102,6 +112,10 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
 void TerrainRenderer::render(const Mat4& vp, const Vec3& sunDir, const Vec3& cameraPos) {
     if (m_procedural) {
         renderProcedural(vp, sunDir, cameraPos);
+        return;
+    }
+    if (m_compiled) {
+        renderCompiled(vp, sunDir, cameraPos);
         return;
     }
     if (m_tiled) {
@@ -261,6 +275,73 @@ void TerrainRenderer::setupProcedural(const std::string& configPath) {
     m_procedural = true;
 }
 
+void TerrainRenderer::setupCompiled(const std::string& configPath) {
+    auto terrainConfigOpt = loadJsonConfig(configPath);
+    if (!terrainConfigOpt) {
+        return;
+    }
+    const auto& config = *terrainConfigOpt;
+
+    std::filesystem::path cfg(configPath);
+    auto resolve = [&](const std::string& p) {
+        if (p.empty()) return p;
+        std::filesystem::path path(p);
+        if (path.is_absolute()) return p;
+        return (cfg.parent_path() / path).string();
+    };
+
+    std::string manifestPath = resolve(config.value("compiledManifest", ""));
+    if (manifestPath.empty()) {
+        return;
+    }
+
+    auto manifestOpt = loadJsonConfig(manifestPath);
+    if (!manifestOpt) {
+        std::cerr << "Failed to load compiled terrain manifest: " << manifestPath << "\n";
+        return;
+    }
+    const auto& manifest = *manifestOpt;
+
+    m_compiledManifestDir = std::filesystem::path(manifestPath).parent_path().string();
+    m_compiledTileSizeMeters = manifest.value("tileSizeMeters", 2000.0f);
+    m_compiledGridResolution = manifest.value("gridResolution", 129);
+    if (manifest.contains("boundsENU") && manifest["boundsENU"].is_array() && manifest["boundsENU"].size() == 4) {
+        m_compiledMinX = manifest["boundsENU"][0].get<float>();
+        m_compiledMinZ = manifest["boundsENU"][1].get<float>();
+        m_compiledMaxX = manifest["boundsENU"][2].get<float>();
+        m_compiledMaxZ = manifest["boundsENU"][3].get<float>();
+    }
+
+    m_compiledVisibleRadius = config.value("compiledVisibleRadius", 1);
+    m_compiledLoadsPerFrame = config.value("compiledMaxLoadsPerFrame", 2);
+    m_compiledDebugLog = config.value("compiledDebugLog", true);
+
+    m_compiledTileSizeMeters = std::max(1.0f, m_compiledTileSizeMeters);
+    m_compiledGridResolution = std::max(2, m_compiledGridResolution);
+    m_compiledVisibleRadius = std::max(0, m_compiledVisibleRadius);
+    m_compiledLoadsPerFrame = std::max(1, m_compiledLoadsPerFrame);
+
+    m_compiledTiles.clear();
+    if (manifest.contains("tileIndex") && manifest["tileIndex"].is_array()) {
+        for (const auto& entry : manifest["tileIndex"]) {
+            if (!entry.is_array() || entry.size() != 2) {
+                continue;
+            }
+            int tx = entry[0].get<int>();
+            int ty = entry[1].get<int>();
+            m_compiledTiles.insert(packedTileKey(tx, ty));
+        }
+    }
+
+    if (m_compiledTiles.empty()) {
+        std::cerr << "Compiled terrain manifest has no tiles listed: " << manifestPath << "\n";
+        return;
+    }
+
+    m_textured = false;
+    m_compiled = true;
+}
+
 namespace {
 Vec3 heightColorLocal(float t) {
     t = std::max(0.0f, std::min(1.0f, t));
@@ -295,6 +376,30 @@ Vec3 TerrainRenderer::proceduralTileTint(int tileX, int tileY) const {
     float g = 0.6f + 0.4f * (((hash >> 8) & 0xFFu) / 255.0f);
     float b = 0.6f + 0.4f * (((hash >> 16) & 0xFFu) / 255.0f);
     return Vec3(r, g, b);
+}
+
+std::int64_t TerrainRenderer::packedTileKey(int x, int y) const {
+    return (static_cast<std::int64_t>(x) << 32) ^ (static_cast<std::uint32_t>(y));
+}
+
+bool TerrainRenderer::loadCompiledMesh(const std::string& path, std::vector<float>& out) const {
+    std::ifstream in(path, std::ios::binary);
+    if (!in.is_open()) {
+        return false;
+    }
+    char magic[4] = {};
+    in.read(magic, 4);
+    if (in.gcount() != 4 || std::string(magic, 4) != "NTM1") {
+        return false;
+    }
+    std::uint32_t count = 0;
+    in.read(reinterpret_cast<char*>(&count), sizeof(count));
+    if (!in || count == 0) {
+        return false;
+    }
+    out.resize(count);
+    in.read(reinterpret_cast<char*>(out.data()), static_cast<std::streamsize>(count * sizeof(float)));
+    return static_cast<std::size_t>(in.gcount()) == count * sizeof(float);
 }
 
 bool TerrainRenderer::loadHeightTileFile(const std::string& path, HeightTile& out) {
@@ -691,6 +796,67 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureProceduralTileLoaded(int x
     return &inserted.first->second;
 }
 
+TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, int y) {
+    if (!m_assets) {
+        return nullptr;
+    }
+    if (m_compiledTiles.find(packedTileKey(x, y)) == m_compiledTiles.end()) {
+        return nullptr;
+    }
+
+    std::string key = "C_x" + std::to_string(x) + "_y" + std::to_string(y);
+    auto found = m_tileCache.find(key);
+    if (found != m_tileCache.end()) {
+        return &found->second;
+    }
+    if (m_compiledTilesLoadedThisFrame >= m_compiledLoadsPerFrame) {
+        return nullptr;
+    }
+
+    std::filesystem::path meshPath = std::filesystem::path(m_compiledManifestDir)
+        / "tiles" / ("tile_" + std::to_string(x) + "_" + std::to_string(y) + ".mesh");
+
+    std::vector<float> verts;
+    if (!loadCompiledMesh(meshPath.string(), verts)) {
+        if (m_compiledDebugLog) {
+            std::cout << "[terrain] missing compiled tile " << x << "," << y << "\n";
+        }
+        return nullptr;
+    }
+
+    auto mesh = std::make_unique<Mesh>();
+    mesh->init(verts);
+    m_compiledTilesLoadedThisFrame += 1;
+
+    TileResource resource;
+    resource.ownedMesh = std::move(mesh);
+    resource.mesh = resource.ownedMesh.get();
+    resource.texture = nullptr;
+    resource.center = Vec3((static_cast<float>(x) + 0.5f) * m_compiledTileSizeMeters,
+                           0.0f,
+                           (static_cast<float>(y) + 0.5f) * m_compiledTileSizeMeters);
+    resource.radius = m_compiledTileSizeMeters * 0.5f;
+    resource.level = 0;
+    resource.x = x;
+    resource.y = y;
+    resource.textured = false;
+    resource.procedural = false;
+    resource.compiled = true;
+
+    auto inserted = m_tileCache.emplace(key, std::move(resource));
+    if (m_compiledDebugLog) {
+        int& count = m_compiledTileCreateCounts[key];
+        count += 1;
+        if (count > 1) {
+            m_compiledTileRebuilds += 1;
+            std::cout << "[terrain] compiled tile rebuilt " << x << "," << y
+                      << " total_rebuilds=" << m_compiledTileRebuilds << "\n";
+        }
+        std::cout << "[terrain] loaded compiled tile " << x << "," << y << "\n";
+    }
+    return &inserted.first->second;
+}
+
 void TerrainRenderer::renderTiled(const Mat4& vp, const Vec3& sunDir, const Vec3& cameraPos) {
     if (m_heightLayer.levels.empty()) {
         return;
@@ -854,6 +1020,69 @@ void TerrainRenderer::renderProcedural(const Mat4& vp, const Vec3& sunDir, const
             }
             if (m_procDebugLog) {
                 std::cout << "[terrain] unloaded procedural tile " << it->second.x << "," << it->second.y << "\n";
+            }
+            m_tileCache.erase(it);
+        }
+    }
+}
+
+void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const Vec3& cameraPos) {
+    if (!m_shader) {
+        m_shader = m_assets ? m_assets->getShader("basic") : nullptr;
+    }
+    if (!m_shader) {
+        return;
+    }
+
+    m_compiledTilesLoadedThisFrame = 0;
+
+    int centerX = static_cast<int>(std::floor(cameraPos.x / m_compiledTileSizeMeters));
+    int centerY = static_cast<int>(std::floor(cameraPos.z / m_compiledTileSizeMeters));
+
+    std::unordered_set<std::string> desiredKeys;
+    desiredKeys.reserve(static_cast<size_t>((m_compiledVisibleRadius * 2 + 1) * (m_compiledVisibleRadius * 2 + 1)));
+
+    for (int dy = -m_compiledVisibleRadius; dy <= m_compiledVisibleRadius; ++dy) {
+        for (int dx = -m_compiledVisibleRadius; dx <= m_compiledVisibleRadius; ++dx) {
+            int tx = centerX + dx;
+            int ty = centerY + dy;
+            if (m_compiledTiles.find(packedTileKey(tx, ty)) == m_compiledTiles.end()) {
+                continue;
+            }
+
+            std::string key = "C_x" + std::to_string(tx) + "_y" + std::to_string(ty);
+            desiredKeys.insert(key);
+
+            TileResource* tile = ensureCompiledTileLoaded(tx, ty);
+            if (!tile || !tile->mesh) {
+                continue;
+            }
+
+            m_shader->use();
+            m_shader->setMat4("uMVP", vp);
+            applyDirectionalLighting(m_shader, sunDir);
+            tile->mesh->draw();
+        }
+    }
+
+    if (!m_tileCache.empty()) {
+        std::vector<std::string> toRemove;
+        toRemove.reserve(m_tileCache.size());
+        for (const auto& pair : m_tileCache) {
+            if (!pair.second.compiled) {
+                continue;
+            }
+            if (desiredKeys.find(pair.first) == desiredKeys.end()) {
+                toRemove.push_back(pair.first);
+            }
+        }
+        for (const auto& key : toRemove) {
+            auto it = m_tileCache.find(key);
+            if (it == m_tileCache.end()) {
+                continue;
+            }
+            if (m_compiledDebugLog) {
+                std::cout << "[terrain] unloaded compiled tile " << it->second.x << "," << it->second.y << "\n";
             }
             m_tileCache.erase(it);
         }
