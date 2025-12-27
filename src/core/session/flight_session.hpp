@@ -3,7 +3,6 @@
 #include "aircraft/aircraft.hpp"
 #include "environment/atmosphere.hpp"
 #include "graphics/camera.hpp"
-#include "scenery/scenery.hpp"
 #include "core/session/flight_config.hpp"
 #include "graphics/renderers/skybox.hpp"
 #include "graphics/renderers/terrain_renderer.hpp"
@@ -29,8 +28,6 @@ public:
     Aircraft& aircraft() { return m_aircraft; }
     Camera& camera() { return m_camera; }
     Atmosphere& atmosphere() { return m_atmosphere; }
-    Scenery& scenery() { return m_scenery; }
-
 private:
     void setupHUD();
     void updateHUD();
@@ -41,7 +38,6 @@ private:
     Aircraft m_aircraft;
     Atmosphere m_atmosphere;
     Camera m_camera;
-    Scenery m_scenery;
 
     Skybox m_skybox;
     TerrainRenderer m_terrain;

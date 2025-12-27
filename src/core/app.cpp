@@ -36,7 +36,6 @@ bool App::init(const AppConfig& config) {
         FlightConfig flight;
         flight.aircraftPath = "assets/config/aircraft/c172p.json";
         flight.terrainPath = "assets/config/terrain.json";
-        flight.sceneryPath = "assets/config/scenery.json";
         this->startFlight(flight);
     });
 

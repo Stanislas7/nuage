@@ -20,8 +20,6 @@ bool FlightSession::init() {
     
     m_aircraft.init(assets, m_atmosphere);
     m_camera.init(m_app->input());
-    m_scenery.init(assets);
-
     m_skybox.init(assets);
     m_terrain.init(assets);
     m_terrain.setup(m_config.terrainPath, assets);
@@ -30,10 +28,6 @@ bool FlightSession::init() {
 
     if (!m_config.aircraftPath.empty()) {
         m_aircraft.spawnPlayer(m_config.aircraftPath);
-    }
-
-    if (!m_config.sceneryPath.empty()) {
-        m_scenery.loadConfig(m_config.sceneryPath);
     }
 
     return true;
@@ -54,7 +48,6 @@ void FlightSession::render(float alpha) {
     Vec3 sunDir = m_atmosphere.getSunDirection();
     m_terrain.render(vp, sunDir, m_camera.position());
     
-    m_scenery.render(vp);
     m_aircraft.render(vp, alpha, sunDir);
 }
 
