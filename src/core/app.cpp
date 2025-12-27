@@ -195,6 +195,12 @@ bool App::initWindow(const AppConfig& config) {
     return true;
 }
 
+void App::setPaused(bool paused) {
+    if (m_paused == paused) return;
+    m_paused = paused;
+    m_physicsAccumulator = 0.0f;
+}
+
 void App::updatePhysics() {
     if (m_paused || !m_session) {
         return;

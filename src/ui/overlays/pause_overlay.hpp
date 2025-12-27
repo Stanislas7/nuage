@@ -1,35 +1,35 @@
 #pragma once
 
 #include "ui/ui_manager.hpp"
-#include "math/vec3.hpp"
-#include <string>
 
 namespace nuage {
+
+class Button;
 
 /**
  * @brief Logic and visual management for the pause screen.
  */
 class PauseOverlay {
 public:
-    void update(bool paused, UIManager& ui) {
-        // state logic, maybe someday
-    }
+    void update(bool paused, UIManager& ui);
+    void draw(bool paused, UIManager& ui);
+    void reset();
 
-    void draw(bool paused, UIManager& ui) {
-        if (!paused) return;
+private:
+    void buildUi(UIManager& ui);
+    void layout(UIManager& ui);
+    void setButtonsVisible(bool visible);
 
-        // Draw background tint
-        ui.drawRect(0, 0, (float)ui.getWindowWidth(), (float)ui.getWindowHeight(), 
-                    Vec3(0.0f, 0.0f, 0.0f), 0.45f);
-
-        // Draw text
-        ui.drawText("PAUSED", 0, -40, Anchor::Center, 1.5f, Vec3(1, 1, 1), 1.0f);
-        ui.drawText("Press SPACE to resume", 0, 40, Anchor::Center, 0.6f, Vec3(1, 1, 1), 1.0f);
-    }
-
-    void reset() {
-        // No state to reset currently
-    }
+    bool m_initialized = false;
+    bool m_visible = false;
+    int m_lastWidth = 0;
+    int m_lastHeight = 0;
+    float m_panelCenterY = 0.0f;
+    Button* m_dawnButton = nullptr;
+    Button* m_noonButton = nullptr;
+    Button* m_duskButton = nullptr;
+    Button* m_midnightButton = nullptr;
+    Button* m_resumeButton = nullptr;
 };
 
 } // namespace nuage

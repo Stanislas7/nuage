@@ -1,5 +1,7 @@
 #include "graphics/shader.hpp"
 #include "math/mat4.hpp"
+#include "math/vec2.hpp"
+#include "math/vec3.hpp"
 #include <iostream>
 
 namespace nuage {
@@ -45,6 +47,13 @@ void Shader::setMat4(const char* name, const Mat4& mat) const {
     GLint loc = getUniformLocation(name);
     if (loc >= 0) {
         glUniformMatrix4fv(loc, 1, GL_FALSE, mat.data());
+    }
+}
+
+void Shader::setVec2(const char* name, const Vec2& vec) const {
+    GLint loc = getUniformLocation(name);
+    if (loc >= 0) {
+        glUniform2f(loc, vec.x, vec.y);
     }
 }
 

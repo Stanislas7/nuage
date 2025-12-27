@@ -139,8 +139,38 @@ void UIManager::drawPersistent() {
     // 1. Draw Buttons
     for (const auto& btn : m_buttons) {
         if (!btn->visible) continue;
-        drawRect(btn->position.x, btn->position.y, btn->getSize().x, btn->getSize().y,
-                 btn->isHovered() ? btn->getHoverColor() : btn->color, 1.0f, btn->anchor);
+        Vec3 fillColor = btn->isHovered() ? btn->getHoverColor() : btn->color;
+        if (btn->isOutlineOnly()) {
+            drawRoundedRect(btn->position.x, btn->position.y, btn->getSize().x, btn->getSize().y,
+                            btn->getCornerRadius(), btn->getOutlineColor(), 1.0f, btn->anchor);
+
+            float thickness = std::max(0.0f, btn->getOutlineThickness());
+            float innerW = std::max(0.0f, btn->getSize().x - 2.0f * thickness);
+            float innerH = std::max(0.0f, btn->getSize().y - 2.0f * thickness);
+            if (innerW > 0.0f && innerH > 0.0f) {
+                float xInset = 0.0f;
+                float yInset = 0.0f;
+                switch (btn->anchor) {
+                    case Anchor::TopLeft:
+                    case Anchor::TopRight:
+                    case Anchor::BottomLeft:
+                    case Anchor::BottomRight:
+                        xInset = thickness;
+                        yInset = thickness;
+                        break;
+                    case Anchor::Center:
+                    default:
+                        break;
+                }
+
+                drawRoundedRect(btn->position.x + xInset, btn->position.y + yInset, innerW, innerH,
+                                std::max(0.0f, btn->getCornerRadius() - thickness),
+                                fillColor, 1.0f, btn->anchor);
+            }
+        } else {
+            drawRoundedRect(btn->position.x, btn->position.y, btn->getSize().x, btn->getSize().y,
+                            btn->getCornerRadius(), fillColor, 1.0f, btn->anchor);
+        }
 
         Text tempText(btn->getText(), m_font.get(), m_app);
         tempText.scaleVal(btn->scale);
@@ -187,10 +217,50 @@ void UIManager::drawRect(float x, float y, float w, float h, const Vec3& color, 
     m_shader->setMat4("uModel", Mat4::identity());
     m_shader->setVec3("uColor", color);
     m_shader->setFloat("uAlpha", alpha);
+    m_shader->setInt("uRounded", 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_whiteTexture);
     m_shader->setInt("uTexture", 0);
     
+    glBufferSubData(GL_ARRAY_BUFFER, 0, verts.size() * sizeof(float), verts.data());
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+void UIManager::drawRoundedRect(float x, float y, float w, float h, float radius, const Vec3& color, float alpha, Anchor anchor) {
+    float rx = x;
+    float ry = y;
+
+    switch (anchor) {
+        case Anchor::TopRight:    rx = m_windowWidth - x - w; break;
+        case Anchor::BottomLeft:  ry = m_windowHeight - y - h; break;
+        case Anchor::BottomRight: rx = m_windowWidth - x - w; ry = m_windowHeight - y - h; break;
+        case Anchor::Center:      rx = m_windowWidth / 2.0f + x - w / 2.0f;
+                                  ry = m_windowHeight / 2.0f + y - h / 2.0f; break;
+        default: break;
+    }
+
+    const std::array<float, 24> verts = {
+        rx,     ry,     0.0f, 0.0f,
+        rx + w, ry,     1.0f, 0.0f,
+        rx + w, ry + h, 1.0f, 1.0f,
+        rx,     ry,     0.0f, 0.0f,
+        rx + w, ry + h, 1.0f, 1.0f,
+        rx,     ry + h, 0.0f, 1.0f
+    };
+
+    float maxRadius = 0.5f * std::min(w, h);
+    float clampedRadius = std::clamp(radius, 0.0f, maxRadius);
+
+    m_shader->setMat4("uModel", Mat4::identity());
+    m_shader->setVec3("uColor", color);
+    m_shader->setFloat("uAlpha", alpha);
+    m_shader->setInt("uRounded", 1);
+    m_shader->setVec2("uRectSize", Vec2(w, h));
+    m_shader->setFloat("uRadius", clampedRadius);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_whiteTexture);
+    m_shader->setInt("uTexture", 0);
+
     glBufferSubData(GL_ARRAY_BUFFER, 0, verts.size() * sizeof(float), verts.data());
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
@@ -211,6 +281,7 @@ void UIManager::drawText(const std::string& content, float x, float y, Anchor an
     m_shader->setMat4("uModel", Mat4::identity());
     m_shader->setVec3("uColor", color);
     m_shader->setFloat("uAlpha", std::clamp(alpha, 0.0f, 1.0f));
+    m_shader->setInt("uRounded", 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_font->getTexture());
     m_shader->setInt("uTexture", 0);

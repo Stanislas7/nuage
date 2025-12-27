@@ -23,6 +23,10 @@ public:
     const Vec3& getSize() const { return m_size; }
     const std::string& getText() const { return m_text; }
     const Vec3& getHoverColor() const { return m_hoverColor; }
+    float getCornerRadius() const { return m_cornerRadius; }
+    bool isOutlineOnly() const { return m_outlineOnly; }
+    const Vec3& getOutlineColor() const { return m_outlineColor; }
+    float getOutlineThickness() const { return m_outlineThickness; }
 
     bool isHovered() const { return m_isHovered; }
     void setHovered(bool hovered) { m_isHovered = hovered; }
@@ -33,6 +37,10 @@ public:
     Button& size(float w, float h) { m_size = Vec3(w, h, 0); return *this; }
     Button& hoverColor(const Vec3& c) { m_hoverColor = c; return *this; }
     Button& text(const std::string& t) { m_text = t; return *this; }
+    Button& cornerRadius(float r) { m_cornerRadius = r; return *this; }
+    Button& outlineOnly(bool enabled) { m_outlineOnly = enabled; return *this; }
+    Button& outlineColor(const Vec3& c) { m_outlineColor = c; return *this; }
+    Button& outlineThickness(float t) { m_outlineThickness = t; return *this; }
     
     // UIElement overrides for chaining
     Button& pos(float x, float y) { UIElement::pos(x, y); return *this; }
@@ -47,6 +55,10 @@ private:
     App* m_app = nullptr;
     Vec3 m_size = {200, 50, 0};
     Vec3 m_hoverColor = {0.8f, 0.8f, 0.8f};
+    float m_cornerRadius = 8.0f;
+    bool m_outlineOnly = false;
+    Vec3 m_outlineColor = {1.0f, 1.0f, 1.0f};
+    float m_outlineThickness = 2.0f;
     bool m_isHovered = false;
     ClickCallback m_callback;
 };

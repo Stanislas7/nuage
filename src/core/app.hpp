@@ -48,6 +48,8 @@ public:
     float time() const { return m_time; }
     float dt() const { return m_deltaTime; }
     GLFWwindow* window() const { return m_window; }
+
+    void setPaused(bool paused);
     
     void quit() { m_shouldQuit = true; }
 

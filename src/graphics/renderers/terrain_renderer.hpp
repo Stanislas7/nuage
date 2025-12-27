@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 namespace nuage {
 
@@ -53,9 +54,18 @@ private:
         bool textured = false;
     };
 
+    struct HeightTile {
+        int width = 0;
+        int height = 0;
+        std::vector<std::uint16_t> pixels;
+    };
+
     void setupTiled(const std::string& configPath, AssetStore& assets);
     void renderTiled(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
     TileResource* ensureTileLoaded(const TileLevel& level, int x, int y);
+    bool loadHeightTileFile(const std::string& path, HeightTile& out);
+    float bilinearSample(const HeightTile& tile, float x, float y) const;
+    float sampleHeightAt(const TileLevel& heightLevel, float u, float v);
 
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
@@ -68,6 +78,7 @@ private:
     std::string m_manifestDir;
     TileLayer m_heightLayer;
     TileLayer m_albedoLayer;
+    std::vector<int> m_albedoLevelForHeight;
     int m_tileSizePx = 512;
     float m_worldSizeX = 0.0f;
     float m_worldSizeZ = 0.0f;
@@ -78,7 +89,13 @@ private:
     int m_tileMinLod = 0;
     int m_tileMaxLod = 0;
     int m_tileBudget = 256;
+    int m_tileLoadsPerFrame = 32;
+    int m_textureLoadsPerFrame = 32;
+    int m_tilesLoadedThisFrame = 0;
+    int m_texturesLoadedThisFrame = 0;
     std::unordered_map<std::string, TileResource> m_tileCache;
+
+    std::unordered_map<std::string, HeightTile> m_heightTileCache;
 };
 
 } // namespace nuage

@@ -35,6 +35,7 @@ public:
     
     // Primitives for custom overlays
     void drawRect(float x, float y, float w, float h, const Vec3& color, float alpha, Anchor anchor = Anchor::TopLeft);
+    void drawRoundedRect(float x, float y, float w, float h, float radius, const Vec3& color, float alpha, Anchor anchor = Anchor::TopLeft);
     void drawText(const std::string& content, float x, float y, Anchor anchor = Anchor::TopLeft,
                   float scale = 1.0f, const Vec3& color = {1, 1, 1}, float alpha = 1.0f);
 
