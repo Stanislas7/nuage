@@ -52,7 +52,7 @@ void FlightSession::render(float alpha) {
 
     m_skybox.render(view, proj, m_atmosphere, m_elapsedTime);
     Vec3 sunDir = m_atmosphere.getSunDirection();
-    m_terrain.render(vp, sunDir);
+    m_terrain.render(vp, sunDir, m_camera.position());
     
     m_scenery.render(vp);
     m_aircraft.render(vp, alpha, sunDir);

@@ -7,6 +7,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import subprocess
 from collections import defaultdict
 from datetime import datetime
 from typing import Any, Optional
@@ -96,6 +97,19 @@ def download_asset(href: str, out_path: str, requester_pays: bool = False, aws_s
         run(["curl", "-L", href, "-o", out_path])
 
 
+def is_valid_raster(path: str) -> bool:
+    try:
+        if os.path.getsize(path) < 1024:
+            return False
+    except OSError:
+        return False
+    try:
+        subprocess.check_output(["gdalinfo", path], stderr=subprocess.DEVNULL)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+    return True
+
+
 def iso_dt(s: str) -> datetime:
     # e.g. 2025-10-28T19:14:07.929000Z
     return datetime.fromisoformat(s.replace("Z", "+00:00"))
@@ -160,6 +174,7 @@ def main() -> int:
     ap.add_argument("--stac", choices=["earth-search", "planetary"], default="earth-search", help="STAC endpoint preset")
     ap.add_argument("--stac-fallback", choices=["planetary", "earth-search"], default="", help="Fallback STAC endpoint if the first fails")
     ap.add_argument("--stac-retries", type=int, default=4, help="STAC retry count for 5xx/network errors")
+    ap.add_argument("--asset-stac", choices=["earth-search", "planetary"], default="", help="STAC endpoint to resolve asset hrefs (defaults to search endpoint)")
     ap.add_argument("--outdir", type=str, default="assets/scenery/sfo/imagery", help="Output directory")
     ap.add_argument("--export", choices=["png", "jpg", "both"], default="png")
     ap.add_argument("--quality", type=int, default=92, help="JPG quality if exporting jpg/both")
@@ -321,10 +336,14 @@ def main() -> int:
     dl_dir = os.path.join(args.outdir, "s2_visual")
     os.makedirs(dl_dir, exist_ok=True)
 
+    asset_base = base
+    if args.asset_stac:
+        asset_base = EARTH_SEARCH if args.asset_stac == "earth-search" else PLANETARY_STAC
+
     local_tifs = []
     for item in best_items:
         item_id = item["id"]
-        item_url = stac_url(base, f"collections/{args.collection}/items/{item_id}")
+        item_url = stac_url(asset_base, f"collections/{args.collection}/items/{item_id}")
         full = stac_fetch(item_url, retries=args.stac_retries, backoff=1.5)
 
         assets = full.get("assets", {})
@@ -344,8 +363,28 @@ def main() -> int:
         if not os.path.exists(out_tif):
             print(f"Downloading {item_id}")
             download_asset(href, out_tif, requester_pays=requester_pays, aws_sign=args.aws_sign)
+            if not is_valid_raster(out_tif):
+                print(f"Invalid download for {item_id}; retrying with Earth Search asset href.", file=sys.stderr)
+                try:
+                    fallback_item = stac_fetch(
+                        stac_url(EARTH_SEARCH, f"collections/{args.collection}/items/{item_id}"),
+                        retries=args.stac_retries,
+                        backoff=1.5,
+                    )
+                    assets_fallback = fallback_item.get("assets", {})
+                    asset_key_fallback, asset_fallback = pick_asset(assets_fallback, args.asset or None)
+                    href_fallback = asset_fallback.get("href") if asset_fallback else None
+                    if href_fallback:
+                        if os.path.exists(out_tif):
+                            os.remove(out_tif)
+                        download_asset(href_fallback, out_tif, requester_pays=requester_pays, aws_sign=args.aws_sign)
+                except urllib.error.HTTPError:
+                    pass
         else:
             print(f"Already exists: {out_tif}")
+        if not is_valid_raster(out_tif):
+            print(f"Skipping {item_id}: invalid GeoTIFF download", file=sys.stderr)
+            continue
         local_tifs.append(out_tif)
 
     if not local_tifs:

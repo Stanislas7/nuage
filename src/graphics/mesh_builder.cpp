@@ -96,7 +96,9 @@ std::vector<float> MeshBuilder::terrainFromHeightmap(const std::string& path,
                                                      float heightMax,
                                                      int maxResolution,
                                                      bool textured,
-                                                     bool flipY) {
+                                                     bool flipY,
+                                                     float offsetX,
+                                                     float offsetZ) {
     HeightmapData heightmap;
     if (!loadHeightmap(path, heightmap, flipY)) {
         return {};
@@ -150,8 +152,8 @@ std::vector<float> MeshBuilder::terrainFromHeightmap(const std::string& path,
             float fx = (resX > 1) ? static_cast<float>(x) / (resX - 1) : 0.0f;
             float fz = (resZ > 1) ? static_cast<float>(z) / (resZ - 1) : 0.0f;
 
-            float px = (fx - 0.5f) * sizeX;
-            float pz = (fz - 0.5f) * sizeZ;
+            float px = (fx - 0.5f) * sizeX + offsetX;
+            float pz = (fz - 0.5f) * sizeZ + offsetZ;
             float height = sampleHeight(sampleX, sampleZ);
 
             positions[idx] = Vec3(px, height, pz);

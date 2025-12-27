@@ -17,7 +17,9 @@ public:
                                                    float heightMax,
                                                    int maxResolution,
                                                    bool textured,
-                                                   bool flipY = true);
+                                                   bool flipY = true,
+                                                   float offsetX = 0.0f,
+                                                   float offsetZ = 0.0f);
 };
 
 }

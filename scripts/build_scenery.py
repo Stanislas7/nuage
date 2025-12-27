@@ -256,6 +256,7 @@ def main() -> int:
     ap.add_argument("--stac", choices=["earth-search", "planetary"], default="earth-search", help="STAC endpoint preset")
     ap.add_argument("--stac-fallback", choices=["planetary", "earth-search"], default="", help="Fallback STAC endpoint if the first fails")
     ap.add_argument("--stac-retries", type=int, default=4, help="STAC retry count for 5xx/network errors")
+    ap.add_argument("--asset-stac", choices=["earth-search", "planetary"], default="", help="STAC endpoint to resolve asset hrefs (defaults to search endpoint)")
     ap.add_argument("--skip-dem", action="store_true")
     ap.add_argument("--skip-tiles", action="store_true")
     ap.add_argument("--keep-temp", action="store_true")
@@ -326,6 +327,8 @@ def main() -> int:
             imagery_cmd += ["--stac-fallback", args.stac_fallback]
         if args.stac_retries:
             imagery_cmd += ["--stac-retries", str(args.stac_retries)]
+        if args.asset_stac:
+            imagery_cmd += ["--asset-stac", args.asset_stac]
         if args.coverage_report:
             imagery_cmd.append("--preflight")
         if args.asset:

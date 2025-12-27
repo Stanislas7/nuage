@@ -1,0 +1,10 @@
+{
+  "heightmap": "heights/height_preview.png",
+  "sizeX": 36360.0,
+  "sizeZ": 33720.0,
+  "heightMin": 0.0,
+  "heightMax": 1538.2314453125,
+  "maxResolution": 512,
+  "flipY": true,
+  "albedo": "imagery/albedo_texture.jpg"
+}
