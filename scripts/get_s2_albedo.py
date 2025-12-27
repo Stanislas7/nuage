@@ -4,12 +4,15 @@ import json
 import os
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.request
 from collections import defaultdict
 from datetime import datetime
 from typing import Any, Optional
 
 EARTH_SEARCH = "https://earth-search.aws.element84.com/v1"
+PLANETARY_STAC = "https://planetarycomputer.microsoft.com/api/stac/v1"
 GDAL_GIS_ORDER = ["--config", "OGR_CT_FORCE_TRADITIONAL_GIS_ORDER", "YES"]
 
 
@@ -18,18 +21,52 @@ def run(cmd: list[str]) -> None:
     subprocess.check_call(cmd)
 
 
-def http_json(url: str, payload: dict) -> dict: # pyright: ignore[reportUnknownParameterType]
+def http_json(url: str, payload: dict, retries: int = 4, backoff: float = 1.5) -> dict: # pyright: ignore[reportUnknownParameterType]
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url, data=data, headers={"Content-Type": "application/json"}, method="POST"
     )
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    attempt = 0
+    while True:
+        try:
+            with urllib.request.urlopen(req) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as err:
+            attempt += 1
+            if attempt > retries or err.code < 500:
+                raise
+            wait_s = backoff ** attempt
+            print(f"STAC POST failed ({err.code}); retrying in {wait_s:.1f}s...", file=sys.stderr)
+            time.sleep(wait_s)
+        except urllib.error.URLError:
+            attempt += 1
+            if attempt > retries:
+                raise
+            wait_s = backoff ** attempt
+            print(f"STAC POST failed (network); retrying in {wait_s:.1f}s...", file=sys.stderr)
+            time.sleep(wait_s)
 
 
-def http_get_json(url: str) -> dict:
-    with urllib.request.urlopen(url) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+def http_get_json(url: str, retries: int = 4, backoff: float = 1.5) -> dict:
+    attempt = 0
+    while True:
+        try:
+            with urllib.request.urlopen(url) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as err:
+            attempt += 1
+            if attempt > retries or err.code < 500:
+                raise
+            wait_s = backoff ** attempt
+            print(f"STAC GET failed ({err.code}); retrying in {wait_s:.1f}s...", file=sys.stderr)
+            time.sleep(wait_s)
+        except urllib.error.URLError:
+            attempt += 1
+            if attempt > retries:
+                raise
+            wait_s = backoff ** attempt
+            print(f"STAC GET failed (network); retrying in {wait_s:.1f}s...", file=sys.stderr)
+            time.sleep(wait_s)
 
 
 def flag_true(value: Any) -> bool:
@@ -42,12 +79,12 @@ def flag_true(value: Any) -> bool:
     return False
 
 
-def download_asset(href: str, out_path: str, requester_pays: bool = False) -> None:
+def download_asset(href: str, out_path: str, requester_pays: bool = False, aws_sign: bool = False) -> None:
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     if href.startswith("s3://"):
         # Public bucket/object; no credentials needed
         cmd = ["aws", "s3", "cp"]
-        if not requester_pays:
+        if not requester_pays and not aws_sign:
             cmd.append("--no-sign-request")
         if requester_pays:
             cmd += ["--request-payer", "requester"]
@@ -91,6 +128,18 @@ def pick_asset(assets: dict[str, Any], preferred: Optional[str]) -> tuple[Option
     return None, None
 
 
+def stac_url(base: str, path: str) -> str:
+    return base.rstrip("/") + "/" + path.lstrip("/")
+
+
+def stac_search(base: str, payload: dict, retries: int, backoff: float) -> dict:
+    return http_json(stac_url(base, "search"), payload, retries=retries, backoff=backoff)
+
+
+def stac_fetch(url: str, retries: int, backoff: float) -> dict:
+    return http_get_json(url, retries=retries, backoff=backoff)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Download STAC visual imagery (Sentinel-2 by default) over bbox, mosaic, clip, reproject, export."
@@ -106,19 +155,27 @@ def main() -> int:
     ap.add_argument("--collection", type=str, default="sentinel-2-l2a", help="STAC collection to search")
     ap.add_argument("--asset", type=str, default="", help="Preferred STAC asset key (falls back to visual/data if unset)")
     ap.add_argument("--limit", type=int, default=50, help="How many candidates to fetch from STAC. Default 50")
+    ap.add_argument("--max-pages", type=int, default=10, help="Max STAC pages to fetch when paging. Default 10")
+    ap.add_argument("--max-items", type=int, default=500, help="Max STAC items to keep in memory. Default 500")
+    ap.add_argument("--stac", choices=["earth-search", "planetary"], default="earth-search", help="STAC endpoint preset")
+    ap.add_argument("--stac-fallback", choices=["planetary", "earth-search"], default="", help="Fallback STAC endpoint if the first fails")
+    ap.add_argument("--stac-retries", type=int, default=4, help="STAC retry count for 5xx/network errors")
     ap.add_argument("--outdir", type=str, default="assets/scenery/sfo/imagery", help="Output directory")
     ap.add_argument("--export", choices=["png", "jpg", "both"], default="png")
     ap.add_argument("--quality", type=int, default=92, help="JPG quality if exporting jpg/both")
     ap.add_argument("--utm", type=str, default="EPSG:32610", help="Target projected CRS (Bay Area: EPSG:32610)")
     ap.add_argument("--tr", type=float, default=25.0, help="Target resolution in meters (Sentinel-2 visual ~10m). Default 25m for reasonable texture size.")
     ap.add_argument("--fill-nodata", action="store_true", help="Fill nodata gaps after reprojection (avoids black holes).")
+    ap.add_argument("--aws-sign", action="store_true", help="Use signed AWS requests for s3:// assets (requires credentials).")
+    ap.add_argument("--preflight", action="store_true", help="Report approximate coverage and exit without downloads.")
+    ap.add_argument("--coverage-grid", type=int, default=64, help="Grid size for coverage estimate (NxN). Default 64.")
     args = ap.parse_args()
 
     bbox = [args.xmin, args.ymin, args.xmax, args.ymax]
     os.makedirs(args.outdir, exist_ok=True)
     dt = f"{args.start}/{args.end}"
 
-    # 1) STAC search
+    # 1) STAC search (with pagination)
     search_payload = {
         "collections": [args.collection],
         "bbox": bbox,
@@ -127,11 +184,87 @@ def main() -> int:
     }
     if not args.skip_cloud_filter:
         search_payload["query"] = {"eo:cloud_cover": {"lt": args.cloud_lt}}
-    res = http_json(f"{EARTH_SEARCH}/search", search_payload)
-    feats = res.get("features", [])
+
+    base = EARTH_SEARCH if args.stac == "earth-search" else PLANETARY_STAC
+    fallback = ""
+    if args.stac_fallback:
+        fallback = PLANETARY_STAC if args.stac_fallback == "planetary" else EARTH_SEARCH
+
+    feats: list[dict[str, Any]] = []
+    try:
+        res = stac_search(base, search_payload, retries=args.stac_retries, backoff=1.5)
+    except urllib.error.HTTPError as err:
+        if fallback and err.code >= 500:
+            print(f"Primary STAC failed ({err.code}); falling back to {fallback}", file=sys.stderr)
+            res = stac_search(fallback, search_payload, retries=args.stac_retries, backoff=1.5)
+            base = fallback
+        else:
+            raise
+    except urllib.error.URLError:
+        if fallback:
+            print(f"Primary STAC failed (network); falling back to {fallback}", file=sys.stderr)
+            res = stac_search(fallback, search_payload, retries=args.stac_retries, backoff=1.5)
+            base = fallback
+        else:
+            raise
+    feats.extend(res.get("features", []))
+    next_link = None
+    next_method = "GET"
+    next_body: Optional[dict[str, Any]] = None
+    for link in res.get("links", []):
+        if link.get("rel") == "next":
+            next_link = link.get("href")
+            next_method = str(link.get("method", "GET")).upper()
+            next_body = link.get("body") if isinstance(link.get("body"), dict) else None
+            break
+
+    page = 1
+    while next_link and page < args.max_pages and len(feats) < args.max_items:
+        if next_method == "POST":
+            body = next_body or {}
+            res = http_json(next_link, body, retries=args.stac_retries, backoff=1.5)
+        else:
+            res = stac_fetch(next_link, retries=args.stac_retries, backoff=1.5)
+        feats.extend(res.get("features", []))
+        next_link = None
+        next_method = "GET"
+        next_body = None
+        for link in res.get("links", []):
+            if link.get("rel") == "next":
+                next_link = link.get("href")
+                next_method = str(link.get("method", "GET")).upper()
+                next_body = link.get("body") if isinstance(link.get("body"), dict) else None
+                break
+        page += 1
+
+    if feats:
+        feats = feats[: args.max_items]
     if not feats:
         print("No scenes found for that bbox/date/cloud threshold.", file=sys.stderr)
         return 2
+
+    if args.preflight:
+        grid = max(8, int(args.coverage_grid))
+        xs = [args.xmin + (args.xmax - args.xmin) * (i + 0.5) / grid for i in range(grid)]
+        ys = [args.ymin + (args.ymax - args.ymin) * (j + 0.5) / grid for j in range(grid)]
+        covered = 0
+        for y in ys:
+            for x in xs:
+                hit = False
+                for f in feats:
+                    fb = f.get("bbox")
+                    if not fb or len(fb) < 4:
+                        continue
+                    if fb[0] <= x <= fb[2] and fb[1] <= y <= fb[3]:
+                        hit = True
+                        break
+                if hit:
+                    covered += 1
+        total = grid * grid
+        pct = (covered / total) * 100.0
+        print(f"Preflight coverage (approx bbox hit-rate): {pct:.1f}%")
+        print(f"Items scanned: {len(feats)} (pages <= {args.max_pages}, limit {args.limit})")
+        return 0
 
     # 2) Pick the best scene per MGRS tile so the mosaic covers the full bbox.
     #    Fallback to datetime grouping if tile ids are missing.
@@ -191,8 +324,8 @@ def main() -> int:
     local_tifs = []
     for item in best_items:
         item_id = item["id"]
-        item_url = f"{EARTH_SEARCH}/collections/{args.collection}/items/{item_id}"
-        full = http_get_json(item_url)
+        item_url = stac_url(base, f"collections/{args.collection}/items/{item_id}")
+        full = stac_fetch(item_url, retries=args.stac_retries, backoff=1.5)
 
         assets = full.get("assets", {})
         asset_key, asset = pick_asset(assets, args.asset or None)
@@ -210,7 +343,7 @@ def main() -> int:
         out_tif = os.path.join(dl_dir, f"{item_id}_visual.tif")
         if not os.path.exists(out_tif):
             print(f"Downloading {item_id}")
-            download_asset(href, out_tif, requester_pays=requester_pays)
+            download_asset(href, out_tif, requester_pays=requester_pays, aws_sign=args.aws_sign)
         else:
             print(f"Already exists: {out_tif}")
         local_tifs.append(out_tif)

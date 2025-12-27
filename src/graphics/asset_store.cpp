@@ -139,6 +139,9 @@ bool AssetStore::loadModel(const std::string& name, const std::string& path,
                 buffers.untextured.push_back(static_cast<float>(nx));
                 buffers.untextured.push_back(static_cast<float>(ny));
                 buffers.untextured.push_back(static_cast<float>(nz));
+                buffers.untextured.push_back(1.0f);
+                buffers.untextured.push_back(1.0f);
+                buffers.untextured.push_back(1.0f);
 
                 if (hasTexcoords) {
                     tinyobj::real_t tu = 0.0f;
@@ -150,6 +153,9 @@ bool AssetStore::loadModel(const std::string& name, const std::string& path,
                     buffers.textured.push_back(static_cast<float>(vx));
                     buffers.textured.push_back(static_cast<float>(vy));
                     buffers.textured.push_back(static_cast<float>(vz));
+                    buffers.textured.push_back(static_cast<float>(nx));
+                    buffers.textured.push_back(static_cast<float>(ny));
+                    buffers.textured.push_back(static_cast<float>(nz));
                     buffers.textured.push_back(static_cast<float>(tu));
                     buffers.textured.push_back(static_cast<float>(tv));
                 }

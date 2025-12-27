@@ -15,7 +15,8 @@ class Atmosphere;
 class Skybox {
 public:
     bool init(AssetStore& assets);
-    void render(const Mat4& viewMatrix, const Mat4& projectionMatrix, const Atmosphere& atmosphere);
+    void render(const Mat4& viewMatrix, const Mat4& projectionMatrix,
+                const Atmosphere& atmosphere, float time);
 
 private:
     Shader* m_shader = nullptr;

@@ -40,6 +40,7 @@ bool FlightSession::init() {
 }
 
 void FlightSession::update(float dt) {
+    m_elapsedTime += dt;
     m_atmosphere.update(dt);
     updateHUD();
 }
@@ -49,11 +50,12 @@ void FlightSession::render(float alpha) {
     Mat4 proj = m_camera.projectionMatrix();
     Mat4 vp = proj * view;
 
-    m_skybox.render(view, proj, m_atmosphere);
-    m_terrain.render(vp);
+    m_skybox.render(view, proj, m_atmosphere, m_elapsedTime);
+    Vec3 sunDir = m_atmosphere.getSunDirection();
+    m_terrain.render(vp, sunDir);
     
     m_scenery.render(vp);
-    m_aircraft.render(vp, alpha);
+    m_aircraft.render(vp, alpha, sunDir);
 }
 
 void FlightSession::setupHUD() {

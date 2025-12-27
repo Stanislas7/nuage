@@ -4,6 +4,7 @@
 #include "graphics/texture.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/mesh_builder.hpp"
+#include "graphics/lighting.hpp"
 #include "utils/config_loader.hpp"
 #include <filesystem>
 #include <iostream>
@@ -65,7 +66,7 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_mesh = assets.getMesh("session_terrain");
 }
 
-void TerrainRenderer::render(const Mat4& vp) {
+void TerrainRenderer::render(const Mat4& vp, const Vec3& sunDir) {
     if (!m_mesh) return;
 
     Shader* shader = (m_textured && m_texturedShader && m_texture) ? m_texturedShader : m_shader;
@@ -73,6 +74,7 @@ void TerrainRenderer::render(const Mat4& vp) {
 
     shader->use();
     shader->setMat4("uMVP", vp);
+    applyDirectionalLighting(shader, sunDir);
     if (m_textured && m_texture) {
         m_texture->bind(0);
         shader->setInt("uTexture", 0);

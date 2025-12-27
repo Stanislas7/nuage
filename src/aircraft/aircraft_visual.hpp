@@ -20,7 +20,8 @@ class Model;
 class AircraftVisual {
 public:
     void init(const std::string& configPath, AssetStore& assets);
-    void draw(const Vec3& position, const Quat& orientation, const Mat4& viewProjection);
+    void draw(const Vec3& position, const Quat& orientation, const Mat4& viewProjection,
+              const Vec3& lightDir);
 
 private:
     Mesh* m_mesh = nullptr;

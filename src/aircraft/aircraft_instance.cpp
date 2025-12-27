@@ -71,10 +71,10 @@ void Aircraft::Instance::update(float dt, const FlightInput& input) {
     }
 }
 
-void Aircraft::Instance::render(const Mat4& viewProjection, float alpha) {
+void Aircraft::Instance::render(const Mat4& viewProjection, float alpha, const Vec3& lightDir) {
     Vec3 renderPos = interpolatedPosition(alpha);
     Quat renderRot = interpolatedOrientation(alpha);
-    m_visual.draw(renderPos, renderRot, viewProjection);
+    m_visual.draw(renderPos, renderRot, viewProjection, lightDir);
 }
 
 Vec3 Aircraft::Instance::position() const {

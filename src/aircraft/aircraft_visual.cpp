@@ -1,6 +1,7 @@
 #include "aircraft/aircraft_visual.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/shader.hpp"
+#include "graphics/lighting.hpp"
 #include "graphics/asset_store.hpp"
 #include "graphics/texture.hpp"
 #include "graphics/model.hpp"
@@ -66,7 +67,8 @@ void AircraftVisual::init(const std::string& configPath, AssetStore& assets) {
     m_texturedShader = assets.getShader("textured");
 }
 
-void AircraftVisual::draw(const Vec3& position, const Quat& orientation, const Mat4& viewProjection) {
+void AircraftVisual::draw(const Vec3& position, const Quat& orientation, const Mat4& viewProjection,
+                          const Vec3& lightDir) {
     Mat4 modelMatrix = Mat4::translate(position)
         * orientation.toMat4()
         * Mat4::translate(m_modelOffset)
@@ -79,6 +81,7 @@ void AircraftVisual::draw(const Vec3& position, const Quat& orientation, const M
             Shader* shader = (part.textured && part.texture && m_texturedShader) ? m_texturedShader : m_shader;
             if (!shader) continue;
             shader->use();
+            applyDirectionalLighting(shader, lightDir);
             shader->setMat4("uMVP", viewProjection * modelMatrix);
             if (part.textured && part.texture && shader == m_texturedShader) {
                 part.texture->bind(0);
@@ -97,16 +100,19 @@ void AircraftVisual::draw(const Vec3& position, const Quat& orientation, const M
 
     if (!m_mesh || !m_shader) return;
 
-    m_shader->use();
-    m_shader->setMat4("uMVP", viewProjection * modelMatrix);
     if (m_texture && m_texturedShader) {
         m_texturedShader->use();
+        applyDirectionalLighting(m_texturedShader, lightDir);
         m_texturedShader->setMat4("uMVP", viewProjection * modelMatrix);
         m_texture->bind(0);
         m_texturedShader->setInt("uTexture", 0);
         m_mesh->draw();
         return;
     }
+
+    m_shader->use();
+    applyDirectionalLighting(m_shader, lightDir);
+    m_shader->setMat4("uMVP", viewProjection * modelMatrix);
     m_shader->setVec3("uColor", m_color);
     m_shader->setBool("uUseUniformColor", true);
     m_mesh->draw();

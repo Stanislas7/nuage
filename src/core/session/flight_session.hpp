@@ -52,6 +52,7 @@ private:
     Text* m_headingText = nullptr;
     Text* m_positionText = nullptr;
     Text* m_powerText = nullptr;
+    float m_elapsedTime = 0.0f;
 };
 
 } // namespace nuage

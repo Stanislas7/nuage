@@ -14,7 +14,7 @@ bool Skybox::init(AssetStore& assets) {
     return true;
 }
 
-void Skybox::render(const Mat4& view, const Mat4& proj, const Atmosphere& atmosphere) {
+void Skybox::render(const Mat4& view, const Mat4& proj, const Atmosphere& atmosphere, float time) {
     if (!m_shader || !m_vao) return;
 
     Vec3 right(view.m[0], view.m[4], view.m[8]);
@@ -40,6 +40,7 @@ void Skybox::render(const Mat4& view, const Mat4& proj, const Atmosphere& atmosp
     m_shader->setFloat("uAspect", aspect);
     m_shader->setFloat("uTanHalfFov", tanHalfFov);
     m_shader->setVec3("uSunDir", sunDir);
+    m_shader->setFloat("uTime", time);
     
     glBindVertexArray(m_vao);
     glDrawArrays(GL_TRIANGLES, 0, 3);

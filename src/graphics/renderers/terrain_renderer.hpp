@@ -1,6 +1,7 @@
 #pragma once
 
 #include "math/mat4.hpp"
+#include "math/vec3.hpp"
 #include <string>
 
 namespace nuage {
@@ -17,7 +18,7 @@ class TerrainRenderer {
 public:
     void init(AssetStore& assets);
     void setup(const std::string& configPath, AssetStore& assets);
-    void render(const Mat4& viewProjection);
+    void render(const Mat4& viewProjection, const Vec3& sunDir);
 
 private:
     Mesh* m_mesh = nullptr;

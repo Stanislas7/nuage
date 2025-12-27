@@ -28,7 +28,7 @@ public:
     public:
         void init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere);
         void update(float dt, const FlightInput& input);
-        void render(const Mat4& viewProjection, float alpha = 1.0f);
+        void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
 
         PropertyBus& state() { return m_state; }
         const PropertyBus& state() const { return m_state; }
@@ -74,7 +74,7 @@ public:
 
     void init(AssetStore& assets, Atmosphere& atmosphere);
     void fixedUpdate(float dt, const Input& input);
-    void render(const Mat4& viewProjection, float alpha = 1.0f);
+    void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
     void shutdown();
 
     Instance* spawnPlayer(const std::string& configPath);

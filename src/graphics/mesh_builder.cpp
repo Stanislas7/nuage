@@ -1,4 +1,5 @@
 #include "graphics/mesh_builder.hpp"
+#include "math/vec2.hpp"
 #include "utils/stb_image.h"
 #include <iostream>
 #include <algorithm>
@@ -75,13 +76,13 @@ std::vector<float> MeshBuilder::terrain(float size, int subdivisions) {
             float r = g * 0.5f;
             float b = g * 0.4f;
             
-            verts.insert(verts.end(), {x0, 0.0f, z0, r, g, b});
-            verts.insert(verts.end(), {x1, 0.0f, z0, r, g, b});
-            verts.insert(verts.end(), {x1, 0.0f, z1, r, g, b});
-            
-            verts.insert(verts.end(), {x0, 0.0f, z0, r, g, b});
-            verts.insert(verts.end(), {x1, 0.0f, z1, r, g, b});
-            verts.insert(verts.end(), {x0, 0.0f, z1, r, g, b});
+            verts.insert(verts.end(), {x0, 0.0f, z0, 0.0f, 1.0f, 0.0f, r, g, b});
+            verts.insert(verts.end(), {x1, 0.0f, z0, 0.0f, 1.0f, 0.0f, r, g, b});
+            verts.insert(verts.end(), {x1, 0.0f, z1, 0.0f, 1.0f, 0.0f, r, g, b});
+
+            verts.insert(verts.end(), {x0, 0.0f, z0, 0.0f, 1.0f, 0.0f, r, g, b});
+            verts.insert(verts.end(), {x1, 0.0f, z1, 0.0f, 1.0f, 0.0f, r, g, b});
+            verts.insert(verts.end(), {x0, 0.0f, z1, 0.0f, 1.0f, 0.0f, r, g, b});
         }
     }
     
@@ -116,69 +117,103 @@ std::vector<float> MeshBuilder::terrainFromHeightmap(const std::string& path,
     int resX = (heightmap.width - 1) / stepX + 1;
     int resZ = (heightmap.height - 1) / stepZ + 1;
 
-    float invMax = 1.0f / 65535.0f;
     if (heightMax <= heightMin) {
         heightMax = heightMin + 1.0f;
     }
 
+    float heightRange = heightMax - heightMin;
     auto sampleHeight = [&](int x, int z) {
         std::uint16_t v = heightmap.pixels[z * heightmap.width + x];
-        float t = static_cast<float>(v) * invMax;
-        return heightMin + t * (heightMax - heightMin);
+        float t = static_cast<float>(v) / 65535.0f;
+        return heightMin + t * heightRange;
     };
 
     std::vector<float> verts;
-    verts.reserve((resX - 1) * (resZ - 1) * 6 * (textured ? 5 : 6));
+    if (resX > 1 && resZ > 1) {
+        int stride = textured ? 8 : 9;
+        verts.reserve((resX - 1) * (resZ - 1) * 6 * stride);
+    }
+
+    std::vector<Vec3> positions(resX * resZ);
+    std::vector<Vec3> normals(resX * resZ);
+    std::vector<Vec2> uvs;
+    if (textured) {
+        uvs.resize(resX * resZ);
+    }
+
+    for (int z = 0; z < resZ; ++z) {
+        for (int x = 0; x < resX; ++x) {
+            int sampleX = std::min(x * stepX, heightmap.width - 1);
+            int sampleZ = std::min(z * stepZ, heightmap.height - 1);
+            int idx = z * resX + x;
+
+            float fx = (resX > 1) ? static_cast<float>(x) / (resX - 1) : 0.0f;
+            float fz = (resZ > 1) ? static_cast<float>(z) / (resZ - 1) : 0.0f;
+
+            float px = (fx - 0.5f) * sizeX;
+            float pz = (fz - 0.5f) * sizeZ;
+            float height = sampleHeight(sampleX, sampleZ);
+
+            positions[idx] = Vec3(px, height, pz);
+            if (textured) {
+                uvs[idx] = Vec2(fx, fz);
+            }
+        }
+    }
+
+    for (int z = 0; z < resZ; ++z) {
+        for (int x = 0; x < resX; ++x) {
+            int idx = z * resX + x;
+            int left = z * resX + std::max(x - 1, 0);
+            int right = z * resX + std::min(x + 1, resX - 1);
+            int up = std::max(z - 1, 0) * resX + x;
+            int down = std::min(z + 1, resZ - 1) * resX + x;
+
+            Vec3 tangentX = positions[right] - positions[left];
+            Vec3 tangentZ = positions[down] - positions[up];
+            Vec3 normal = tangentZ.cross(tangentX);
+            normals[idx] = (normal.length() > 1e-6f) ? normal.normalized() : Vec3(0, 1, 0);
+        }
+    }
+
+    auto appendVertex = [&](int vertexIdx) {
+        const Vec3& pos = positions[vertexIdx];
+        const Vec3& normal = normals[vertexIdx];
+
+        if (textured) {
+            const Vec2& uv = uvs[vertexIdx];
+            verts.insert(verts.end(), {
+                pos.x, pos.y, pos.z,
+                normal.x, normal.y, normal.z,
+                uv.x, uv.y
+            });
+        } else {
+            float normalizedHeight = (pos.y - heightMin) / heightRange;
+            normalizedHeight = std::clamp(normalizedHeight, 0.0f, 1.0f);
+            Vec3 color = heightColor(normalizedHeight);
+
+            verts.insert(verts.end(), {
+                pos.x, pos.y, pos.z,
+                normal.x, normal.y, normal.z,
+                color.x, color.y, color.z
+            });
+        }
+    };
 
     for (int z = 0; z < resZ - 1; ++z) {
         for (int x = 0; x < resX - 1; ++x) {
-            int x0 = x * stepX;
-            int z0 = z * stepZ;
-            int x1 = std::min(x0 + stepX, heightmap.width - 1);
-            int z1 = std::min(z0 + stepZ, heightmap.height - 1);
+            int i00 = z * resX + x;
+            int i10 = i00 + 1;
+            int i01 = i00 + resX;
+            int i11 = i01 + 1;
 
-            float fx0 = (resX > 1) ? (static_cast<float>(x) / (resX - 1)) : 0.0f;
-            float fz0 = (resZ > 1) ? (static_cast<float>(z) / (resZ - 1)) : 0.0f;
-            float fx1 = (resX > 1) ? (static_cast<float>(x + 1) / (resX - 1)) : 1.0f;
-            float fz1 = (resZ > 1) ? (static_cast<float>(z + 1) / (resZ - 1)) : 1.0f;
+            appendVertex(i00);
+            appendVertex(i10);
+            appendVertex(i11);
 
-            float px0 = (fx0 - 0.5f) * sizeX;
-            float pz0 = (fz0 - 0.5f) * sizeZ;
-            float px1 = (fx1 - 0.5f) * sizeX;
-            float pz1 = (fz1 - 0.5f) * sizeZ;
-
-            float h00 = sampleHeight(x0, z0);
-            float h10 = sampleHeight(x1, z0);
-            float h11 = sampleHeight(x1, z1);
-            float h01 = sampleHeight(x0, z1);
-
-            if (textured) {
-                verts.insert(verts.end(), {px0, h00, pz0, fx0, fz0});
-                verts.insert(verts.end(), {px1, h10, pz0, fx1, fz0});
-                verts.insert(verts.end(), {px1, h11, pz1, fx1, fz1});
-
-                verts.insert(verts.end(), {px0, h00, pz0, fx0, fz0});
-                verts.insert(verts.end(), {px1, h11, pz1, fx1, fz1});
-                verts.insert(verts.end(), {px0, h01, pz1, fx0, fz1});
-            } else {
-                float t00 = (h00 - heightMin) / (heightMax - heightMin);
-                float t10 = (h10 - heightMin) / (heightMax - heightMin);
-                float t11 = (h11 - heightMin) / (heightMax - heightMin);
-                float t01 = (h01 - heightMin) / (heightMax - heightMin);
-
-                Vec3 c00 = heightColor(t00);
-                Vec3 c10 = heightColor(t10);
-                Vec3 c11 = heightColor(t11);
-                Vec3 c01 = heightColor(t01);
-
-                verts.insert(verts.end(), {px0, h00, pz0, c00.x, c00.y, c00.z});
-                verts.insert(verts.end(), {px1, h10, pz0, c10.x, c10.y, c10.z});
-                verts.insert(verts.end(), {px1, h11, pz1, c11.x, c11.y, c11.z});
-
-                verts.insert(verts.end(), {px0, h00, pz0, c00.x, c00.y, c00.z});
-                verts.insert(verts.end(), {px1, h11, pz1, c11.x, c11.y, c11.z});
-                verts.insert(verts.end(), {px0, h01, pz1, c01.x, c01.y, c01.z});
-            }
+            appendVertex(i00);
+            appendVertex(i11);
+            appendVertex(i01);
         }
     }
 
