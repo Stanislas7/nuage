@@ -11,7 +11,6 @@
 namespace nuage {
 
 class App;
-class Text;
 class UIManager;
 
 /**
@@ -44,12 +43,8 @@ private:
     Skybox m_skybox;
     TerrainRenderer m_terrain;
 
-    // HUD Text pointers (owned by UIManager)
-    Text* m_altitudeText = nullptr;
-    Text* m_airspeedText = nullptr;
-    Text* m_headingText = nullptr;
-    Text* m_positionText = nullptr;
     float m_powerPercent = -1.0f;
+    float m_headingDegrees = -1.0f;
     float m_elapsedTime = 0.0f;
 };
 
