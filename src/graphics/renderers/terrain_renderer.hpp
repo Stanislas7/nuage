@@ -2,6 +2,7 @@
 
 #include "math/mat4.hpp"
 #include "math/vec3.hpp"
+#include "graphics/renderers/terrain/terrain_visual_settings.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -49,11 +50,6 @@ private:
     float proceduralHeight(float worldX, float worldZ) const;
     Vec3 proceduralTileTint(int tileX, int tileY) const;
     std::int64_t packedTileKey(int x, int y) const;
-    bool loadCompiledMesh(const std::string& path, std::vector<float>& out) const;
-    bool loadCompiledMask(const std::string& path, int expectedRes, std::vector<std::uint8_t>& out) const;
-    void applyMaskToVerts(std::vector<float>& verts, const std::vector<std::uint8_t>& mask,
-                          int maskRes, float tileMinX, float tileMinZ) const;
-    Vec3 maskClassColor(std::uint8_t cls) const;
 
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
@@ -99,22 +95,7 @@ private:
     bool m_procDebugLog = true;
     int m_procTilesLoadedThisFrame = 0;
 
-    float m_terrainHeightMin = 0.0f;
-    float m_terrainHeightMax = 1500.0f;
-    float m_terrainNoiseScale = 0.002f;
-    float m_terrainNoiseStrength = 0.3f;
-    float m_terrainSlopeStart = 0.3f;
-    float m_terrainSlopeEnd = 0.7f;
-    float m_terrainSlopeDarken = 0.3f;
-    float m_terrainFogDistance = 12000.0f;
-    float m_terrainDesaturate = 0.2f;
-    Vec3 m_terrainTint = Vec3(0.45f, 0.52f, 0.33f);
-    float m_terrainTintStrength = 0.15f;
-    float m_terrainDistanceDesatStart = 3000.0f;
-    float m_terrainDistanceDesatEnd = 12000.0f;
-    float m_terrainDistanceDesatStrength = 0.35f;
-    float m_terrainDistanceContrastLoss = 0.25f;
-    float m_terrainFogSunScale = 0.35f;
+    TerrainVisualSettings m_visuals;
 };
 
 } // namespace nuage

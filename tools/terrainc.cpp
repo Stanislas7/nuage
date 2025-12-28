@@ -6,7 +6,6 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
-#include <map>
 #include <unordered_map>
 #include <sstream>
 #include <string>
@@ -17,125 +16,11 @@
 #include "utils/json.hpp"
 #include "math/vec2.hpp"
 #include "math/vec3.hpp"
+#include "tools/terrainc/color_ramp.hpp"
+#include "tools/terrainc/heightmap.hpp"
+#include "tools/terrainc/mask_smoothing.hpp"
 
 namespace {
-struct Heightmap {
-    int width = 0;
-    int height = 0;
-    std::vector<std::uint16_t> pixels;
-};
-
-bool loadHeightmap(const std::string& path, Heightmap& out) {
-    stbi_set_flip_vertically_on_load(0);
-    int width = 0;
-    int height = 0;
-    int channels = 0;
-
-    std::uint16_t* data16 = stbi_load_16(path.c_str(), &width, &height, &channels, 1);
-    if (data16) {
-        out.width = width;
-        out.height = height;
-        out.pixels.assign(data16, data16 + (width * height));
-        stbi_image_free(data16);
-        return true;
-    }
-
-    unsigned char* data8 = stbi_load(path.c_str(), &width, &height, &channels, 1);
-    if (!data8) {
-        std::cerr << "Failed to load heightmap: " << path << "\n";
-        return false;
-    }
-    out.width = width;
-    out.height = height;
-    out.pixels.resize(width * height);
-    for (int i = 0; i < width * height; ++i) {
-        out.pixels[i] = static_cast<std::uint16_t>(data8[i]) * 257;
-    }
-    stbi_image_free(data8);
-    return true;
-}
-
-float clamp01(float v) {
-    return std::max(0.0f, std::min(1.0f, v));
-}
-
-void smoothMask(std::vector<std::uint8_t>& mask, int res, int passes) {
-    if (passes <= 0 || res <= 0 || mask.empty()) {
-        return;
-    }
-    std::vector<std::uint8_t> scratch(mask.size());
-    for (int pass = 0; pass < passes; ++pass) {
-        for (int z = 0; z < res; ++z) {
-            for (int x = 0; x < res; ++x) {
-                int counts[5] = {0, 0, 0, 0, 0};
-                for (int dz = -1; dz <= 1; ++dz) {
-                    int sz = std::clamp(z + dz, 0, res - 1);
-                    for (int dx = -1; dx <= 1; ++dx) {
-                        int sx = std::clamp(x + dx, 0, res - 1);
-                        std::uint8_t cls = mask[static_cast<size_t>(sz) * res + static_cast<size_t>(sx)];
-                        if (cls <= 4) {
-                            counts[cls] += 1;
-                        }
-                    }
-                }
-                int best = 0;
-                for (int cls = 1; cls <= 4; ++cls) {
-                    if (counts[cls] > counts[best]) {
-                        best = cls;
-                    }
-                }
-                std::uint8_t current = mask[static_cast<size_t>(z) * res + static_cast<size_t>(x)];
-                if (best != 0 && counts[best] >= 5) {
-                    scratch[static_cast<size_t>(z) * res + static_cast<size_t>(x)] = static_cast<std::uint8_t>(best);
-                } else {
-                    scratch[static_cast<size_t>(z) * res + static_cast<size_t>(x)] = current;
-                }
-            }
-        }
-        mask.swap(scratch);
-    }
-}
-
-float bilinearSample(const Heightmap& hm, float x, float y) {
-    float fx = std::clamp(x, 0.0f, static_cast<float>(hm.width - 1));
-    float fy = std::clamp(y, 0.0f, static_cast<float>(hm.height - 1));
-
-    int x0 = static_cast<int>(std::floor(fx));
-    int y0 = static_cast<int>(std::floor(fy));
-    int x1 = std::min(x0 + 1, hm.width - 1);
-    int y1 = std::min(y0 + 1, hm.height - 1);
-
-    float tx = fx - static_cast<float>(x0);
-    float ty = fy - static_cast<float>(y0);
-
-    auto at = [&](int px, int py) -> float {
-        return static_cast<float>(hm.pixels[py * hm.width + px]);
-    };
-
-    float v00 = at(x0, y0);
-    float v10 = at(x1, y0);
-    float v01 = at(x0, y1);
-    float v11 = at(x1, y1);
-
-    float v0 = v00 + (v10 - v00) * tx;
-    float v1 = v01 + (v11 - v01) * tx;
-    return v0 + (v1 - v0) * ty;
-}
-
-nuage::Vec3 heightColor(float t) {
-    t = clamp01(t);
-    if (t < 0.3f) {
-        float k = t / 0.3f;
-        return nuage::Vec3(0.15f + 0.1f * k, 0.35f + 0.3f * k, 0.15f + 0.1f * k);
-    }
-    if (t < 0.7f) {
-        float k = (t - 0.3f) / 0.4f;
-        return nuage::Vec3(0.25f + 0.25f * k, 0.55f - 0.15f * k, 0.2f + 0.1f * k);
-    }
-    float k = (t - 0.7f) / 0.3f;
-    return nuage::Vec3(0.55f + 0.35f * k, 0.5f + 0.35f * k, 0.45f + 0.3f * k);
-}
-
 struct Config {
     std::string heightmapPath;
     std::string osmPath;
