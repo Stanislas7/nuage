@@ -24,6 +24,8 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         return;
     }
 
+    m_properties.bind(PropertyBus::global(), m_state);
+
     const auto& json = *jsonOpt;
     JsbsimConfig jsbsimConfig;
     if (json.contains(ConfigKeys::JSBSIM)) {
@@ -62,15 +64,18 @@ void Aircraft::Instance::update(float dt) {
     m_prevState = m_currentState;
 
     // Read controls from global property tree
-    double elevator = PropertyBus::global().get(Properties::Controls::ELEVATOR, 0.0);
-    double aileron = PropertyBus::global().get(Properties::Controls::AILERON, 0.0);
-    double rudder = PropertyBus::global().get(Properties::Controls::RUDDER, 0.0);
-    double throttle = PropertyBus::global().get(Properties::Controls::THROTTLE, 0.0);
+    PropertyBus& global = m_properties.global();
+    PropertyBus& local = m_properties.local();
 
-    m_state.set(Properties::Controls::ELEVATOR, elevator);
-    m_state.set(Properties::Controls::AILERON, aileron);
-    m_state.set(Properties::Controls::RUDDER, rudder);
-    m_state.set(Properties::Controls::THROTTLE, throttle);
+    double elevator = global.get(Properties::Controls::ELEVATOR, 0.0);
+    double aileron = global.get(Properties::Controls::AILERON, 0.0);
+    double rudder = global.get(Properties::Controls::RUDDER, 0.0);
+    double throttle = global.get(Properties::Controls::THROTTLE, 0.0);
+
+    local.set(Properties::Controls::ELEVATOR, elevator);
+    local.set(Properties::Controls::AILERON, aileron);
+    local.set(Properties::Controls::RUDDER, rudder);
+    local.set(Properties::Controls::THROTTLE, throttle);
 
     for (auto& system : m_systems) {
         system->update(dt);

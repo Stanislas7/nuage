@@ -1,5 +1,5 @@
 #include "jsbsim_system.hpp"
-#include "core/properties/property_bus.hpp"
+#include "core/properties/property_context.hpp"
 #include "core/properties/property_paths.hpp"
 #include "aircraft/aircraft_state.hpp"
 #include <FGFDMExec.h>
@@ -79,9 +79,9 @@ JsbsimSystem::JsbsimSystem(JsbsimConfig config)
 {
 }
 
-void JsbsimSystem::init(AircraftState& state, PropertyBus& bus) {
+void JsbsimSystem::init(AircraftState& state, PropertyContext& properties) {
     m_acState = &state;
-    m_bus = &bus;
+    m_properties = &properties;
     m_originLatRad = m_config.initLatDeg * 3.1415926535 / 180.0;
     m_originLonRad = m_config.initLonDeg * 3.1415926535 / 180.0;
 }
@@ -119,17 +119,18 @@ void JsbsimSystem::ensureInitialized(float dt) {
 }
 
 void JsbsimSystem::syncInputs() {
-    double elevator = m_bus->get(Properties::Controls::ELEVATOR);
-    double aileron = m_bus->get(Properties::Controls::AILERON);
-    double rudder = m_bus->get(Properties::Controls::RUDDER);
-    double throttle = m_bus->get(Properties::Controls::THROTTLE);
+    PropertyBus& local = m_properties->local();
+    double elevator = local.get(Properties::Controls::ELEVATOR);
+    double aileron = local.get(Properties::Controls::AILERON);
+    double rudder = local.get(Properties::Controls::RUDDER);
+    double throttle = local.get(Properties::Controls::THROTTLE);
 
     m_fdm->SetPropertyValue("fcs/elevator-cmd-norm", clampInput(elevator));
     m_fdm->SetPropertyValue("fcs/aileron-cmd-norm", clampInput(-aileron));
     m_fdm->SetPropertyValue("fcs/rudder-cmd-norm", clampInput(rudder));
     m_fdm->SetPropertyValue("fcs/throttle-cmd-norm", clampInput(throttle));
 
-    Vec3 wind = m_bus->get(Properties::Atmosphere::WIND_PREFIX);
+    Vec3 wind = local.get(Properties::Atmosphere::WIND_PREFIX);
     double windNorth = wind.z * kMToFt;
     double windEast = wind.x * kMToFt;
     double windDown = -wind.y * kMToFt;
@@ -207,15 +208,16 @@ void JsbsimSystem::syncOutputs() {
     m_acState->airspeed = airspeedFps * kFtToM;
 
     // Publish to Property Bus
-    m_bus->set(Properties::Velocities::AIRSPEED_KT, airspeedFps * 0.592484); // fps to knots
-    m_bus->set(Properties::Position::ALTITUDE_FT, altFt);
-    m_bus->set(Properties::Position::LATITUDE_DEG, lat * 180.0 / 3.1415926535);
-    m_bus->set(Properties::Position::LONGITUDE_DEG, lon * 180.0 / 3.1415926535);
+    PropertyBus& local = m_properties->local();
+    local.set(Properties::Velocities::AIRSPEED_KT, airspeedFps * 0.592484); // fps to knots
+    local.set(Properties::Position::ALTITUDE_FT, altFt);
+    local.set(Properties::Position::LATITUDE_DEG, lat * 180.0 / 3.1415926535);
+    local.set(Properties::Position::LONGITUDE_DEG, lon * 180.0 / 3.1415926535);
     
-    m_bus->set(Properties::Orientation::PITCH_DEG, m_fdm->GetPropertyValue("attitude/theta-deg"));
-    m_bus->set(Properties::Orientation::ROLL_DEG, m_fdm->GetPropertyValue("attitude/phi-deg"));
-    m_bus->set(Properties::Orientation::HEADING_DEG, m_fdm->GetPropertyValue("attitude/psi-deg"));
-    m_bus->set(Properties::Velocities::VERTICAL_SPEED_FPS, m_fdm->GetPropertyValue("velocities/v-down-fps") * -1.0);
+    local.set(Properties::Orientation::PITCH_DEG, m_fdm->GetPropertyValue("attitude/theta-deg"));
+    local.set(Properties::Orientation::ROLL_DEG, m_fdm->GetPropertyValue("attitude/phi-deg"));
+    local.set(Properties::Orientation::HEADING_DEG, m_fdm->GetPropertyValue("attitude/psi-deg"));
+    local.set(Properties::Velocities::VERTICAL_SPEED_FPS, m_fdm->GetPropertyValue("velocities/v-down-fps") * -1.0);
 }
 
 void JsbsimSystem::update(float dt) {

@@ -4,6 +4,7 @@
 #include "aircraft/aircraft_component.hpp"
 #include "aircraft/aircraft_state.hpp"
 #include "aircraft/aircraft_visual.hpp"
+#include "core/properties/property_context.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
 #include "math/mat4.hpp"
@@ -40,7 +41,7 @@ public:
         T* addSystem(Args&&... args) {
             auto system = std::make_unique<T>(std::forward<Args>(args)...);
             T* ptr = system.get();
-            system->init(m_currentState, m_state);
+            system->init(m_currentState, m_properties);
             m_systems.push_back(std::move(system));
             return ptr;
         }
@@ -56,6 +57,7 @@ public:
 
     private:
         PropertyBus m_state;
+        PropertyContext m_properties;
         AircraftState m_currentState;
         AircraftState m_prevState;
         
