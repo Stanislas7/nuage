@@ -20,6 +20,7 @@ This document describes the modular, property-driven architecture of Nuage, insp
 
 ## Graphics & Assets
 - **AssetStore**: A subsystem-managed repository for shaders, textures, and models. Assets are loaded once and shared across the engine via `SubsystemManager`.
+  Asset loading is data-driven via `assets/config/assets.json` to keep engine initialization decoupled from specific shader lists.
 - **Camera**: A flexible camera system (Chase, Orbit) that tracks targets directly via `Aircraft::Instance` interpolation for tight coupling and predictable performance.
 - **Terrain**: Managed by `TerrainRenderer`, which handles tile loading and LOD based on the current camera position.
 

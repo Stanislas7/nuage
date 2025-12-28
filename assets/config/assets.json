@@ -1,0 +1,24 @@
+{
+    "shaders": [
+        {
+            "name": "basic",
+            "vertex": "assets/shaders/basic.vert",
+            "fragment": "assets/shaders/basic.frag"
+        },
+        {
+            "name": "textured",
+            "vertex": "assets/shaders/textured.vert",
+            "fragment": "assets/shaders/textured.frag"
+        },
+        {
+            "name": "sky",
+            "vertex": "assets/shaders/sky.vert",
+            "fragment": "assets/shaders/sky.frag"
+        },
+        {
+            "name": "ui",
+            "vertex": "assets/shaders/ui.vert",
+            "fragment": "assets/shaders/ui.frag"
+        }
+    ]
+}

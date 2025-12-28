@@ -1,4 +1,5 @@
 #include "graphics/asset_store.hpp"
+#include "utils/config_loader.hpp"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -24,17 +25,32 @@ namespace {
 }
 
 void AssetStore::init() {
-    if (!loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag")) {
-        std::cerr << "Failed to load basic shader" << std::endl;
+    constexpr const char* kAssetConfigPath = "assets/config/assets.json";
+    auto configOpt = loadJsonConfig(kAssetConfigPath);
+    if (!configOpt || !configOpt->contains("shaders") || !(*configOpt)["shaders"].is_array()) {
+        std::cerr << "Missing or invalid asset config: " << kAssetConfigPath << std::endl;
+        throw std::runtime_error("AssetStore requires a valid assets/config/assets.json");
     }
-    if (!loadShader("textured", "assets/shaders/textured.vert", "assets/shaders/textured.frag")) {
-        std::cerr << "Failed to load textured shader" << std::endl;
+
+    bool loadedAny = false;
+    for (const auto& entry : (*configOpt)["shaders"]) {
+        if (!entry.is_object()) continue;
+        std::string name = entry.value("name", "");
+        std::string vert = entry.value("vertex", "");
+        std::string frag = entry.value("fragment", "");
+        if (name.empty() || vert.empty() || frag.empty()) {
+            std::cerr << "Invalid shader entry in " << kAssetConfigPath << std::endl;
+            continue;
+        }
+        if (!loadShader(name, vert, frag)) {
+            std::cerr << "Failed to load shader: " << name << std::endl;
+        } else {
+            loadedAny = true;
+        }
     }
-    if (!loadShader("sky", "assets/shaders/sky.vert", "assets/shaders/sky.frag")) {
-        std::cerr << "Failed to load sky shader" << std::endl;
-    }
-    if (!loadShader("ui", "assets/shaders/ui.vert", "assets/shaders/ui.frag")) {
-        std::cerr << "Failed to load ui shader" << std::endl;
+
+    if (!loadedAny) {
+        throw std::runtime_error("AssetStore did not load any shaders from assets/config/assets.json");
     }
 }
 
