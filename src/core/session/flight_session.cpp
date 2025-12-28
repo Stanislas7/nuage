@@ -3,7 +3,6 @@
 #include "core/properties/property_paths.hpp"
 #include "graphics/glad.h"
 #include <algorithm>
-#include <iostream>
 #include <cmath>
 
 namespace nuage {
@@ -18,16 +17,16 @@ FlightSession::FlightSession(App* app, const FlightConfig& config)
 }
 
 bool FlightSession::init() {
-    AssetStore& assets = m_app->assets();
+    auto assets = m_app->subsystems().getRequired<AssetStore>();
 
     m_atmosphere.init();
     m_atmosphere.setTimeOfDay(m_config.timeOfDay);
     
-    m_aircraft.init(assets, m_atmosphere);
+    m_aircraft.init(*assets, m_atmosphere);
     m_camera.init(m_app->input());
-    m_skybox.init(assets);
-    m_terrain.init(assets);
-    m_terrain.setup(m_config.terrainPath, assets);
+    m_skybox.init(*assets);
+    m_terrain.init(*assets);
+    m_terrain.setup(m_config.terrainPath, *assets);
 
     if (!m_config.aircraftPath.empty()) {
         m_aircraft.spawnPlayer(m_config.aircraftPath);

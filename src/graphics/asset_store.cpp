@@ -23,6 +23,27 @@ namespace {
 
 }
 
+void AssetStore::init() {
+    if (!loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag")) {
+        std::cerr << "Failed to load basic shader" << std::endl;
+    }
+    if (!loadShader("textured", "assets/shaders/textured.vert", "assets/shaders/textured.frag")) {
+        std::cerr << "Failed to load textured shader" << std::endl;
+    }
+    if (!loadShader("sky", "assets/shaders/sky.vert", "assets/shaders/sky.frag")) {
+        std::cerr << "Failed to load sky shader" << std::endl;
+    }
+    if (!loadShader("ui", "assets/shaders/ui.vert", "assets/shaders/ui.frag")) {
+        std::cerr << "Failed to load ui shader" << std::endl;
+    }
+}
+
+void AssetStore::update(double /*dt*/) {}
+
+void AssetStore::shutdown() {
+    unloadAll();
+}
+
 bool AssetStore::loadShader(const std::string& name,
                             const std::string& vertPath,
                             const std::string& fragPath) {

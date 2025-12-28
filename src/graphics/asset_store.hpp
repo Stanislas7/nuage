@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/subsystem.hpp"
 #include "graphics/shader.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/texture.hpp"
@@ -10,8 +11,14 @@
 
 namespace nuage {
 
-class AssetStore {
+class AssetStore : public Subsystem {
 public:
+    // Subsystem interface
+    void init() override;
+    void update(double dt) override;
+    void shutdown() override;
+    std::string getName() const override { return "AssetStore"; }
+
     // Shaders
     bool loadShader(const std::string& name,
                     const std::string& vertPath,

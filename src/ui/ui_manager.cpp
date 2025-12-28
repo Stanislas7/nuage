@@ -47,7 +47,8 @@ void UIManager::init() {
         return;
     }
 
-    m_shader = m_app->assets().getShader("ui");
+    auto assets = m_app->subsystems().getRequired<AssetStore>();
+    m_shader = assets->getShader("ui");
     if (!m_shader) {
         std::cerr << "UI shader not found in AssetStore" << std::endl;
         return;

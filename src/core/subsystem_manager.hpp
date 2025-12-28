@@ -5,6 +5,8 @@
 #include <memory>
 #include <algorithm>
 #include <iostream>
+#include <stdexcept>
+#include <typeinfo>
 
 namespace nuage {
 
@@ -28,6 +30,15 @@ public:
             if (casted) return casted;
         }
         return nullptr;
+    }
+
+    template<typename T>
+    std::shared_ptr<T> getRequired() {
+        auto system = get<T>();
+        if (!system) {
+            throw std::runtime_error(std::string("Required subsystem not found: ") + typeid(T).name());
+        }
+        return system;
     }
 
 private:

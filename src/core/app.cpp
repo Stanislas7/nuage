@@ -22,6 +22,9 @@ namespace nuage {
 bool App::init(const AppConfig& config) {
     if (!initWindow(config)) return false;
 
+    m_assets = std::make_shared<AssetStore>();
+    m_subsystems.add(m_assets);
+
     m_input = std::make_shared<Input>();
     m_input->setWindow(m_window);
     m_subsystems.add(m_input);
@@ -31,12 +34,6 @@ bool App::init(const AppConfig& config) {
     m_subsystems.add(m_ui);
 
     m_subsystems.add(std::make_shared<SimSubsystem>());
-
-    // Load assets before initializing subsystems that depend on them
-    m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
-    m_assets.loadShader("textured", "assets/shaders/textured.vert", "assets/shaders/textured.frag");
-    m_assets.loadShader("sky", "assets/shaders/sky.vert", "assets/shaders/sky.frag");
-    m_assets.loadShader("ui", "assets/shaders/ui.vert", "assets/shaders/ui.frag");
 
     m_subsystems.initAll();
 
@@ -141,8 +138,6 @@ void App::run() {
 void App::shutdown() {
     endFlight();
     m_subsystems.shutdownAll();
-    m_ui->shutdown();
-    m_assets.unloadAll();
     glfwDestroyWindow(m_window);
     glfwTerminate();
 }

@@ -35,8 +35,9 @@ public:
 
     // Persistent Systems
     Input& input() { return *m_input; }
-    AssetStore& assets() { return m_assets; }
     UIManager& ui() { return *m_ui; }
+    SubsystemManager& subsystems() { return m_subsystems; }
+    const SubsystemManager& subsystems() const { return m_subsystems; }
 
     // Current Session Delegation
     FlightSession* session() { return m_session.get(); }
@@ -73,7 +74,7 @@ private:
     SubsystemManager m_subsystems;
     std::shared_ptr<Input> m_input;
     std::shared_ptr<UIManager> m_ui;
-    AssetStore m_assets;
+    std::shared_ptr<AssetStore> m_assets;
     // Active Flight Session
     std::unique_ptr<FlightSession> m_session;
 
