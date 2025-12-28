@@ -87,6 +87,7 @@ void AircraftVisual::draw(const Vec3& position, const Quat& orientation, const M
                 part.texture->bind(0);
                 shader->setInt("uTexture", 0);
             } else {
+                shader->setBool("uTerrainShading", false);
                 shader->setVec3("uColor", m_color);
                 shader->setBool("uUseUniformColor", true);
             }
@@ -113,6 +114,7 @@ void AircraftVisual::draw(const Vec3& position, const Quat& orientation, const M
     m_shader->use();
     applyDirectionalLighting(m_shader, lightDir);
     m_shader->setMat4("uMVP", viewProjection * modelMatrix);
+    m_shader->setBool("uTerrainShading", false);
     m_shader->setVec3("uColor", m_color);
     m_shader->setBool("uUseUniformColor", true);
     m_mesh->draw();

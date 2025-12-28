@@ -1,0 +1,6 @@
+{
+  "compiledManifest": "../terrain/compiled/manifest.json",
+  "compiledVisibleRadius": 1,
+  "compiledMaxLoadsPerFrame": 2,
+  "compiledDebugLog": true
+}

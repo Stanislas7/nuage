@@ -13,7 +13,6 @@
 - Preserve native resolution without manual desampling.
 - Split imagery + height into a quadtree tile pyramid for streaming.
 - Keep a low-res preview output so the current renderer still works.
-- Automate the pipeline and keep it aligned with `docs/assets.md`.
 
 ## 3. Constraints
 - **Renderer limitations:** Current terrain renderer consumes a single heightmap + texture.

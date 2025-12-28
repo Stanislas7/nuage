@@ -8,6 +8,7 @@
         "throttle_up": ["ArrowUp", "PageUp", "KeypadAdd"],
         "throttle_down": ["ArrowDown", "PageDown", "KeypadSubtract"],
         "brake": "B",
+        "debug_menu": "F1",
         "quit": "Escape"
     }
 }

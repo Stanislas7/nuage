@@ -28,6 +28,9 @@
                         "positive": "D",
                         "negative": "Q"
                     }
+                },
+                "buttons": {
+                    "debug_menu": "H"
                 }
             }
         }

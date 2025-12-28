@@ -4,7 +4,7 @@
 #include "graphics/asset_store.hpp"
 #include "ui/ui_manager.hpp"
 #include "ui/overlays/pause_overlay.hpp"
-#include "ui/overlays/main_menu.hpp"
+#include "ui/overlays/debug_overlay.hpp"
 #include "core/session/flight_config.hpp"
 #include "core/session/flight_session.hpp"
 #include <cstdint>
@@ -13,11 +13,6 @@
 struct GLFWwindow;
 
 namespace nuage {
-
-enum class AppState {
-    StartMenu,
-    InFlight
-};
 
 struct AppConfig {
     int windowWidth = 1280;
@@ -78,17 +73,16 @@ private:
     AssetStore m_assets;
     UIManager m_ui;
     PauseOverlay m_pauseOverlay;
-    MainMenu m_mainMenu;
-
+    DebugOverlay m_debugOverlay;
     // Active Flight Session
     std::unique_ptr<FlightSession> m_session;
-    AppState m_state = AppState::StartMenu;
 
     float m_time = 0.0f;
     float m_deltaTime = 0.0f;
     float m_lastFrameTime = 0.0f;
     bool m_shouldQuit = false;
     bool m_paused = false;
+    bool m_debugVisible = false;
 
     float m_physicsAccumulator = 0.0f;
     static constexpr float FIXED_DT = 1.0f / 120.0f;

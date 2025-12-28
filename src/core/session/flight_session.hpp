@@ -3,7 +3,6 @@
 #include "aircraft/aircraft.hpp"
 #include "environment/atmosphere.hpp"
 #include "graphics/camera.hpp"
-#include "scenery/scenery.hpp"
 #include "core/session/flight_config.hpp"
 #include "graphics/renderers/skybox.hpp"
 #include "graphics/renderers/terrain_renderer.hpp"
@@ -12,7 +11,7 @@
 namespace nuage {
 
 class App;
-class Text;
+class UIManager;
 
 /**
  * @brief Represents an active flight simulation session.
@@ -25,12 +24,13 @@ public:
     bool init();
     void update(float dt);
     void render(float alpha);
+    void drawHUD(UIManager& ui);
 
     Aircraft& aircraft() { return m_aircraft; }
     Camera& camera() { return m_camera; }
     Atmosphere& atmosphere() { return m_atmosphere; }
-    Scenery& scenery() { return m_scenery; }
-
+    TerrainRenderer& terrain() { return m_terrain; }
+    const TerrainRenderer& terrain() const { return m_terrain; }
 private:
     void setupHUD();
     void updateHUD();
@@ -41,17 +41,14 @@ private:
     Aircraft m_aircraft;
     Atmosphere m_atmosphere;
     Camera m_camera;
-    Scenery m_scenery;
 
     Skybox m_skybox;
     TerrainRenderer m_terrain;
 
-    // HUD Text pointers (owned by UIManager)
-    Text* m_altitudeText = nullptr;
-    Text* m_airspeedText = nullptr;
-    Text* m_headingText = nullptr;
-    Text* m_positionText = nullptr;
-    Text* m_powerText = nullptr;
+    float m_powerPercent = -1.0f;
+    float m_altitudeFeet = -1.0f;
+    float m_airspeedKts = -1.0f;
+    float m_headingDegrees = -1.0f;
     float m_elapsedTime = 0.0f;
 };
 

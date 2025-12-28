@@ -380,6 +380,16 @@ bool Input::isKeyPressed(int key) const {
     return key < 512 && m_keys[key] && !m_prevKeys[key];
 }
 
+bool Input::isButtonPressed(const std::string& name) const {
+    const auto& keys = getButtonBinding(name);
+    for (int key : keys) {
+        if (key >= 0 && key < 512 && m_keys[key] && !m_prevKeys[key]) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Input::pollMouse() {
     double x, y;
     glfwGetCursorPos(m_window, &x, &y);
