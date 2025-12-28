@@ -44,6 +44,8 @@ private:
     TerrainRenderer m_terrain;
 
     float m_powerPercent = -1.0f;
+    float m_altitudeFeet = -1.0f;
+    float m_airspeedKts = -1.0f;
     float m_headingDegrees = -1.0f;
     float m_elapsedTime = 0.0f;
 };

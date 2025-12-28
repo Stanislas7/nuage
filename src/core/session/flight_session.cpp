@@ -65,11 +65,15 @@ void FlightSession::updateHUD() {
     Aircraft::Instance* player = m_aircraft.player();
     if (player) {
         Vec3 fwd = player->forward();
+        Vec3 pos = player->position();
+        float airspeed = player->airspeed();
 
         float heading = std::atan2(fwd.x, fwd.z) * 180.0f / 3.14159265f;
         if (heading < 0) heading += 360.0f;
 
         m_headingDegrees = heading;
+        m_altitudeFeet = pos.y * 3.28084f;
+        m_airspeedKts = airspeed * 1.94384f;
     }
 
     if (player) {
@@ -77,6 +81,8 @@ void FlightSession::updateHUD() {
         m_powerPercent = static_cast<float>(std::clamp(throttle, 0.0, 1.0));
     } else {
         m_powerPercent = -1.0f;
+        m_altitudeFeet = -1.0f;
+        m_airspeedKts = -1.0f;
         m_headingDegrees = -1.0f;
     }
 
@@ -165,6 +171,49 @@ void FlightSession::drawHUD(UIManager& ui) {
                 kCompassX + kCompassRadius - centerOffsetX,
                 kCompassY + kCompassRadius - centerOffsetY,
                 Anchor::Center, 0.75f, kCompassValue, 0.98f);
+
+    constexpr float kInfoBoxPadding = 16.0f;
+    constexpr float kInfoBoxHeight = 80.0f;
+    constexpr float kInfoBoxRadius = 10.0f;
+    const Vec3 kInfoBoxBack = Vec3(0.18f, 0.2f, 0.23f);
+    const Vec3 kInfoText = Vec3(0.95f, 0.96f, 0.98f);
+    const Vec3 kInfoSubText = kInfoText;
+
+    auto formatWithCommas = [](int value) {
+        std::string s = std::to_string(value);
+        int insertPos = static_cast<int>(s.size()) - 3;
+        while (insertPos > 0) {
+            s.insert(static_cast<std::string::size_type>(insertPos), ",");
+            insertPos -= 3;
+        }
+        return s;
+    };
+
+    std::string altText = "-- ft";
+    if (m_altitudeFeet >= 0.0f) {
+        int altValue = static_cast<int>(std::round(m_altitudeFeet));
+        altText = formatWithCommas(altValue) + " ft";
+    }
+
+    std::string speedText = "-- kts";
+    if (m_airspeedKts >= 0.0f) {
+        int speedValue = static_cast<int>(std::round(m_airspeedKts));
+        speedText = formatWithCommas(speedValue) + " kts";
+    }
+
+    float infoBoxX = kCompassX;
+    float infoBoxY = kCompassY + kCompassSize + kInfoBoxPadding;
+    float infoBoxW = kCompassSize;
+
+    ui.drawRoundedRect(infoBoxX, infoBoxY, infoBoxW, kInfoBoxHeight, kInfoBoxRadius,
+                       kInfoBoxBack, 0.92f, Anchor::TopLeft);
+    constexpr float kInfoTextPadX = 16.0f;
+    constexpr float kInfoTextPadTop = 12.0f;
+    constexpr float kInfoLineGap = 26.0f;
+    ui.drawText(altText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop,
+                Anchor::TopLeft, 0.55f, kInfoText, 0.98f);
+    ui.drawText(speedText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap,
+                Anchor::TopLeft, 0.55f, kInfoSubText, 0.98f);
 }
 
 } // namespace nuage
