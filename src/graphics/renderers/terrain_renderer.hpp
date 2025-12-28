@@ -111,6 +111,7 @@ private:
     bool m_compiledDebugLog = true;
     float m_compiledLod1Distance = 0.0f;
     float m_compiledLod1DistanceSq = 0.0f;
+    float m_compiledSkirtDepth = 0.0f;
     float m_compiledMinX = 0.0f;
     float m_compiledMinZ = 0.0f;
     float m_compiledMaxX = 0.0f;

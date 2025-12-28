@@ -3,7 +3,8 @@
   "compiledVisibleRadius": 2,
   "compiledMaxLoadsPerFrame": 2,
   "compiledLod1Distance": 3000.0,
-  "compiledDebugLog": true,
+  "compiledSkirtDepth": 180.0,
+  "compiledDebugLog": false,
   "terrainVisuals": {
     "heightMin": 0.0,
     "heightMax": 2000.0,

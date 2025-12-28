@@ -13,6 +13,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -105,6 +106,60 @@ void buildLodIndices(int resX, int resZ, int step, std::vector<std::uint32_t>& o
     int lodResX = (resX - 1) / step + 1;
     int lodResZ = (resZ - 1) / step + 1;
     buildGridIndices(lodResX, lodResZ, outIndices);
+}
+
+void addSkirt(std::vector<float>& verts, std::vector<std::uint32_t>& indices,
+              int resX, int resZ, float depth) {
+    if (resX < 2 || resZ < 2 || depth <= 0.0f) {
+        return;
+    }
+    int stride = 9;
+    std::vector<std::uint32_t> border;
+    border.reserve(static_cast<size_t>((resX + resZ) * 2 - 4));
+
+    for (int x = 0; x < resX; ++x) {
+        border.push_back(static_cast<std::uint32_t>(x));
+    }
+    for (int z = 1; z < resZ; ++z) {
+        border.push_back(static_cast<std::uint32_t>(z * resX + (resX - 1)));
+    }
+    for (int x = resX - 2; x >= 0; --x) {
+        border.push_back(static_cast<std::uint32_t>((resZ - 1) * resX + x));
+    }
+    for (int z = resZ - 2; z >= 1; --z) {
+        border.push_back(static_cast<std::uint32_t>(z * resX));
+    }
+
+    std::vector<std::uint32_t> skirt;
+    skirt.reserve(border.size());
+    for (std::uint32_t idx : border) {
+        size_t base = static_cast<size_t>(idx) * stride;
+        verts.push_back(verts[base + 0]);
+        verts.push_back(verts[base + 1] - depth);
+        verts.push_back(verts[base + 2]);
+        verts.push_back(verts[base + 3]);
+        verts.push_back(verts[base + 4]);
+        verts.push_back(verts[base + 5]);
+        verts.push_back(verts[base + 6]);
+        verts.push_back(verts[base + 7]);
+        verts.push_back(verts[base + 8]);
+        skirt.push_back(static_cast<std::uint32_t>(verts.size() / stride - 1));
+    }
+
+    size_t count = border.size();
+    for (size_t i = 0; i < count; ++i) {
+        size_t next = (i + 1) % count;
+        std::uint32_t b0 = border[i];
+        std::uint32_t b1 = border[next];
+        std::uint32_t s0 = skirt[i];
+        std::uint32_t s1 = skirt[next];
+        indices.push_back(b0);
+        indices.push_back(b1);
+        indices.push_back(s1);
+        indices.push_back(b0);
+        indices.push_back(s1);
+        indices.push_back(s0);
+    }
 }
 }
 
@@ -304,6 +359,7 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
     m_compiledLoadsPerFrame = config.value("compiledMaxLoadsPerFrame", 2);
     m_compiledDebugLog = config.value("compiledDebugLog", true);
     m_compiledLod1Distance = config.value("compiledLod1Distance", m_compiledTileSizeMeters * 1.5f);
+    m_compiledSkirtDepth = config.value("compiledSkirtDepth", m_compiledTileSizeMeters * 0.05f);
 
     m_compiledTileSizeMeters = std::max(1.0f, m_compiledTileSizeMeters);
     m_compiledGridResolution = std::max(2, m_compiledGridResolution);
@@ -311,6 +367,7 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
     m_compiledLoadsPerFrame = std::max(1, m_compiledLoadsPerFrame);
     m_compiledLod1Distance = std::max(0.0f, m_compiledLod1Distance);
     m_compiledLod1DistanceSq = m_compiledLod1Distance * m_compiledLod1Distance;
+    m_compiledSkirtDepth = std::max(0.0f, m_compiledSkirtDepth);
 
     m_compiledTiles.clear();
     if (manifest.contains("tileIndex") && manifest["tileIndex"].is_array()) {
@@ -663,6 +720,7 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
     if (builtGrid) {
         int res = m_compiledGridResolution + 1;
         buildGridIndices(res, res, indices);
+        addSkirt(gridVerts, indices, res, res, m_compiledSkirtDepth);
         mesh->initIndexed(gridVerts, indices);
     } else {
         mesh->init(verts);
@@ -692,6 +750,7 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
         std::vector<std::uint32_t> lodIndices;
         buildLodVertices(gridVerts, res, res, 2, lodVerts);
         buildLodIndices(res, res, 2, lodIndices);
+        addSkirt(lodVerts, lodIndices, (res - 1) / 2 + 1, (res - 1) / 2 + 1, m_compiledSkirtDepth);
         if (!lodVerts.empty() && !lodIndices.empty()) {
             auto lodMesh = std::make_unique<Mesh>();
             lodMesh->initIndexed(lodVerts, lodIndices);
