@@ -1,139 +1,57 @@
-# Terrain Pipeline Redesign Plan (TerraGear-like)
+# Nuage Architectural Refactoring Plan
 
-Goal: offline compilation into runtime-friendly tiles, DEM-first, OSM-next.
-Runtime is a pure consumer with strict performance budgets. No runtime GIS.
+This document outlines the roadmap to transition Nuage from a tightly coupled architecture to a modular, subsystem-based architecture inspired by FlightGear. The core mechanism for decoupling will be a global **Property Tree** (based on the existing `PropertyBus`).
 
-Defaults (v1)
-- tileSizeMeters: 2000
-- gridResolution: 129 (cells) => 130x130 verts
-- visibleRadiusTiles: 1 (3x3)
-- maxLoadsPerSecond: 2
-- budgets: <= 9 visible tiles, <= 300k tris total, <= 12 draw calls
+## Goals
+- **Decoupling:** Systems (Input, Physics, Graphics) should not directly reference each other.
+- **Data-Driven:** Communication happens via a hierarchical property tree (e.g., `Input` writes to `/controls/flight/pitch`, `Physics` reads it).
+- **Modularity:** It should be easy to swap out or disable subsystems without breaking the engine.
 
-Non-goals (v1)
-- No runtime GeoTIFF/VRT/OSM parsing or reprojection
-- No quadtree/LOD pyramids
-- No full terrain material system (debug shading allowed)
-- No preview activation coupling
+---
 
-## Stage 0 (2-hour milestone): Runtime-only synthetic tiles
-Purpose: guarantee visible progress without file formats or disk I/O.
+## Phase 1: Core Infrastructure
+Establish the foundational classes for the new architecture.
 
-Inputs
-- Synthetic height function with deterministic seed
-- Bounds in local ENU (meters)
+- [ ] **Create `Subsystem` Interface (`src/core/subsystem.hpp`)**
+    - Virtual methods: `init()`, `update(double dt)`, `shutdown()`, `getName()`.
+- [ ] **Create `SubsystemManager` (`src/core/subsystem_manager.hpp`)**
+    - Manages a list of subsystems.
+    - Handles initialization order and the main update loop.
+- [ ] **Global Property Access**
+    - Ensure `PropertyBus` is accessible to all subsystems (likely via a Service Locator or Singleton pattern for now, to ease migration).
 
-Outputs
-- In-memory tiles generated on demand
-- Debug view: tile borders + tile IDs
+## Phase 2: Decouple Input System
+Convert the existing `Input` class into a standalone subsystem that publishes data.
 
-Runtime changes (only)
-- Implement tile selection for a fixed 3x3 working set around camera
-- Generate tile meshes procedurally in memory on first touch
-- Async mesh creation + GPU upload; no blocking I/O
-- Enforce invariant: tile meshes are created once per tile lifetime
-- Logging: tiles loaded/unloaded, tiles in memory, tris, draw calls
+- [ ] **Refactor `Input` class**
+    - Inherit from `Subsystem`.
+    - Remove `FlightInput` struct and `flight()` getter.
+- [ ] **Update Input Logic**
+    - In `update()`, write values directly to property paths:
+        - `/controls/flight/aileron` (Roll)
+        - `/controls/flight/elevator` (Pitch)
+        - `/controls/flight/rudder` (Yaw)
+        - `/controls/engines/current/throttle`
 
-Compiler changes
-- None required
+## Phase 3: Decouple Aircraft (Physics)
+Update the physics simulation to consume data from the property tree instead of direct function arguments.
 
-Acceptance tests (done when...)
-- 60 FPS stable while moving across multiple tiles
-- Tile rebuilds per minute = 0 in steady flight (no re-creation without eviction)
-- No blocking disk I/O on main thread
-- Debug overlay shows correct tile IDs and borders
+- [ ] **Refactor `Aircraft` Update Loop**
+    - Remove `Input& input` parameter from `update()`.
+    - Read control surface positions from the `PropertyBus` at the start of the frame.
+- [ ] **Refactor `FlightSession`**
+    - Ensure `Aircraft` logic is called via the standard subsystem update path (or wrapped in a `PhysicsSystem`).
 
-Top risks + de-risk
-- Risk: per-frame rebuilds => add assert and counter for rebuilds
-- Risk: stalls on mesh generation => use async tasks and frame budget limits
+## Phase 4: Integration & Cleanup
+Wire everything together in the main application loop.
 
-## Stage 1: Offline compiler writes tilepack (DEM ingestion)
-Purpose: replace synthetic generator with real data on disk, keep runtime same.
+- [ ] **Update `App` (`src/core/app.cpp`)**
+    - Replace individual `m_input.update()`, etc., with `m_subsystemManager.update(dt)`.
+    - Register `Input` and other systems with the manager on startup.
+- [ ] **Update UI/HUD**
+    - Modify HUD rendering to read aircraft state (airspeed, altitude) from the Property Tree instead of the `Aircraft` object directly.
 
-Inputs
-- GeoTIFF DEMs within bounds (USGS 3DEP or similar)
-- Bounds in LLA
-- tileSizeMeters, gridResolution
-
-Outputs
-- Tile pack on disk (manifest.json + tiles/*.mesh + tiles/*.meta.json)
-
-Compiler changes
-- Load DEM, reproject to local tangent plane, resample to grid
-- Generate mesh tiles + per-tile metadata
-- Write manifest.json with origin + bounds
-
-Runtime changes
-- Add tilepack loader (manifest + tile files)
-- Keep tile selection, streaming, and budgets unchanged
-
-Acceptance tests
-- Visual terrain matches DEM region
-- Same FPS and budgets as Stage 0
-- Logging shows disk loads capped at maxLoadsPerSecond
-
-Top risks + de-risk
-- Risk: seam cracks => enforce shared edge sampling
-- Risk: reprojection pitfalls => lock a single local CRS per pack
-
-## Stage 2: OSM integration (water + landuse masks)
-Purpose: add minimal landclass mask tiles for debug shading.
-
-Inputs
-- OSM PBF extract matching DEM bounds
-
-Outputs
-- Optional per-tile mask (8-bit landclass codes)
-
-Compiler changes
-- Rasterize water and landuse into tile-aligned masks
-- Update manifest availableLayers to include "mask"
-
-Runtime changes
-- Optional debug shader: color by mask code
-
-Acceptance tests
-- Water bodies visible in debug shading
-- No FPS regression or additional per-frame work
-
-Top risks + de-risk
-- Risk: OSM parsing complexity => use a single library and keep mask resolution low
-
-## Stage 2.5: Terrain visuals (shader-only)
-Purpose: improve terrain legibility without textures or heavier data.
-
-Runtime changes
-- Add low-frequency color variation (noise tint)
-- Add altitude-based tinting
-- Darken steep slopes to soften landuse edges
-- Add distance haze toward sky color
-
-Acceptance tests
-- Reduced "paint bucket" look on large landuse blocks
-- Landuse edges less harsh on hills
-- Distant terrain blends naturally without banding
-
-Top risks + de-risk
-- Risk: values too strong => expose tweakable shader params in config
-
-## Stage 3: Optional imagery (offline only)
-Purpose: optional texture layer, still offline compiled and streamed.
-
-Inputs
-- Imagery datasets (optional)
-
-Outputs
-- Texture tiles aligned to the same grid
-
-Compiler changes
-- Reproject + tile imagery offline
-
-Runtime changes
-- Optional texture loading if imagery exists
-
-Acceptance tests
-- Terrain still renders without imagery present
-- Performance budgets unchanged
-
-Top risks + de-risk
-- Risk: VRAM bloat => enforce per-tile texture resolution cap
+## Phase 5: Future Steps (Post-Refactor)
+- [ ] **Scripting Support:** Expose the Property Tree to Lua/Python.
+- [ ] **Network Replication:** Sync properties over the network for multiplayer.
+- [ ] **Configuration:** Load initial property values from JSON/XML files.

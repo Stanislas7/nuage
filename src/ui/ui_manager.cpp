@@ -13,11 +13,11 @@ UIManager::~UIManager() {
     shutdown();
 }
 
-bool UIManager::init(App* app) {
-    m_app = app;
+void UIManager::init() {
+    if (!m_app) return;
 
     int width, height;
-    glfwGetFramebufferSize(app->window(), &width, &height);
+    glfwGetFramebufferSize(m_app->window(), &width, &height);
     m_windowWidth = width;
     m_windowHeight = height;
     m_projection = Mat4::ortho(0.0f, static_cast<float>(width),
@@ -28,19 +28,19 @@ bool UIManager::init(App* app) {
     std::ifstream testFile(fontPath);
     if (!testFile.good()) {
         std::cerr << "Font file not found: " << fontPath << std::endl;
-        return false;
+        return;
     }
     testFile.close();
 
     if (!m_font->init(fontPath, 64.0f)) {
         std::cerr << "Failed to load font" << std::endl;
-        return false;
+        return;
     }
 
-    m_shader = app->assets().getShader("ui");
+    m_shader = m_app->assets().getShader("ui");
     if (!m_shader) {
         std::cerr << "UI shader not found in AssetStore" << std::endl;
-        return false;
+        return;
     }
 
     glGenVertexArrays(1, &m_vao);
@@ -63,8 +63,6 @@ bool UIManager::init(App* app) {
     glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
-
-    return true;
 }
 
 void UIManager::shutdown() {
@@ -82,7 +80,8 @@ void UIManager::shutdown() {
     m_whiteTexture = 0;
 }
 
-void UIManager::update() {
+void UIManager::update(double dt) {
+    if (!m_app) return;
     int width, height;
     glfwGetFramebufferSize(m_app->window(), &width, &height);
 
@@ -193,6 +192,7 @@ void UIManager::drawPersistent() {
 }
 
 void UIManager::drawRect(float x, float y, float w, float h, const Vec3& color, float alpha, Anchor anchor) {
+    if (!m_shader) return;
     float rx = x;
     float ry = y;
 
@@ -227,6 +227,7 @@ void UIManager::drawRect(float x, float y, float w, float h, const Vec3& color, 
 }
 
 void UIManager::drawRoundedRect(float x, float y, float w, float h, float radius, const Vec3& color, float alpha, Anchor anchor) {
+    if (!m_shader) return;
     float rx = x;
     float ry = y;
 

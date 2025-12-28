@@ -28,7 +28,7 @@ file(GLOB_RECURSE SOURCES
     "src/graphics/*.c"
     "src/math/*.cpp"
     "src/ui/*.cpp"
-    "src/ui/font/*.cpp"
+    "src/ui/**/*.cpp"
 )
 
 add_executable(nuage ${SOURCES})

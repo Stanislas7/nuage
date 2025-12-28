@@ -7,6 +7,7 @@
 #include "ui/button.hpp"
 #include "graphics/shader.hpp"
 #include "math/mat4.hpp"
+#include "core/subsystem.hpp"
 #include <vector>
 #include <memory>
 #include <string>
@@ -15,14 +16,18 @@ namespace nuage {
 
 class App;
 
-class UIManager {
+class UIManager : public Subsystem {
 public:
     UIManager() = default;
     ~UIManager();
 
-    bool init(App* app);
-    void shutdown();
-    void update();
+    void setApp(App* app) { m_app = app; }
+
+    // Subsystem interface
+    void init() override;
+    void update(double dt) override;
+    void shutdown() override;
+    std::string getName() const override { return "UI"; }
     
     // Drawing Lifecycle
     void begin();

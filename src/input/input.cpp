@@ -1,4 +1,6 @@
 #include "input/input.hpp"
+#include "core/properties/property_bus.hpp"
+#include "core/properties/property_paths.hpp"
 #include "utils/config_loader.hpp"
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -314,13 +316,17 @@ namespace {
     }
 }
 
-void Input::init(GLFWwindow* window) {
+void Input::setWindow(GLFWwindow* window) {
     m_window = window;
     glfwSetWindowUserPointer(window, this);
+}
+
+void Input::init() {
     loadBindingsFromConfig();
 }
 
-void Input::update(float dt) {
+void Input::update(double dt) {
+    if (!m_window) return;
     pollKeyboard();
     pollMouse();
     mapToControls(dt);
@@ -335,41 +341,59 @@ void Input::pollKeyboard() {
 
     auto quitIt = g_buttonBindings.find("quit");
     if (quitIt != g_buttonBindings.end() && isKeyListDown(quitIt->second)) {
-        m_quitRequested = true;
+        PropertyBus::global().set(Properties::Sim::QUIT_REQUESTED, true);
     }
 }
 
-void Input::mapToControls(float dt) {
-    auto mapAxis = [&](const std::string& name) -> float {
+void Input::mapToControls(double dt) {
+    auto mapAxis = [&](const std::string& name) -> double {
         auto it = g_axisBindings.find(name);
-        if (it == g_axisBindings.end()) return 0.0f;
-        float value = 0.0f;
+        if (it == g_axisBindings.end()) return 0.0;
+        double value = 0.0;
         for (int key : it->second.positiveKeys) {
             if (key >= 0 && key < 512 && m_keys[key]) {
-                value += 1.0f;
+                value += 1.0;
             }
         }
         for (int key : it->second.negativeKeys) {
             if (key >= 0 && key < 512 && m_keys[key]) {
-                value -= 1.0f;
+                value -= 1.0;
             }
         }
-        return std::clamp(value, -1.0f, 1.0f) * it->second.scale;
+        return std::clamp(value, -1.0, 1.0) * it->second.scale;
     };
 
-    m_flight.pitch = mapAxis("pitch");
-    m_flight.yaw = mapAxis("yaw");
-    m_flight.roll = mapAxis("roll");
+    PropertyBus::global().set(Properties::Controls::ELEVATOR, mapAxis("pitch"));
+    PropertyBus::global().set(Properties::Controls::RUDDER, mapAxis("yaw"));
+    PropertyBus::global().set(Properties::Controls::AILERON, mapAxis("roll"));
 
     if (isKeyListDown(getButtonBinding("throttle_up"))) {
-        m_throttleAccum = std::min(1.0f, m_throttleAccum + dt * 0.5f);
+        m_throttleAccum = std::min(1.0f, m_throttleAccum + static_cast<float>(dt) * 0.5f);
     }
     if (isKeyListDown(getButtonBinding("throttle_down"))) {
-        m_throttleAccum = std::max(0.0f, m_throttleAccum - dt * 0.5f);
+        m_throttleAccum = std::max(0.0f, m_throttleAccum - static_cast<float>(dt) * 0.5f);
     }
-    m_flight.throttle = m_throttleAccum;
+    
+    PropertyBus::global().set(Properties::Controls::THROTTLE, static_cast<double>(m_throttleAccum));
 
-    m_flight.brake = isKeyListDown(getButtonBinding("brake"));
+    // Simple brake for now
+    bool braking = isKeyListDown(getButtonBinding("brake"));
+    PropertyBus::global().set(Properties::Controls::BRAKE_LEFT, braking ? 1.0 : 0.0);
+    PropertyBus::global().set(Properties::Controls::BRAKE_RIGHT, braking ? 1.0 : 0.0);
+
+    if (isKeyPressed(GLFW_KEY_SPACE)) {
+        bool current = PropertyBus::global().get(Properties::Sim::PAUSED, false);
+        PropertyBus::global().set(Properties::Sim::PAUSED, !current);
+    }
+
+    if (isKeyPressed(GLFW_KEY_TAB)) {
+        PropertyBus::global().set("sim/commands/toggle-camera", true);
+    }
+
+    if (isButtonPressed("debug_menu")) {
+        bool current = PropertyBus::global().get(Properties::Sim::DEBUG_VISIBLE, false);
+        PropertyBus::global().set(Properties::Sim::DEBUG_VISIBLE, !current);
+    }
 }
 
 bool Input::isKeyDown(int key) const {

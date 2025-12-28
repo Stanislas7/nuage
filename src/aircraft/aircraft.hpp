@@ -20,30 +20,21 @@ class Shader;
 class Texture;
 class Model;
 class Input;
-struct FlightInput;
 
 class Aircraft {
 public:
     class Instance {
     public:
         void init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere);
-        void update(float dt, const FlightInput& input);
+        void update(float dt);
         void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
 
         PropertyBus& state() { return m_state; }
         const PropertyBus& state() const { return m_state; }
 
-        Vec3 position() const;
-        Quat orientation() const;
-        
         // Interpolated getters for rendering
         Vec3 interpolatedPosition(float alpha) const;
         Quat interpolatedOrientation(float alpha) const;
-
-        float airspeed() const;
-        Vec3 forward() const;
-        Vec3 up() const;
-        Vec3 right() const;
 
         template<typename T, typename... Args>
         T* addSystem(Args&&... args) {
@@ -73,7 +64,7 @@ public:
     };
 
     void init(AssetStore& assets, Atmosphere& atmosphere);
-    void fixedUpdate(float dt, const Input& input);
+    void fixedUpdate(float dt);
     void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
     void shutdown();
 

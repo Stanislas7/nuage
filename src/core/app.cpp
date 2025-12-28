@@ -1,5 +1,6 @@
 #include "core/app.hpp"
 #include "core/properties/property_paths.hpp"
+#include "core/sim_subsystem.hpp"
 #include "ui/anchor.hpp"
 #include "graphics/glad.h"
 #include "graphics/mesh_builder.hpp"
@@ -21,16 +22,23 @@ namespace nuage {
 bool App::init(const AppConfig& config) {
     if (!initWindow(config)) return false;
 
-    m_input.init(m_window);
+    m_input = std::make_shared<Input>();
+    m_input->setWindow(m_window);
+    m_subsystems.add(m_input);
+
+    m_ui = std::make_shared<UIManager>();
+    m_ui->setApp(this);
+    m_subsystems.add(m_ui);
+
+    m_subsystems.add(std::make_shared<SimSubsystem>());
+
+    // Load assets BEFORE initializing subsystems that depend on them
     m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
     m_assets.loadShader("textured", "assets/shaders/textured.vert", "assets/shaders/textured.frag");
     m_assets.loadShader("sky", "assets/shaders/sky.vert", "assets/shaders/sky.frag");
     m_assets.loadShader("ui", "assets/shaders/ui.vert", "assets/shaders/ui.frag");
 
-    if (!m_ui.init(this)) {
-        std::cerr << "Failed to initialize UI system" << std::endl;
-        return false;
-    }
+    m_subsystems.initAll();
 
     FlightConfig flight;
     flight.aircraftPath = "assets/config/aircraft/c172p.json";
@@ -53,7 +61,7 @@ bool App::startFlight(const FlightConfig& config) {
         return false;
     }
 
-    m_paused = false;
+    setPaused(false);
     return true;
 }
 
@@ -61,7 +69,7 @@ void App::endFlight() {
     m_session.reset();
     m_physicsAccumulator = 0.0f;
     m_debugOverlay.reset();
-    m_debugVisible = false;
+    PropertyBus::global().set(Properties::Sim::DEBUG_VISIBLE, false);
 }
 
 void App::run() {
@@ -76,30 +84,18 @@ void App::run() {
         m_time = now;
 
         auto inputStart = clock::now();
-        m_input.update(m_deltaTime);
+        m_subsystems.updateAll(m_deltaTime);
         auto inputEnd = clock::now();
 
-        if (m_input.quitRequested()) {
+        if (PropertyBus::global().get(Properties::Sim::QUIT_REQUESTED, false)) {
             m_shouldQuit = true;
             continue;
         }
 
         if (m_session) {
-            if (m_input.isKeyPressed(GLFW_KEY_TAB)) {
+            if (PropertyBus::global().get("sim/commands/toggle-camera", false)) {
                 m_session->camera().toggleOrbitMode();
-            }
-
-            if (m_input.isKeyPressed(GLFW_KEY_SPACE)) {
-                m_paused = !m_paused;
-                m_physicsAccumulator = 0.0f;
-            }
-
-            if (m_input.isButtonPressed("debug_menu")) {
-                m_debugVisible = !m_debugVisible;
-            }
-
-            if (m_input.isKeyPressed(GLFW_KEY_ESCAPE)) {
-                m_shouldQuit = true;
+                PropertyBus::global().set("sim/commands/toggle-camera", false);
             }
 
             updatePhysics();
@@ -110,11 +106,11 @@ void App::run() {
                 m_session->camera().update(m_deltaTime, m_session->aircraft().player(), alpha);
             }
 
-            m_pauseOverlay.update(m_paused, m_ui);
-            m_debugOverlay.update(m_debugVisible, m_ui);
+            bool paused = PropertyBus::global().get(Properties::Sim::PAUSED, false);
+            bool debugVisible = PropertyBus::global().get(Properties::Sim::DEBUG_VISIBLE, false);
+            m_pauseOverlay.update(paused, *m_ui);
+            m_debugOverlay.update(debugVisible, *m_ui);
         }
-
-        m_ui.update();
 
         auto renderStart = clock::now();
         float alpha = m_physicsAccumulator / FIXED_DT;
@@ -125,14 +121,16 @@ void App::run() {
             m_session->render(alpha);
         }
 
-        m_ui.begin();
+        m_ui->begin();
         if (m_session) {
-            m_session->drawHUD(m_ui);
-            m_pauseOverlay.draw(m_paused, m_ui);
-            m_debugOverlay.draw(m_debugVisible, m_ui);
+            bool paused = PropertyBus::global().get(Properties::Sim::PAUSED, false);
+            bool debugVisible = PropertyBus::global().get(Properties::Sim::DEBUG_VISIBLE, false);
+            m_session->drawHUD(*m_ui);
+            m_pauseOverlay.draw(paused, *m_ui);
+            m_debugOverlay.draw(debugVisible, *m_ui);
         }
-        m_ui.drawPersistent();
-        m_ui.end();
+        m_ui->drawPersistent();
+        m_ui->end();
         auto renderEnd = clock::now();
 
         glfwSwapBuffers(m_window);
@@ -155,7 +153,8 @@ void App::run() {
 
 void App::shutdown() {
     endFlight();
-    m_ui.shutdown();
+    m_subsystems.shutdownAll();
+    m_ui->shutdown();
     m_assets.unloadAll();
     glfwDestroyWindow(m_window);
     glfwTerminate();
@@ -197,18 +196,18 @@ bool App::initWindow(const AppConfig& config) {
 }
 
 void App::setPaused(bool paused) {
-    if (m_paused == paused) return;
-    m_paused = paused;
+    PropertyBus::global().set(Properties::Sim::PAUSED, paused);
     m_physicsAccumulator = 0.0f;
 }
 
 void App::updatePhysics() {
-    if (m_paused || !m_session) {
+    bool paused = PropertyBus::global().get(Properties::Sim::PAUSED, false);
+    if (paused || !m_session) {
         return;
     }
     m_physicsAccumulator += m_deltaTime;
     while (m_physicsAccumulator >= FIXED_DT) {
-        m_session->aircraft().fixedUpdate(FIXED_DT, m_input);
+        m_session->aircraft().fixedUpdate(FIXED_DT);
         m_physicsAccumulator -= FIXED_DT;
     }
 }

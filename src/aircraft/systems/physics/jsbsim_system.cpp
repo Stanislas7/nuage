@@ -119,14 +119,14 @@ void JsbsimSystem::ensureInitialized(float dt) {
 }
 
 void JsbsimSystem::syncInputs() {
-    double pitch = m_bus->get(Properties::Input::PITCH);
-    double roll = m_bus->get(Properties::Input::ROLL);
-    double yaw = m_bus->get(Properties::Input::YAW);
-    double throttle = m_bus->get(Properties::Input::THROTTLE);
+    double elevator = m_bus->get(Properties::Controls::ELEVATOR);
+    double aileron = m_bus->get(Properties::Controls::AILERON);
+    double rudder = m_bus->get(Properties::Controls::RUDDER);
+    double throttle = m_bus->get(Properties::Controls::THROTTLE);
 
-    m_fdm->SetPropertyValue("fcs/elevator-cmd-norm", clampInput(pitch));
-    m_fdm->SetPropertyValue("fcs/aileron-cmd-norm", clampInput(-roll));
-    m_fdm->SetPropertyValue("fcs/rudder-cmd-norm", clampInput(yaw));
+    m_fdm->SetPropertyValue("fcs/elevator-cmd-norm", clampInput(elevator));
+    m_fdm->SetPropertyValue("fcs/aileron-cmd-norm", clampInput(-aileron));
+    m_fdm->SetPropertyValue("fcs/rudder-cmd-norm", clampInput(rudder));
     m_fdm->SetPropertyValue("fcs/throttle-cmd-norm", clampInput(throttle));
 
     Vec3 wind = m_bus->get(Properties::Atmosphere::WIND_PREFIX);
@@ -205,6 +205,17 @@ void JsbsimSystem::syncOutputs() {
 
     double airspeedFps = m_fdm->GetPropertyValue("velocities/vtrue-fps");
     m_acState->airspeed = airspeedFps * kFtToM;
+
+    // Publish to Property Bus
+    m_bus->set(Properties::Velocities::AIRSPEED_KT, airspeedFps * 0.592484); // fps to knots
+    m_bus->set(Properties::Position::ALTITUDE_FT, altFt);
+    m_bus->set(Properties::Position::LATITUDE_DEG, lat * 180.0 / 3.1415926535);
+    m_bus->set(Properties::Position::LONGITUDE_DEG, lon * 180.0 / 3.1415926535);
+    
+    m_bus->set(Properties::Orientation::PITCH_DEG, m_fdm->GetPropertyValue("attitude/theta-deg"));
+    m_bus->set(Properties::Orientation::ROLL_DEG, m_fdm->GetPropertyValue("attitude/phi-deg"));
+    m_bus->set(Properties::Orientation::HEADING_DEG, m_fdm->GetPropertyValue("attitude/psi-deg"));
+    m_bus->set(Properties::Velocities::VERTICAL_SPEED_FPS, m_fdm->GetPropertyValue("velocities/v-down-fps") * -1.0);
 }
 
 void JsbsimSystem::update(float dt) {

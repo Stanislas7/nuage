@@ -6,28 +6,8 @@ PropertyId PropertyBus::getID(const std::string& key) {
     return hashString(key.c_str(), key.length());
 }
 
-void PropertyBus::set(PropertyId id, double value) {
-    m_data[id] = value;
-}
-
-double PropertyBus::get(PropertyId id, double fallback) const {
-    auto it = m_data.find(id);
-    if (it != m_data.end() && std::holds_alternative<double>(it->second)) {
-        return std::get<double>(it->second);
-    }
-    return fallback;
-}
-
 bool PropertyBus::has(PropertyId id) const {
     return m_data.find(id) != m_data.end();
-}
-
-void PropertyBus::set(const std::string& key, double value) {
-    set(getID(key), value);
-}
-
-double PropertyBus::get(const std::string& key, double fallback) const {
-    return get(getID(key), fallback);
 }
 
 bool PropertyBus::has(const std::string& key) const {

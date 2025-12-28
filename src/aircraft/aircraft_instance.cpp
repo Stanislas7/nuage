@@ -58,13 +58,19 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     m_prevState = m_currentState;
 }
 
-void Aircraft::Instance::update(float dt, const FlightInput& input) {
+void Aircraft::Instance::update(float dt) {
     m_prevState = m_currentState;
 
-    m_state.set(Properties::Input::PITCH, input.pitch);
-    m_state.set(Properties::Input::ROLL, input.roll);
-    m_state.set(Properties::Input::YAW, input.yaw);
-    m_state.set(Properties::Input::THROTTLE, input.throttle);
+    // Read controls from global property tree
+    double elevator = PropertyBus::global().get(Properties::Controls::ELEVATOR, 0.0);
+    double aileron = PropertyBus::global().get(Properties::Controls::AILERON, 0.0);
+    double rudder = PropertyBus::global().get(Properties::Controls::RUDDER, 0.0);
+    double throttle = PropertyBus::global().get(Properties::Controls::THROTTLE, 0.0);
+
+    m_state.set(Properties::Controls::ELEVATOR, elevator);
+    m_state.set(Properties::Controls::AILERON, aileron);
+    m_state.set(Properties::Controls::RUDDER, rudder);
+    m_state.set(Properties::Controls::THROTTLE, throttle);
 
     for (auto& system : m_systems) {
         system->update(dt);
@@ -77,36 +83,12 @@ void Aircraft::Instance::render(const Mat4& viewProjection, float alpha, const V
     m_visual.draw(renderPos, renderRot, viewProjection, lightDir);
 }
 
-Vec3 Aircraft::Instance::position() const {
-    return m_currentState.position;
-}
-
-Quat Aircraft::Instance::orientation() const {
-    return m_currentState.orientation;
-}
-
 Vec3 Aircraft::Instance::interpolatedPosition(float alpha) const {
     return m_prevState.position + (m_currentState.position - m_prevState.position) * alpha;
 }
 
 Quat Aircraft::Instance::interpolatedOrientation(float alpha) const {
     return Quat::slerp(m_prevState.orientation, m_currentState.orientation, alpha);
-}
-
-float Aircraft::Instance::airspeed() const {
-    return static_cast<float>(m_currentState.airspeed);
-}
-
-Vec3 Aircraft::Instance::forward() const {
-    return orientation().rotate(Vec3(0, 0, 1));
-}
-
-Vec3 Aircraft::Instance::up() const {
-    return orientation().rotate(Vec3(0, 1, 0));
-}
-
-Vec3 Aircraft::Instance::right() const {
-    return orientation().rotate(Vec3(1, 0, 0));
 }
 
 }
