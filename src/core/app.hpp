@@ -5,7 +5,6 @@
 #include "ui/ui_manager.hpp"
 #include "ui/overlays/pause_overlay.hpp"
 #include "ui/overlays/debug_overlay.hpp"
-#include "ui/overlays/main_menu.hpp"
 #include "core/session/flight_config.hpp"
 #include "core/session/flight_session.hpp"
 #include <cstdint>
@@ -14,11 +13,6 @@
 struct GLFWwindow;
 
 namespace nuage {
-
-enum class AppState {
-    StartMenu,
-    InFlight
-};
 
 struct AppConfig {
     int windowWidth = 1280;
@@ -80,11 +74,8 @@ private:
     UIManager m_ui;
     PauseOverlay m_pauseOverlay;
     DebugOverlay m_debugOverlay;
-    MainMenu m_mainMenu;
-
     // Active Flight Session
     std::unique_ptr<FlightSession> m_session;
-    AppState m_state = AppState::StartMenu;
 
     float m_time = 0.0f;
     float m_deltaTime = 0.0f;

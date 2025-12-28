@@ -32,12 +32,13 @@ bool App::init(const AppConfig& config) {
         return false;
     }
 
-    m_mainMenu.init(this, [this]() {
-        FlightConfig flight;
-        flight.aircraftPath = "assets/config/aircraft/c172p.json";
-        flight.terrainPath = "assets/config/terrain.json";
-        this->startFlight(flight);
-    });
+    FlightConfig flight;
+    flight.aircraftPath = "assets/config/aircraft/c172p.json";
+    flight.terrainPath = "assets/config/terrain.json";
+    if (!startFlight(flight)) {
+        std::cerr << "Failed to start flight session" << std::endl;
+        return false;
+    }
 
     m_lastFrameTime = static_cast<float>(glfwGetTime());
     return true;
@@ -53,14 +54,12 @@ bool App::startFlight(const FlightConfig& config) {
     }
 
     m_paused = false;
-    m_state = AppState::InFlight;
     return true;
 }
 
 void App::endFlight() {
     m_session.reset();
     m_physicsAccumulator = 0.0f;
-    m_state = AppState::StartMenu;
     m_debugOverlay.reset();
     m_debugVisible = false;
 }
@@ -85,11 +84,7 @@ void App::run() {
             continue;
         }
 
-        if (m_state == AppState::StartMenu) {
-            m_mainMenu.update(true, m_ui);
-        } else if (m_state == AppState::InFlight) {
-            m_mainMenu.update(false, m_ui);
-
+        if (m_session) {
             if (m_input.isKeyPressed(GLFW_KEY_TAB)) {
                 m_session->camera().toggleOrbitMode();
             }
@@ -104,7 +99,7 @@ void App::run() {
             }
 
             if (m_input.isKeyPressed(GLFW_KEY_ESCAPE)) {
-                endFlight();
+                m_shouldQuit = true;
             }
 
             updatePhysics();
@@ -126,17 +121,15 @@ void App::run() {
         
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if (m_state == AppState::InFlight && m_session) {
+        if (m_session) {
             m_session->render(alpha);
         }
 
         m_ui.begin();
-        if (m_state == AppState::InFlight && m_session) {
+        if (m_session) {
             m_session->drawHUD(m_ui);
             m_pauseOverlay.draw(m_paused, m_ui);
             m_debugOverlay.draw(m_debugVisible, m_ui);
-        } else if (m_state == AppState::StartMenu) {
-            m_mainMenu.draw(true, m_ui);
         }
         m_ui.drawPersistent();
         m_ui.end();
