@@ -25,6 +25,19 @@ public:
     void init(AssetStore& assets);
     void setup(const std::string& configPath, AssetStore& assets);
     void render(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
+    bool isProcedural() const { return m_procedural; }
+    bool isCompiled() const { return m_compiled; }
+    int compiledVisibleRadius() const { return m_compiledVisibleRadius; }
+    int compiledLoadsPerFrame() const { return m_compiledLoadsPerFrame; }
+    int proceduralVisibleRadius() const { return m_procVisibleRadius; }
+    int proceduralLoadsPerFrame() const { return m_procLoadsPerFrame; }
+    void setCompiledVisibleRadius(int radius);
+    void setCompiledLoadsPerFrame(int loads);
+    void setProceduralVisibleRadius(int radius);
+    void setProceduralLoadsPerFrame(int loads);
+    TerrainVisualSettings& visuals() { return m_visuals; }
+    const TerrainVisualSettings& visuals() const { return m_visuals; }
+    void clampVisuals() { m_visuals.clamp(); }
 
 private:
     struct TileResource {

@@ -30,6 +30,7 @@ public:
 
     bool isKeyDown(int key) const;
     bool isKeyPressed(int key) const;
+    bool isButtonPressed(const std::string& name) const;
     bool quitRequested() const { return m_quitRequested; }
 
     Vec2 mousePosition() const { return m_mousePos; }

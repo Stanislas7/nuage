@@ -18,10 +18,31 @@
 
 namespace nuage {
 
+namespace {
+constexpr int kMaxVisibleRadius = 8;
+constexpr int kMaxLoadsPerFrame = 8;
+}
+
 void TerrainRenderer::init(AssetStore& assets) {
     m_shader = assets.getShader("basic");
     m_texturedShader = assets.getShader("textured");
     m_assets = &assets;
+}
+
+void TerrainRenderer::setCompiledVisibleRadius(int radius) {
+    m_compiledVisibleRadius = std::clamp(radius, 0, kMaxVisibleRadius);
+}
+
+void TerrainRenderer::setCompiledLoadsPerFrame(int loads) {
+    m_compiledLoadsPerFrame = std::clamp(loads, 1, kMaxLoadsPerFrame);
+}
+
+void TerrainRenderer::setProceduralVisibleRadius(int radius) {
+    m_procVisibleRadius = std::clamp(radius, 0, kMaxVisibleRadius);
+}
+
+void TerrainRenderer::setProceduralLoadsPerFrame(int loads) {
+    m_procLoadsPerFrame = std::clamp(loads, 1, kMaxLoadsPerFrame);
 }
 
 void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {

@@ -61,6 +61,8 @@ void App::endFlight() {
     m_session.reset();
     m_physicsAccumulator = 0.0f;
     m_state = AppState::StartMenu;
+    m_debugOverlay.reset();
+    m_debugVisible = false;
 }
 
 void App::run() {
@@ -97,6 +99,10 @@ void App::run() {
                 m_physicsAccumulator = 0.0f;
             }
 
+            if (m_input.isButtonPressed("debug_menu")) {
+                m_debugVisible = !m_debugVisible;
+            }
+
             if (m_input.isKeyPressed(GLFW_KEY_ESCAPE)) {
                 endFlight();
             }
@@ -110,6 +116,7 @@ void App::run() {
             }
 
             m_pauseOverlay.update(m_paused, m_ui);
+            m_debugOverlay.update(m_debugVisible, m_ui);
         }
 
         m_ui.update();
@@ -127,6 +134,7 @@ void App::run() {
         if (m_state == AppState::InFlight && m_session) {
             m_session->drawHUD(m_ui);
             m_pauseOverlay.draw(m_paused, m_ui);
+            m_debugOverlay.draw(m_debugVisible, m_ui);
         } else if (m_state == AppState::StartMenu) {
             m_mainMenu.draw(true, m_ui);
         }

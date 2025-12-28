@@ -70,6 +70,12 @@ Key fields:
 - Loads at most a small number of tiles per frame.
 - Tiles are created once per lifetime; evicted tiles free GPU memory.
 
+Visible radius is configured in `assets/config/terrain.json`:
+```
+"compiledVisibleRadius": 2
+```
+Radius N renders a `(2N+1) x (2N+1)` tile window (e.g., 2 => 5x5).
+
 ## Terrain visuals (runtime)
 The terrain renderer applies a cheap shader pass to reduce the "paint bucket" look:
 - **Noise tint:** low-frequency variation per pixel.

@@ -4,6 +4,7 @@
 #include "graphics/asset_store.hpp"
 #include "ui/ui_manager.hpp"
 #include "ui/overlays/pause_overlay.hpp"
+#include "ui/overlays/debug_overlay.hpp"
 #include "ui/overlays/main_menu.hpp"
 #include "core/session/flight_config.hpp"
 #include "core/session/flight_session.hpp"
@@ -78,6 +79,7 @@ private:
     AssetStore m_assets;
     UIManager m_ui;
     PauseOverlay m_pauseOverlay;
+    DebugOverlay m_debugOverlay;
     MainMenu m_mainMenu;
 
     // Active Flight Session
@@ -89,6 +91,7 @@ private:
     float m_lastFrameTime = 0.0f;
     bool m_shouldQuit = false;
     bool m_paused = false;
+    bool m_debugVisible = false;
 
     float m_physicsAccumulator = 0.0f;
     static constexpr float FIXED_DT = 1.0f / 120.0f;

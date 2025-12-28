@@ -29,6 +29,8 @@ public:
     Aircraft& aircraft() { return m_aircraft; }
     Camera& camera() { return m_camera; }
     Atmosphere& atmosphere() { return m_atmosphere; }
+    TerrainRenderer& terrain() { return m_terrain; }
+    const TerrainRenderer& terrain() const { return m_terrain; }
 private:
     void setupHUD();
     void updateHUD();
