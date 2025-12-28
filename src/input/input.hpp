@@ -4,6 +4,7 @@
 #include <OpenGL/gl3.h>
 #include "math/vec2.hpp"
 #include "core/subsystem.hpp"
+#include "input/input_bindings.hpp"
 #include <GLFW/glfw3.h>
 #include <string>
 #include <vector>
@@ -54,6 +55,8 @@ private:
 
     bool m_mouseButtons[8] = {};
     bool m_prevMouseButtons[8] = {};
+
+    InputBindings m_bindings;
 };
 
 }
