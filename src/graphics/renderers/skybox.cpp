@@ -14,6 +14,14 @@ bool Skybox::init(AssetStore& assets) {
     return true;
 }
 
+void Skybox::shutdown() {
+    if (m_vao) {
+        glDeleteVertexArrays(1, &m_vao);
+        m_vao = 0;
+    }
+    m_shader = nullptr;
+}
+
 void Skybox::render(const Mat4& view, const Mat4& proj, const Atmosphere& atmosphere, float time) {
     if (!m_shader || !m_vao) return;
 

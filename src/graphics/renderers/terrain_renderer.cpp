@@ -29,6 +29,25 @@ void TerrainRenderer::init(AssetStore& assets) {
     m_assets = &assets;
 }
 
+void TerrainRenderer::shutdown() {
+    m_tileCache.clear();
+    m_procTileCreateCounts.clear();
+    m_compiledTileCreateCounts.clear();
+    m_compiledTiles.clear();
+    m_procTilesLoadedThisFrame = 0;
+    m_compiledTilesLoadedThisFrame = 0;
+    m_procTileRebuilds = 0;
+    m_compiledTileRebuilds = 0;
+    m_mesh = nullptr;
+    m_shader = nullptr;
+    m_texturedShader = nullptr;
+    m_texture = nullptr;
+    m_assets = nullptr;
+    m_textured = false;
+    m_procedural = false;
+    m_compiled = false;
+}
+
 void TerrainRenderer::setCompiledVisibleRadius(int radius) {
     m_compiledVisibleRadius = std::clamp(radius, 0, kMaxVisibleRadius);
 }

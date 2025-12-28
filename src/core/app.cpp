@@ -64,7 +64,10 @@ bool App::startFlight(const FlightConfig& config) {
 }
 
 void App::endFlight() {
-    m_session.reset();
+    if (m_session) {
+        m_session->shutdown();
+        m_session.reset();
+    }
     m_physicsAccumulator = 0.0f;
     if (m_ui) m_ui->setAircraft(nullptr);
     PropertyBus::global().set(Properties::Sim::DEBUG_VISIBLE, false);

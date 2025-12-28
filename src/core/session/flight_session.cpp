@@ -35,6 +35,12 @@ bool FlightSession::init() {
     return true;
 }
 
+void FlightSession::shutdown() {
+    m_aircraft.shutdown();
+    m_terrain.shutdown();
+    m_skybox.shutdown();
+}
+
 void FlightSession::update(float dt) {
     m_atmosphere.update(dt);
 }

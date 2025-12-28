@@ -23,6 +23,7 @@ public:
     ~FlightSession() = default;
 
     bool init();
+    void shutdown();
     void update(float dt);
     void render(float alpha);
 
