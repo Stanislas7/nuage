@@ -12,6 +12,7 @@ namespace nuage {
 
 class App;
 class Text;
+class UIManager;
 
 /**
  * @brief Represents an active flight simulation session.
@@ -24,6 +25,7 @@ public:
     bool init();
     void update(float dt);
     void render(float alpha);
+    void drawHUD(UIManager& ui);
 
     Aircraft& aircraft() { return m_aircraft; }
     Camera& camera() { return m_camera; }
@@ -47,7 +49,7 @@ private:
     Text* m_airspeedText = nullptr;
     Text* m_headingText = nullptr;
     Text* m_positionText = nullptr;
-    Text* m_powerText = nullptr;
+    float m_powerPercent = -1.0f;
     float m_elapsedTime = 0.0f;
 };
 

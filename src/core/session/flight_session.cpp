@@ -3,6 +3,7 @@
 #include "core/properties/property_paths.hpp"
 #include "graphics/glad.h"
 #include "ui/text.hpp"
+#include <algorithm>
 #include <iostream>
 #include <cmath>
 
@@ -73,8 +74,6 @@ void FlightSession::setupHUD() {
     m_positionText = &ui.text("POS: 0, 0, 0");
     setupText(*m_positionText, 20, 170, 0.6f, Anchor::TopLeft, 0.0f);
 
-    m_powerText = &ui.text("PWR: 0%");
-    setupText(*m_powerText, 20, -60, 0.6f, Anchor::BottomLeft, 10.0f);
 }
 
 void FlightSession::updateHUD() {
@@ -101,15 +100,51 @@ void FlightSession::updateHUD() {
                                 std::to_string(static_cast<int>(pos.z)));
     }
 
-    if (m_powerText) {
-        if (player) {
-            double throttle = player->state().get(Properties::Input::THROTTLE);
-            int percent = static_cast<int>(std::round(std::clamp(throttle, 0.0, 1.0) * 100.0));
-            m_powerText->content("PWR: " + std::to_string(percent) + "%");
-        } else {
-            m_powerText->content("PWR: --");
-        }
+    if (player) {
+        double throttle = player->state().get(Properties::Input::THROTTLE);
+        m_powerPercent = static_cast<float>(std::clamp(throttle, 0.0, 1.0));
+    } else {
+        m_powerPercent = -1.0f;
     }
+
+}
+
+void FlightSession::drawHUD(UIManager& ui) {
+    constexpr float kGaugeX = 24.0f;
+    constexpr float kGaugeY = 48.0f;
+    constexpr float kGaugeWidth = 56.0f;
+    constexpr float kGaugeHeight = 220.0f;
+    constexpr float kGaugeRadius = 12.0f;
+    constexpr float kInset = 5.0f;
+
+    const Vec3 kGaugeOutline = Vec3(0.62f, 0.86f, 0.7f);
+    const Vec3 kGaugeBack = Vec3(0.07f, 0.12f, 0.1f);
+    const Vec3 kGaugeFill = Vec3(0.06f, 0.78f, 0.28f);
+    const Vec3 kGaugeText = Vec3(1.0f, 1.0f, 1.0f);
+    const Vec3 kGaugeSubText = Vec3(1.0f, 1.0f, 1.0f);
+
+    ui.drawRoundedRect(kGaugeX, kGaugeY, kGaugeWidth, kGaugeHeight, kGaugeRadius,
+                       kGaugeOutline, 0.85f, Anchor::BottomLeft);
+    ui.drawRoundedRect(kGaugeX + kInset, kGaugeY + kInset,
+                       kGaugeWidth - 2.0f * kInset, kGaugeHeight - 2.0f * kInset,
+                       kGaugeRadius - kInset, kGaugeBack, 0.85f, Anchor::BottomLeft);
+
+    float percent = std::clamp(m_powerPercent, 0.0f, 1.0f);
+    float innerHeight = (kGaugeHeight - 2.0f * kInset) * percent;
+    if (m_powerPercent >= 0.0f && innerHeight > 0.0f) {
+        ui.drawRoundedRect(kGaugeX + kInset, kGaugeY + kInset,
+                           kGaugeWidth - 2.0f * kInset, innerHeight,
+                           kGaugeRadius - kInset, kGaugeFill, 0.9f, Anchor::BottomLeft);
+    }
+
+    std::string percentText = "--";
+    if (m_powerPercent >= 0.0f) {
+        int percentValue = static_cast<int>(std::round(percent * 100.0f));
+        percentText = std::to_string(percentValue) + "%";
+    }
+    ui.drawText(percentText, kGaugeX, -(kGaugeY + kGaugeHeight + 8.0f),
+                Anchor::BottomLeft, 0.55f, kGaugeSubText, 0.9f);
+
 }
 
 } // namespace nuage

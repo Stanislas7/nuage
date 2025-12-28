@@ -125,6 +125,7 @@ void App::run() {
 
         m_ui.begin();
         if (m_state == AppState::InFlight && m_session) {
+            m_session->drawHUD(m_ui);
             m_pauseOverlay.draw(m_paused, m_ui);
         } else if (m_state == AppState::StartMenu) {
             m_mainMenu.draw(true, m_ui);
