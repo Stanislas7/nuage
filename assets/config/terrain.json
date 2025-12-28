@@ -5,6 +5,17 @@
   "compiledLod1Distance": 3000.0,
   "compiledSkirtDepth": 180.0,
   "compiledDebugLog": false,
+  "terrainTrees": {
+    "enabled": true,
+    "densityPerSqKm": 800.0,
+    "minHeight": 4.0,
+    "maxHeight": 10.0,
+    "minRadius": 0.8,
+    "maxRadius": 2.2,
+    "maxSlope": 0.7,
+    "maxDistance": 5000.0,
+    "seed": 1337
+  },
   "terrainVisuals": {
     "heightMin": 0.0,
     "heightMax": 2000.0,

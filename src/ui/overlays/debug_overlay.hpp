@@ -33,6 +33,8 @@ private:
     Button* m_fogPlus = nullptr;
     Button* m_noiseMinus = nullptr;
     Button* m_noisePlus = nullptr;
+    Button* m_treesMinus = nullptr;
+    Button* m_treesPlus = nullptr;
 };
 
 } // namespace nuage

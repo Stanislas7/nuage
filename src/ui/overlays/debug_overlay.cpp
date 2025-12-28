@@ -10,7 +10,7 @@ namespace nuage {
 
 namespace {
 constexpr float kPanelWidth = 384.0f;
-constexpr float kPanelHeight = 264.0f;
+constexpr float kPanelHeight = 302.0f;
 constexpr float kPanelRadius = 18.0f;
 constexpr float kPanelMargin = 28.0f;
 constexpr float kRowHeight = 38.0f;
@@ -102,6 +102,8 @@ void DebugOverlay::draw(bool active, UIManager& ui) {
     std::snprintf(noiseBuffer, sizeof(noiseBuffer), "%.2f", terrain->visuals().noiseStrength);
     drawRow("Noise Strength", noiseBuffer, row++);
 
+    drawRow("Trees", terrain->treesEnabled() ? "On" : "Off", row++);
+
 }
 
 void DebugOverlay::reset() {
@@ -131,6 +133,8 @@ void DebugOverlay::buildUi(UIManager& ui) {
     m_fogPlus = makeButton("+");
     m_noiseMinus = makeButton("-");
     m_noisePlus = makeButton("+");
+    m_treesMinus = makeButton("-");
+    m_treesPlus = makeButton("+");
 
     App* app = ui.app();
 
@@ -219,6 +223,20 @@ void DebugOverlay::buildUi(UIManager& ui) {
             terrain->clampVisuals();
         });
     }
+    if (m_treesMinus) {
+        m_treesMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            terrain->setTreesEnabled(false);
+        });
+    }
+    if (m_treesPlus) {
+        m_treesPlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            terrain->setTreesEnabled(true);
+        });
+    }
 
     m_initialized = true;
     setButtonsVisible(false);
@@ -250,6 +268,7 @@ void DebugOverlay::layout(UIManager& ui) {
     positionRowButtons(m_loadsMinus, m_loadsPlus, 1);
     positionRowButtons(m_fogMinus, m_fogPlus, 2);
     positionRowButtons(m_noiseMinus, m_noisePlus, 3);
+    positionRowButtons(m_treesMinus, m_treesPlus, 4);
 }
 
 void DebugOverlay::setButtonsVisible(bool visible) {
@@ -261,6 +280,8 @@ void DebugOverlay::setButtonsVisible(bool visible) {
     if (m_fogPlus) m_fogPlus->setVisible(visible).setEnabled(visible);
     if (m_noiseMinus) m_noiseMinus->setVisible(visible).setEnabled(visible);
     if (m_noisePlus) m_noisePlus->setVisible(visible).setEnabled(visible);
+    if (m_treesMinus) m_treesMinus->setVisible(visible).setEnabled(visible);
+    if (m_treesPlus) m_treesPlus->setVisible(visible).setEnabled(visible);
 }
 
 } // namespace nuage
