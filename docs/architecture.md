@@ -4,6 +4,7 @@ This document describes the modular, property-driven architecture of Nuage, insp
 
 ## Core Runtime & Subsystems
 - **Subsystem Manager**: `core::App` utilizes a `SubsystemManager` to manage the lifecycle of major engine services. Each subsystem (`AssetStore`, `Input`, `UIManager`, `SimSubsystem`) implements a standard interface: `init()`, `update(double dt)`, and `shutdown()`. This keeps lifetime management centralized while allowing systems to be added or removed without modifying the core engine loop.
+- **Subsystem Dependencies**: Subsystems can declare required dependencies by name. The manager validates presence and ordering during initialization to prevent hidden startup coupling.
 - **Global Property Tree**: The "nervous system" of the engine is a global `PropertyBus`. Subsystems and components communicate by reading and writing to standardized property paths (e.g., `controls/flight/elevator`, `velocities/airspeed-kt`). This reduces direct dependencies for data flow (telemetry, controls), while core services still use explicit dependencies.
 - **Main Loop**: `App::run` orchestrates the execution. It updates all subsystems, handles fixed-step physics accumulation (`1/120s`), and manages the rendering lifecycle with state interpolation for visual smoothness.
 

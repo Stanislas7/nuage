@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace nuage {
 
@@ -19,6 +20,9 @@ public:
 
     // Unique name for debugging/logging
     virtual std::string getName() const = 0;
+
+    // Optional dependency list by subsystem name
+    virtual std::vector<std::string> dependencies() const { return {}; }
 };
 
 }

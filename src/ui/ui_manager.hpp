@@ -34,6 +34,7 @@ public:
     void update(double dt) override;
     void shutdown() override;
     std::string getName() const override { return "UI"; }
+    std::vector<std::string> dependencies() const override { return {"AssetStore", "Input"}; }
     
     // Drawing Lifecycle
     void begin();
