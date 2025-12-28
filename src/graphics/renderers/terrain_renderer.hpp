@@ -44,7 +44,9 @@ public:
 private:
     struct TileResource {
         std::unique_ptr<Mesh> ownedMesh;
+        std::unique_ptr<Mesh> ownedMeshLod1;
         Mesh* mesh = nullptr;
+        Mesh* meshLod1 = nullptr;
         Texture* texture = nullptr;
         Vec3 center{0, 0, 0};
         float radius = 0.0f;
@@ -107,6 +109,8 @@ private:
     int m_compiledVisibleRadius = 1;
     int m_compiledLoadsPerFrame = 2;
     bool m_compiledDebugLog = true;
+    float m_compiledLod1Distance = 0.0f;
+    float m_compiledLod1DistanceSq = 0.0f;
     float m_compiledMinX = 0.0f;
     float m_compiledMinZ = 0.0f;
     float m_compiledMaxX = 0.0f;

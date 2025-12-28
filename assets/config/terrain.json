@@ -2,6 +2,7 @@
   "compiledManifest": "../terrain/compiled/manifest.json",
   "compiledVisibleRadius": 2,
   "compiledMaxLoadsPerFrame": 2,
+  "compiledLod1Distance": 3000.0,
   "compiledDebugLog": true,
   "terrainVisuals": {
     "heightMin": 0.0,

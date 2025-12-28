@@ -21,6 +21,91 @@ namespace nuage {
 namespace {
 constexpr int kMaxVisibleRadius = 8;
 constexpr int kMaxLoadsPerFrame = 8;
+
+bool buildGridVerticesFromTriList(const std::vector<float>& triVerts, int gridResolution,
+                                  float tileMinX, float tileMinZ, float tileSize,
+                                  std::vector<float>& outVerts) {
+    if (gridResolution < 1 || tileSize <= 0.0f) {
+        return false;
+    }
+    int res = gridResolution + 1;
+    int stride = 9;
+    size_t gridCount = static_cast<size_t>(res * res);
+    outVerts.assign(gridCount * stride, 0.0f);
+    std::vector<bool> filled(gridCount, false);
+
+    size_t vertexCount = triVerts.size() / stride;
+    for (size_t i = 0; i < vertexCount; ++i) {
+        float px = triVerts[i * stride + 0];
+        float pz = triVerts[i * stride + 2];
+        float fx = (px - tileMinX) / tileSize;
+        float fz = (pz - tileMinZ) / tileSize;
+        int gx = static_cast<int>(std::lround(fx * (res - 1)));
+        int gz = static_cast<int>(std::lround(fz * (res - 1)));
+        gx = std::clamp(gx, 0, res - 1);
+        gz = std::clamp(gz, 0, res - 1);
+        size_t idx = static_cast<size_t>(gz * res + gx);
+        size_t base = idx * stride;
+        for (int c = 0; c < stride; ++c) {
+            outVerts[base + c] = triVerts[i * stride + c];
+        }
+        filled[idx] = true;
+    }
+
+    for (bool ok : filled) {
+        if (!ok) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void buildGridIndices(int resX, int resZ, std::vector<std::uint32_t>& outIndices) {
+    outIndices.clear();
+    if (resX < 2 || resZ < 2) {
+        return;
+    }
+    outIndices.reserve(static_cast<size_t>(resX - 1) * static_cast<size_t>(resZ - 1) * 6u);
+    for (int z = 0; z < resZ - 1; ++z) {
+        for (int x = 0; x < resX - 1; ++x) {
+            std::uint32_t i00 = static_cast<std::uint32_t>(z * resX + x);
+            std::uint32_t i10 = i00 + 1;
+            std::uint32_t i01 = i00 + static_cast<std::uint32_t>(resX);
+            std::uint32_t i11 = i01 + 1;
+            outIndices.push_back(i00);
+            outIndices.push_back(i10);
+            outIndices.push_back(i11);
+            outIndices.push_back(i00);
+            outIndices.push_back(i11);
+            outIndices.push_back(i01);
+        }
+    }
+}
+
+void buildLodVertices(const std::vector<float>& gridVerts, int resX, int resZ, int step,
+                      std::vector<float>& outVerts) {
+    int stride = 9;
+    int lodResX = (resX - 1) / step + 1;
+    int lodResZ = (resZ - 1) / step + 1;
+    outVerts.assign(static_cast<size_t>(lodResX * lodResZ) * stride, 0.0f);
+    for (int z = 0; z < lodResZ; ++z) {
+        int srcZ = z * step;
+        for (int x = 0; x < lodResX; ++x) {
+            int srcX = x * step;
+            size_t srcIdx = static_cast<size_t>(srcZ * resX + srcX) * stride;
+            size_t dstIdx = static_cast<size_t>(z * lodResX + x) * stride;
+            for (int c = 0; c < stride; ++c) {
+                outVerts[dstIdx + c] = gridVerts[srcIdx + c];
+            }
+        }
+    }
+}
+
+void buildLodIndices(int resX, int resZ, int step, std::vector<std::uint32_t>& outIndices) {
+    int lodResX = (resX - 1) / step + 1;
+    int lodResZ = (resZ - 1) / step + 1;
+    buildGridIndices(lodResX, lodResZ, outIndices);
+}
 }
 
 void TerrainRenderer::init(AssetStore& assets) {
@@ -218,11 +303,14 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
     m_compiledVisibleRadius = config.value("compiledVisibleRadius", 1);
     m_compiledLoadsPerFrame = config.value("compiledMaxLoadsPerFrame", 2);
     m_compiledDebugLog = config.value("compiledDebugLog", true);
+    m_compiledLod1Distance = config.value("compiledLod1Distance", m_compiledTileSizeMeters * 1.5f);
 
     m_compiledTileSizeMeters = std::max(1.0f, m_compiledTileSizeMeters);
     m_compiledGridResolution = std::max(2, m_compiledGridResolution);
     m_compiledVisibleRadius = std::max(0, m_compiledVisibleRadius);
     m_compiledLoadsPerFrame = std::max(1, m_compiledLoadsPerFrame);
+    m_compiledLod1Distance = std::max(0.0f, m_compiledLod1Distance);
+    m_compiledLod1DistanceSq = m_compiledLod1Distance * m_compiledLod1Distance;
 
     m_compiledTiles.clear();
     if (manifest.contains("tileIndex") && manifest["tileIndex"].is_array()) {
@@ -555,24 +643,37 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
         return nullptr;
     }
 
+    float tileMinX = static_cast<float>(x) * m_compiledTileSizeMeters;
+    float tileMinZ = static_cast<float>(y) * m_compiledTileSizeMeters;
     if (m_compiledMaskResolution > 0) {
         std::filesystem::path maskPath = std::filesystem::path(m_compiledManifestDir)
             / "tiles" / ("tile_" + std::to_string(x) + "_" + std::to_string(y) + ".mask");
         std::vector<std::uint8_t> mask;
         if (load_compiled_mask(maskPath.string(), m_compiledMaskResolution, mask)) {
-            float tileMinX = static_cast<float>(x) * m_compiledTileSizeMeters;
-            float tileMinZ = static_cast<float>(y) * m_compiledTileSizeMeters;
             apply_mask_to_verts(verts, mask, m_compiledMaskResolution, m_compiledTileSizeMeters, tileMinX, tileMinZ);
         }
     }
 
     auto mesh = std::make_unique<Mesh>();
-    mesh->init(verts);
+    std::vector<float> gridVerts;
+    std::vector<std::uint32_t> indices;
+    bool builtGrid = buildGridVerticesFromTriList(verts, m_compiledGridResolution,
+                                                  tileMinX, tileMinZ, m_compiledTileSizeMeters,
+                                                  gridVerts);
+    if (builtGrid) {
+        int res = m_compiledGridResolution + 1;
+        buildGridIndices(res, res, indices);
+        mesh->initIndexed(gridVerts, indices);
+    } else {
+        mesh->init(verts);
+    }
     m_compiledTilesLoadedThisFrame += 1;
 
     TileResource resource;
     resource.ownedMesh = std::move(mesh);
     resource.mesh = resource.ownedMesh.get();
+    resource.ownedMeshLod1 = nullptr;
+    resource.meshLod1 = nullptr;
     resource.texture = nullptr;
     resource.center = Vec3((static_cast<float>(x) + 0.5f) * m_compiledTileSizeMeters,
                            0.0f,
@@ -584,6 +685,20 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
     resource.textured = false;
     resource.procedural = false;
     resource.compiled = true;
+
+    if (builtGrid && m_compiledGridResolution >= 2) {
+        int res = m_compiledGridResolution + 1;
+        std::vector<float> lodVerts;
+        std::vector<std::uint32_t> lodIndices;
+        buildLodVertices(gridVerts, res, res, 2, lodVerts);
+        buildLodIndices(res, res, 2, lodIndices);
+        if (!lodVerts.empty() && !lodIndices.empty()) {
+            auto lodMesh = std::make_unique<Mesh>();
+            lodMesh->initIndexed(lodVerts, lodIndices);
+            resource.ownedMeshLod1 = std::move(lodMesh);
+            resource.meshLod1 = resource.ownedMeshLod1.get();
+        }
+    }
 
     auto inserted = m_tileCache.emplace(key, std::move(resource));
     if (m_compiledDebugLog) {
@@ -696,7 +811,16 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
             applyDirectionalLighting(m_shader, sunDir);
             m_visuals.bind(m_shader, sunDir, cameraPos);
             bindTerrainTextures(m_shader, m_compiledMaskResolution > 0);
-            tile->mesh->draw();
+            Mesh* meshToDraw = tile->mesh;
+            if (tile->meshLod1 && m_compiledLod1DistanceSq > 0.0f) {
+                float dx = tile->center.x - cameraPos.x;
+                float dz = tile->center.z - cameraPos.z;
+                float distSq = dx * dx + dz * dz;
+                if (distSq >= m_compiledLod1DistanceSq) {
+                    meshToDraw = tile->meshLod1;
+                }
+            }
+            meshToDraw->draw();
         }
     }
 
