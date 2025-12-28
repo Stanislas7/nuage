@@ -35,7 +35,7 @@ public:
     Model* getModel(const std::string& name);
 
     // Textures
-    bool loadTexture(const std::string& name, const std::string& path);
+    bool loadTexture(const std::string& name, const std::string& path, bool repeat = false);
     Texture* getTexture(const std::string& name);
 
     void unloadAll();

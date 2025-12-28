@@ -266,9 +266,9 @@ Model* AssetStore::getModel(const std::string& name) {
     return it != m_models.end() ? it->second.get() : nullptr;
 }
 
-bool AssetStore::loadTexture(const std::string& name, const std::string& path) {
+bool AssetStore::loadTexture(const std::string& name, const std::string& path, bool repeat) {
     auto texture = std::make_unique<Texture>();
-    if (!texture->loadFromFile(path)) {
+    if (!texture->loadFromFile(path, true, repeat)) {
         return false;
     }
     m_textures[name] = std::move(texture);

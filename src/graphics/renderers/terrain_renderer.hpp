@@ -3,6 +3,7 @@
 #include "math/mat4.hpp"
 #include "math/vec3.hpp"
 #include "graphics/renderers/terrain/terrain_visual_settings.hpp"
+#include "utils/json.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -55,6 +56,17 @@ private:
         bool compiled = false;
     };
 
+    struct TerrainTextureSettings {
+        bool enabled = false;
+        float texScale = 0.02f;
+        float detailScale = 0.08f;
+        float detailStrength = 0.35f;
+        float rockSlopeStart = 0.35f;
+        float rockSlopeEnd = 0.7f;
+        float rockStrength = 0.7f;
+        Vec3 waterColor = Vec3(0.14f, 0.32f, 0.55f);
+    };
+
     void setupProcedural(const std::string& configPath);
     void setupCompiled(const std::string& configPath);
     void renderProcedural(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
@@ -64,12 +76,20 @@ private:
     float proceduralHeight(float worldX, float worldZ) const;
     Vec3 proceduralTileTint(int tileX, int tileY) const;
     std::int64_t packedTileKey(int x, int y) const;
+    void applyTextureConfig(const nlohmann::json& config, const std::string& configPath);
+    void bindTerrainTextures(Shader* shader, bool useMasks) const;
 
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
     Shader* m_texturedShader = nullptr;
     Texture* m_texture = nullptr;
     bool m_textured = false;
+    TerrainTextureSettings m_textureSettings;
+    Texture* m_texGrass = nullptr;
+    Texture* m_texForest = nullptr;
+    Texture* m_texRock = nullptr;
+    Texture* m_texDirt = nullptr;
+    Texture* m_texUrban = nullptr;
 
     bool m_procedural = false;
     bool m_compiled = false;

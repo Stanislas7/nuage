@@ -3,16 +3,6 @@
 
 namespace nuage {
 
-Vec3 terrain_mask_class_color(std::uint8_t cls) {
-    switch (cls) {
-        case 1: return Vec3(0.14f, 0.32f, 0.55f);
-        case 2: return Vec3(0.56f, 0.54f, 0.5f);
-        case 3: return Vec3(0.2f, 0.42f, 0.22f);
-        case 4: return Vec3(0.46f, 0.55f, 0.32f);
-        default: return Vec3(1.0f, 1.0f, 1.0f);
-    }
-}
-
 void apply_mask_to_verts(std::vector<float>& verts, const std::vector<std::uint8_t>& mask,
                          int maskRes, float tileSize, float tileMinX, float tileMinZ) {
     if (maskRes <= 0 || mask.empty()) {
@@ -43,28 +33,28 @@ void apply_mask_to_verts(std::vector<float>& verts, const std::vector<std::uint8
         float w01 = (1.0f - tx) * tz;
         float w11 = tx * tz;
 
-        float total = 0.0f;
-        Vec3 blended(0.0f, 0.0f, 0.0f);
+        // Store water/urban/forest weights in vertex color for texture blending.
+        float water = 0.0f;
+        float urban = 0.0f;
+        float forest = 0.0f;
 
-        std::uint8_t c00 = clsAt(x0, z0);
-        if (c00 != 0) { blended = blended + terrain_mask_class_color(c00) * w00; total += w00; }
-        std::uint8_t c10 = clsAt(x1, z0);
-        if (c10 != 0) { blended = blended + terrain_mask_class_color(c10) * w10; total += w10; }
-        std::uint8_t c01 = clsAt(x0, z1);
-        if (c01 != 0) { blended = blended + terrain_mask_class_color(c01) * w01; total += w01; }
-        std::uint8_t c11 = clsAt(x1, z1);
-        if (c11 != 0) { blended = blended + terrain_mask_class_color(c11) * w11; total += w11; }
+        auto accumulate = [&](std::uint8_t cls, float w) {
+            switch (cls) {
+                case 1: water += w; break;
+                case 2: urban += w; break;
+                case 3: forest += w; break;
+                default: break;
+            }
+        };
 
-        if (total <= 0.0f) {
-            continue;
-        }
+        accumulate(clsAt(x0, z0), w00);
+        accumulate(clsAt(x1, z0), w10);
+        accumulate(clsAt(x0, z1), w01);
+        accumulate(clsAt(x1, z1), w11);
 
-        Vec3 base(verts[i * stride + 6], verts[i * stride + 7], verts[i * stride + 8]);
-        Vec3 maskColor = blended * (1.0f / total);
-        Vec3 mixed = base * (1.0f - total) + maskColor * total;
-        verts[i * stride + 6] = mixed.x;
-        verts[i * stride + 7] = mixed.y;
-        verts[i * stride + 8] = mixed.z;
+        verts[i * stride + 6] = water;
+        verts[i * stride + 7] = urban;
+        verts[i * stride + 8] = forest;
     }
 }
 

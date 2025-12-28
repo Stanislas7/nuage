@@ -42,6 +42,12 @@ void TerrainRenderer::shutdown() {
     m_shader = nullptr;
     m_texturedShader = nullptr;
     m_texture = nullptr;
+    m_textureSettings = TerrainTextureSettings{};
+    m_texGrass = nullptr;
+    m_texForest = nullptr;
+    m_texRock = nullptr;
+    m_texDirt = nullptr;
+    m_texUrban = nullptr;
     m_assets = nullptr;
     m_textured = false;
     m_procedural = false;
@@ -76,6 +82,12 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_mesh = nullptr;
     m_texture = nullptr;
     m_textured = false;
+    m_textureSettings = TerrainTextureSettings{};
+    m_texGrass = nullptr;
+    m_texForest = nullptr;
+    m_texRock = nullptr;
+    m_texDirt = nullptr;
+    m_texUrban = nullptr;
     m_visuals.resetDefaults();
 
     if (configPath.empty()) {
@@ -159,6 +171,7 @@ void TerrainRenderer::setupProcedural(const std::string& configPath) {
                              m_procHeightBase + m_procHeightAmplitude);
     m_visuals.applyConfig(config);
     m_visuals.clamp();
+    applyTextureConfig(config, configPath);
 
     m_textured = false;
     m_procedural = true;
@@ -230,9 +243,110 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
 
     m_visuals.applyConfig(config);
     m_visuals.clamp();
+    applyTextureConfig(config, configPath);
 
     m_textured = false;
     m_compiled = true;
+}
+
+void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std::string& configPath) {
+    m_textureSettings = TerrainTextureSettings{};
+    if (!config.contains("terrainTextures") || !config["terrainTextures"].is_object()) {
+        m_textureSettings.enabled = false;
+        return;
+    }
+
+    const auto& texConfig = config["terrainTextures"];
+    m_textureSettings.enabled = texConfig.value("enabled", true);
+    m_textureSettings.texScale = texConfig.value("texScale", m_textureSettings.texScale);
+    m_textureSettings.detailScale = texConfig.value("detailScale", m_textureSettings.detailScale);
+    m_textureSettings.detailStrength = texConfig.value("detailStrength", m_textureSettings.detailStrength);
+    m_textureSettings.rockSlopeStart = texConfig.value("rockSlopeStart", m_textureSettings.rockSlopeStart);
+    m_textureSettings.rockSlopeEnd = texConfig.value("rockSlopeEnd", m_textureSettings.rockSlopeEnd);
+    m_textureSettings.rockStrength = texConfig.value("rockStrength", m_textureSettings.rockStrength);
+    if (texConfig.contains("waterColor") && texConfig["waterColor"].is_array()
+        && texConfig["waterColor"].size() == 3) {
+        m_textureSettings.waterColor = Vec3(texConfig["waterColor"][0].get<float>(),
+                                            texConfig["waterColor"][1].get<float>(),
+                                            texConfig["waterColor"][2].get<float>());
+    }
+
+    if (!m_assets || !m_textureSettings.enabled) {
+        m_textureSettings.enabled = false;
+        return;
+    }
+
+    std::filesystem::path cfg(configPath);
+    auto resolve = [&](const std::string& p) {
+        if (p.empty()) return p;
+        std::filesystem::path path(p);
+        if (path.is_absolute()) return p;
+        return (cfg.parent_path() / path).string();
+    };
+
+    auto loadTex = [&](const char* key, Texture*& out, const char* name) -> bool {
+        if (!texConfig.contains(key)) {
+            return false;
+        }
+        std::string path = texConfig.value(key, "");
+        if (path.empty()) {
+            return false;
+        }
+        std::string resolved = resolve(path);
+        if (!m_assets->loadTexture(name, resolved, true)) {
+            std::cerr << "[terrain] failed to load texture " << resolved << "\n";
+            return false;
+        }
+        out = m_assets->getTexture(name);
+        return out != nullptr;
+    };
+
+    bool loadedAny = false;
+    loadedAny |= loadTex("grass", m_texGrass, "terrain_grass");
+    loadedAny |= loadTex("forest", m_texForest, "terrain_forest");
+    loadedAny |= loadTex("rock", m_texRock, "terrain_rock");
+    loadedAny |= loadTex("dirt", m_texDirt, "terrain_dirt");
+    loadedAny |= loadTex("urban", m_texUrban, "terrain_urban");
+    if (!loadedAny) {
+        m_textureSettings.enabled = false;
+    }
+}
+
+void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
+    if (!shader) {
+        return;
+    }
+
+    Texture* grass = m_texGrass;
+    Texture* forest = m_texForest ? m_texForest : grass;
+    Texture* rock = m_texRock ? m_texRock : grass;
+    Texture* dirt = m_texDirt ? m_texDirt : grass;
+    Texture* urban = m_texUrban ? m_texUrban : (dirt ? dirt : grass);
+    bool enabled = m_textureSettings.enabled && grass && rock && urban;
+    shader->setBool("uTerrainUseTextures", enabled);
+    shader->setBool("uTerrainUseMasks", useMasks);
+    if (!enabled) {
+        return;
+    }
+
+    shader->setFloat("uTerrainTexScale", m_textureSettings.texScale);
+    shader->setFloat("uTerrainDetailScale", m_textureSettings.detailScale);
+    shader->setFloat("uTerrainDetailStrength", m_textureSettings.detailStrength);
+    shader->setFloat("uTerrainRockSlopeStart", m_textureSettings.rockSlopeStart);
+    shader->setFloat("uTerrainRockSlopeEnd", m_textureSettings.rockSlopeEnd);
+    shader->setFloat("uTerrainRockStrength", m_textureSettings.rockStrength);
+    shader->setVec3("uTerrainWaterColor", m_textureSettings.waterColor);
+
+    grass->bind(0);
+    shader->setInt("uTerrainTexGrass", 0);
+    forest->bind(1);
+    shader->setInt("uTerrainTexForest", 1);
+    rock->bind(2);
+    shader->setInt("uTerrainTexRock", 2);
+    dirt->bind(3);
+    shader->setInt("uTerrainTexDirt", 3);
+    urban->bind(4);
+    shader->setInt("uTerrainTexUrban", 4);
 }
 
 namespace {
@@ -516,6 +630,7 @@ void TerrainRenderer::renderProcedural(const Mat4& vp, const Vec3& sunDir, const
             m_shader->setMat4("uMVP", vp);
             applyDirectionalLighting(m_shader, sunDir);
             m_visuals.bind(m_shader, sunDir, cameraPos);
+            bindTerrainTextures(m_shader, false);
             tile->mesh->draw();
         }
     }
@@ -580,6 +695,7 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
             m_shader->setMat4("uMVP", vp);
             applyDirectionalLighting(m_shader, sunDir);
             m_visuals.bind(m_shader, sunDir, cameraPos);
+            bindTerrainTextures(m_shader, m_compiledMaskResolution > 0);
             tile->mesh->draw();
         }
     }
