@@ -14,6 +14,11 @@
     "fogDistance": 9000.0,
     "desaturate": 0.28,
     "tint": [0.45, 0.52, 0.33],
-    "tintStrength": 0.22
+    "tintStrength": 0.22,
+    "distanceDesatStart": 2000.0,
+    "distanceDesatEnd": 8000.0,
+    "distanceDesatStrength": 0.45,
+    "distanceContrastLoss": 0.35,
+    "fogSunScale": 0.4
   }
 }

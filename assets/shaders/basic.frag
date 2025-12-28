@@ -23,6 +23,10 @@ uniform float uTerrainFogDistance = 12000.0;
 uniform float uTerrainDesaturate = 0.2;
 uniform vec3 uTerrainTint = vec3(0.45, 0.52, 0.33);
 uniform float uTerrainTintStrength = 0.15;
+uniform float uTerrainDistanceDesatStart = 3000.0;
+uniform float uTerrainDistanceDesatEnd = 12000.0;
+uniform float uTerrainDistanceDesatStrength = 0.35;
+uniform float uTerrainDistanceContrastLoss = 0.25;
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -65,6 +69,14 @@ void main() {
     vec3 litColor = baseColor * lighting;
     if (uTerrainShading) {
         float d = distance(uCameraPos, vWorldPos);
+        float distT = clamp((d - uTerrainDistanceDesatStart)
+            / max(uTerrainDistanceDesatEnd - uTerrainDistanceDesatStart, 1.0), 0.0, 1.0);
+        float distDesat = distT * uTerrainDistanceDesatStrength;
+        float distContrast = 1.0 - distT * uTerrainDistanceContrastLoss;
+        float litLuma = dot(litColor, vec3(0.299, 0.587, 0.114));
+        litColor = mix(litColor, vec3(litLuma), distDesat);
+        litColor = (litColor - 0.5) * distContrast + 0.5;
+
         float fog = clamp(d / uTerrainFogDistance, 0.0, 1.0);
         litColor = mix(litColor, uTerrainFogColor, fog);
     }

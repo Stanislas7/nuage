@@ -90,8 +90,18 @@ Optional config (defaults are safe):
   "fogDistance": 12000.0,
   "desaturate": 0.2,
   "tint": [0.45, 0.52, 0.33],
-  "tintStrength": 0.15
+  "tintStrength": 0.15,
+  "distanceDesatStart": 3000.0,
+  "distanceDesatEnd": 12000.0,
+  "distanceDesatStrength": 0.35,
+  "distanceContrastLoss": 0.25,
+  "fogSunScale": 0.35
 }
+```
+
+Optional compiler smoothing (mask edges):
+```
+--mask-smooth 1
 ```
 
 ## How to compile (Stage 1/2)

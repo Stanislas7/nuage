@@ -110,6 +110,11 @@ private:
     float m_terrainDesaturate = 0.2f;
     Vec3 m_terrainTint = Vec3(0.45f, 0.52f, 0.33f);
     float m_terrainTintStrength = 0.15f;
+    float m_terrainDistanceDesatStart = 3000.0f;
+    float m_terrainDistanceDesatEnd = 12000.0f;
+    float m_terrainDistanceDesatStrength = 0.35f;
+    float m_terrainDistanceContrastLoss = 0.25f;
+    float m_terrainFogSunScale = 0.35f;
 };
 
 } // namespace nuage

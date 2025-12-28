@@ -59,6 +59,43 @@ float clamp01(float v) {
     return std::max(0.0f, std::min(1.0f, v));
 }
 
+void smoothMask(std::vector<std::uint8_t>& mask, int res, int passes) {
+    if (passes <= 0 || res <= 0 || mask.empty()) {
+        return;
+    }
+    std::vector<std::uint8_t> scratch(mask.size());
+    for (int pass = 0; pass < passes; ++pass) {
+        for (int z = 0; z < res; ++z) {
+            for (int x = 0; x < res; ++x) {
+                int counts[5] = {0, 0, 0, 0, 0};
+                for (int dz = -1; dz <= 1; ++dz) {
+                    int sz = std::clamp(z + dz, 0, res - 1);
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        int sx = std::clamp(x + dx, 0, res - 1);
+                        std::uint8_t cls = mask[static_cast<size_t>(sz) * res + static_cast<size_t>(sx)];
+                        if (cls <= 4) {
+                            counts[cls] += 1;
+                        }
+                    }
+                }
+                int best = 0;
+                for (int cls = 1; cls <= 4; ++cls) {
+                    if (counts[cls] > counts[best]) {
+                        best = cls;
+                    }
+                }
+                std::uint8_t current = mask[static_cast<size_t>(z) * res + static_cast<size_t>(x)];
+                if (best != 0 && counts[best] >= 5) {
+                    scratch[static_cast<size_t>(z) * res + static_cast<size_t>(x)] = static_cast<std::uint8_t>(best);
+                } else {
+                    scratch[static_cast<size_t>(z) * res + static_cast<size_t>(x)] = current;
+                }
+            }
+        }
+        mask.swap(scratch);
+    }
+}
+
 float bilinearSample(const Heightmap& hm, float x, float y) {
     float fx = std::clamp(x, 0.0f, static_cast<float>(hm.width - 1));
     float fy = std::clamp(y, 0.0f, static_cast<float>(hm.height - 1));
@@ -110,6 +147,7 @@ struct Config {
     float tileSize = 2000.0f;
     int gridResolution = 129;
     int maskResolution = 0;
+    int maskSmooth = 0;
     double xmin = 0.0;
     double ymin = 0.0;
     double xmax = 0.0;
@@ -126,7 +164,7 @@ void printUsage() {
               << "               --grid <cells> --out <dir>\n"
               << "               [--origin-lat <deg>] [--origin-lon <deg>] [--origin-alt <m>]\n"
               << "               [--osm <path> --mask-res <pixels> --xmin <lon> --ymin <lat>\n"
-              << "                --xmax <lon> --ymax <lat>]\n";
+              << "                --xmax <lon> --ymax <lat> --mask-smooth <passes>]\n";
 }
 
 bool parseArgs(int argc, char** argv, Config& cfg) {
@@ -172,6 +210,10 @@ bool parseArgs(int argc, char** argv, Config& cfg) {
             std::string v;
             if (!next(v)) return false;
             cfg.maskResolution = std::stoi(v);
+        } else if (arg == "--mask-smooth") {
+            std::string v;
+            if (!next(v)) return false;
+            cfg.maskSmooth = std::stoi(v);
         } else if (arg == "--xmin") {
             std::string v;
             if (!next(v)) return false;
@@ -755,6 +797,9 @@ int main(int argc, char** argv) {
                 if (bucketIt != polyBuckets.end()) {
                     rasterizePolygonsToMaskList(mask, cfg.maskResolution, tileMinX, tileMinZ,
                                                 cfg.tileSize, allPolys, bucketIt->second);
+                }
+                if (cfg.maskSmooth > 0) {
+                    smoothMask(mask, cfg.maskResolution, cfg.maskSmooth);
                 }
 
                 std::filesystem::path maskPath = tilesDir / ("tile_" + std::to_string(tx) + "_" + std::to_string(ty) + ".mask");
