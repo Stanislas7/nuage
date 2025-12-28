@@ -7,6 +7,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <unordered_map>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -264,8 +265,20 @@ bool pointInPolygon(const std::vector<nuage::Vec2>& poly, float x, float z) {
 }
 
 int classFromTags(const nlohmann::json& tags) {
-    if (tags.contains("landuse")) {
-        std::string v = tags["landuse"].get<std::string>();
+    auto getTag = [&](const char* key) -> std::string {
+        if (!tags.contains(key)) {
+            return {};
+        }
+        const auto& val = tags[key];
+        if (!val.is_string()) {
+            return {};
+        }
+        return val.get<std::string>();
+    };
+
+    std::string landuse = getTag("landuse");
+    if (!landuse.empty()) {
+        std::string v = landuse;
         if (v == "residential" || v == "commercial" || v == "industrial" || v == "retail") {
             return 2;
         }
@@ -278,8 +291,9 @@ int classFromTags(const nlohmann::json& tags) {
         }
         return 4;
     }
-    if (tags.contains("natural")) {
-        std::string v = tags["natural"].get<std::string>();
+    std::string natural = getTag("natural");
+    if (!natural.empty()) {
+        std::string v = natural;
         if (v == "wood" || v == "forest") {
             return 3;
         }
@@ -338,8 +352,13 @@ std::vector<Polygon> loadPolygonsFromGeoJson(const std::string& path, int defaul
         if (!geom.contains("type") || !geom.contains("coordinates")) continue;
 
         int classId = defaultClass;
-        if (useTags && feature.contains("properties") && feature["properties"].contains("tags")) {
-            classId = classFromTags(feature["properties"]["tags"]);
+        if (useTags && feature.contains("properties")) {
+            const auto& props = feature["properties"];
+            if (props.contains("tags") && props["tags"].is_object()) {
+                classId = classFromTags(props["tags"]);
+            } else {
+                classId = classFromTags(props);
+            }
         }
         if (classId == 0) {
             continue;
@@ -431,6 +450,49 @@ bool writeMask(const std::filesystem::path& path, const std::vector<std::uint8_t
     return static_cast<bool>(out);
 }
 
+std::int64_t tileKey(int x, int y) {
+    return (static_cast<std::int64_t>(x) << 32) ^ static_cast<std::uint32_t>(y);
+}
+
+void rasterizePolygonsToMaskList(std::vector<std::uint8_t>& mask, int maskRes,
+                                 float tileMinX, float tileMinZ, float tileSize,
+                                 const std::vector<Polygon>& polys,
+                                 const std::vector<int>& indices) {
+    if (maskRes <= 0 || indices.empty()) return;
+    for (int idx : indices) {
+        const auto& poly = polys[static_cast<size_t>(idx)];
+        if (poly.maxX <= tileMinX || poly.minX >= tileMinX + tileSize ||
+            poly.maxZ <= tileMinZ || poly.minZ >= tileMinZ + tileSize) {
+            continue;
+        }
+        int x0 = static_cast<int>(std::floor((poly.minX - tileMinX) / tileSize * maskRes));
+        int x1 = static_cast<int>(std::ceil((poly.maxX - tileMinX) / tileSize * maskRes));
+        int z0 = static_cast<int>(std::floor((poly.minZ - tileMinZ) / tileSize * maskRes));
+        int z1 = static_cast<int>(std::ceil((poly.maxZ - tileMinZ) / tileSize * maskRes));
+        x0 = std::clamp(x0, 0, maskRes - 1);
+        x1 = std::clamp(x1, 0, maskRes - 1);
+        z0 = std::clamp(z0, 0, maskRes - 1);
+        z1 = std::clamp(z1, 0, maskRes - 1);
+
+        for (int z = z0; z <= z1; ++z) {
+            for (int x = x0; x <= x1; ++x) {
+                float fx = (static_cast<float>(x) + 0.5f) / maskRes;
+                float fz = (static_cast<float>(z) + 0.5f) / maskRes;
+                float worldX = tileMinX + fx * tileSize;
+                float worldZ = tileMinZ + fz * tileSize;
+                if (pointInPolygon(poly.ring, worldX, worldZ)) {
+                    std::uint8_t& cell = mask[z * maskRes + x];
+                    if (poly.classId == 1) {
+                        cell = 1;
+                    } else if (cell == 0) {
+                        cell = static_cast<std::uint8_t>(poly.classId);
+                    }
+                }
+            }
+        }
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -493,6 +555,8 @@ int main(int argc, char** argv) {
 
     std::vector<Polygon> waterPolys;
     std::vector<Polygon> landPolys;
+    std::vector<Polygon> allPolys;
+    std::unordered_map<std::int64_t, std::vector<int>> polyBuckets;
     if (!cfg.osmPath.empty()) {
         std::filesystem::path outDir(cfg.outDir);
         std::filesystem::path tmpDir = outDir / "osm_tmp";
@@ -517,7 +581,8 @@ int main(int argc, char** argv) {
 
         std::ostringstream waterCmd;
         waterCmd << "osmium tags-filter -o \"" << waterPbf.string() << "\" \"" << areaPbf.string()
-                 << "\" w/natural=water w/waterway=riverbank w/water=* w/natural=wetland";
+                 << "\" w/natural=water w/waterway=riverbank w/water=* w/natural=wetland"
+                 << " r/natural=water r/waterway=riverbank r/water=* r/natural=wetland";
         if (!runCommand(waterCmd.str())) {
             std::cerr << "Failed to filter water from OSM.\n";
             return 1;
@@ -525,7 +590,8 @@ int main(int argc, char** argv) {
 
         std::ostringstream landCmd;
         landCmd << "osmium tags-filter -o \"" << landPbf.string() << "\" \"" << areaPbf.string()
-                << "\" w/landuse=* w/natural=wood w/natural=grassland w/natural=heath w/natural=scrub";
+                << "\" w/landuse=* w/natural=wood w/natural=grassland w/natural=heath w/natural=scrub"
+                << " r/landuse=* r/natural=wood r/natural=grassland r/natural=heath r/natural=scrub";
         if (!runCommand(landCmd.str())) {
             std::cerr << "Failed to filter landuse from OSM.\n";
             return 1;
@@ -549,6 +615,35 @@ int main(int argc, char** argv) {
         waterPolys = loadPolygonsFromGeoJson(waterGeo.string(), 1, proj, false);
         std::cout << "Loaded landuse polygons: " << landPolys.size() << "\n";
         std::cout << "Loaded water polygons: " << waterPolys.size() << "\n";
+    }
+
+    if (!landPolys.empty() || !waterPolys.empty()) {
+        allPolys.reserve(landPolys.size() + waterPolys.size());
+        for (const auto& poly : landPolys) {
+            allPolys.push_back(poly);
+        }
+        for (const auto& poly : waterPolys) {
+            allPolys.push_back(poly);
+        }
+
+        for (size_t i = 0; i < allPolys.size(); ++i) {
+            const auto& poly = allPolys[i];
+            int minTx = static_cast<int>(std::floor(poly.minX / cfg.tileSize));
+            int maxTx = static_cast<int>(std::floor(poly.maxX / cfg.tileSize));
+            int minTz = static_cast<int>(std::floor(poly.minZ / cfg.tileSize));
+            int maxTz = static_cast<int>(std::floor(poly.maxZ / cfg.tileSize));
+
+            minTx = std::max(minTx, minTileX);
+            maxTx = std::min(maxTx, maxTileX);
+            minTz = std::max(minTz, minTileZ);
+            maxTz = std::min(maxTz, maxTileZ);
+
+            for (int ty = minTz; ty <= maxTz; ++ty) {
+                for (int tx = minTx; tx <= maxTx; ++tx) {
+                    polyBuckets[tileKey(tx, ty)].push_back(static_cast<int>(i));
+                }
+            }
+        }
     }
 
     for (int ty = minTileZ; ty <= maxTileZ; ++ty) {
@@ -654,12 +749,13 @@ int main(int argc, char** argv) {
             std::filesystem::path metaPath = tilesDir / ("tile_" + std::to_string(tx) + "_" + std::to_string(ty) + ".meta.json");
             writeTileMeta(metaPath, tx, ty, localMinH, localMaxH, cfg.gridResolution);
 
-            if (cfg.maskResolution > 0 && (!landPolys.empty() || !waterPolys.empty())) {
+            if (cfg.maskResolution > 0 && !allPolys.empty()) {
                 std::vector<std::uint8_t> mask(static_cast<size_t>(cfg.maskResolution * cfg.maskResolution), 0);
-                rasterizePolygonsToMask(mask, cfg.maskResolution, tileMinX, tileMinZ, cfg.tileSize, landPolys, 2);
-                rasterizePolygonsToMask(mask, cfg.maskResolution, tileMinX, tileMinZ, cfg.tileSize, landPolys, 3);
-                rasterizePolygonsToMask(mask, cfg.maskResolution, tileMinX, tileMinZ, cfg.tileSize, landPolys, 4);
-                rasterizePolygonsToMask(mask, cfg.maskResolution, tileMinX, tileMinZ, cfg.tileSize, waterPolys, 1);
+                auto bucketIt = polyBuckets.find(tileKey(tx, ty));
+                if (bucketIt != polyBuckets.end()) {
+                    rasterizePolygonsToMaskList(mask, cfg.maskResolution, tileMinX, tileMinZ,
+                                                cfg.tileSize, allPolys, bucketIt->second);
+                }
 
                 std::filesystem::path maskPath = tilesDir / ("tile_" + std::to_string(tx) + "_" + std::to_string(ty) + ".mask");
                 if (!writeMask(maskPath, mask)) {
