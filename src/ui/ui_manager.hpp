@@ -8,6 +8,7 @@
 #include "graphics/shader.hpp"
 #include "math/mat4.hpp"
 #include "core/subsystem.hpp"
+#include "graphics/glad.h"
 #include <vector>
 #include <memory>
 #include <string>
@@ -15,6 +16,10 @@
 namespace nuage {
 
 class App;
+class Aircraft;
+class PauseOverlay;
+class DebugOverlay;
+class HudOverlay;
 
 class UIManager : public Subsystem {
 public:
@@ -22,6 +27,7 @@ public:
     ~UIManager();
 
     void setApp(App* app) { m_app = app; }
+    void setAircraft(Aircraft* aircraft) { m_aircraft = aircraft; }
 
     // Subsystem interface
     void init() override;
@@ -32,6 +38,7 @@ public:
     // Drawing Lifecycle
     void begin();
     void end();
+    void render();
     void drawPersistent();
 
     // Factory methods
@@ -52,8 +59,15 @@ private:
     void buildTextVertexData(const Text& text, std::vector<float>& vertices, Vec3& pos) const;
 
     App* m_app = nullptr;
+    Aircraft* m_aircraft = nullptr;
     std::unique_ptr<Font> m_font;
     Shader* m_shader = nullptr;
+    
+    // Overlays
+    std::unique_ptr<PauseOverlay> m_pauseOverlay;
+    std::unique_ptr<DebugOverlay> m_debugOverlay;
+    std::unique_ptr<HudOverlay> m_hudOverlay;
+
     std::vector<std::unique_ptr<Text>> m_texts;
     std::vector<std::unique_ptr<Button>> m_buttons;
 

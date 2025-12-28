@@ -5,6 +5,7 @@
 namespace nuage {
 
 class Button;
+class UIManager;
 
 /**
  * @brief Logic and visual management for the pause screen.

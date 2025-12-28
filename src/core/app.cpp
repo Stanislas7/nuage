@@ -32,7 +32,7 @@ bool App::init(const AppConfig& config) {
 
     m_subsystems.add(std::make_shared<SimSubsystem>());
 
-    // Load assets BEFORE initializing subsystems that depend on them
+    // Load assets before initializing subsystems that depend on them
     m_assets.loadShader("basic", "assets/shaders/basic.vert", "assets/shaders/basic.frag");
     m_assets.loadShader("textured", "assets/shaders/textured.vert", "assets/shaders/textured.frag");
     m_assets.loadShader("sky", "assets/shaders/sky.vert", "assets/shaders/sky.frag");
@@ -61,6 +61,7 @@ bool App::startFlight(const FlightConfig& config) {
         return false;
     }
 
+    m_ui->setAircraft(&m_session->aircraft());
     setPaused(false);
     return true;
 }
@@ -68,7 +69,7 @@ bool App::startFlight(const FlightConfig& config) {
 void App::endFlight() {
     m_session.reset();
     m_physicsAccumulator = 0.0f;
-    m_debugOverlay.reset();
+    if (m_ui) m_ui->setAircraft(nullptr);
     PropertyBus::global().set(Properties::Sim::DEBUG_VISIBLE, false);
 }
 
@@ -105,11 +106,6 @@ void App::run() {
                 float alpha = m_physicsAccumulator / FIXED_DT;
                 m_session->camera().update(m_deltaTime, m_session->aircraft().player(), alpha);
             }
-
-            bool paused = PropertyBus::global().get(Properties::Sim::PAUSED, false);
-            bool debugVisible = PropertyBus::global().get(Properties::Sim::DEBUG_VISIBLE, false);
-            m_pauseOverlay.update(paused, *m_ui);
-            m_debugOverlay.update(debugVisible, *m_ui);
         }
 
         auto renderStart = clock::now();
@@ -121,16 +117,7 @@ void App::run() {
             m_session->render(alpha);
         }
 
-        m_ui->begin();
-        if (m_session) {
-            bool paused = PropertyBus::global().get(Properties::Sim::PAUSED, false);
-            bool debugVisible = PropertyBus::global().get(Properties::Sim::DEBUG_VISIBLE, false);
-            m_session->drawHUD(*m_ui);
-            m_pauseOverlay.draw(paused, *m_ui);
-            m_debugOverlay.draw(debugVisible, *m_ui);
-        }
-        m_ui->drawPersistent();
-        m_ui->end();
+        m_ui->render();
         auto renderEnd = clock::now();
 
         glfwSwapBuffers(m_window);

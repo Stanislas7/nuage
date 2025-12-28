@@ -1,24 +1,27 @@
 # Nuage Architecture
 
-This note documents the high-level structure so new features can slot into the existing runtime without constant re-explanation.
+This document describes the modular, property-driven architecture of Nuage, inspired by professional flight simulators like FlightGear.
 
-## Runtime loop and telemetry
-- `core::App` owns the GLFW window, main loop, and subsystem wiring. Each frame it polls `Input`, accumulates a fixed-step physics tick (`FIXED_DT = 1/120`), updates the atmosphere and camera, refreshes HUD data, then renders the scene with interpolation to smooth between physics samples (`App::run`, `App::updatePhysics`, and the frame profile logging in `src/core/App.cpp`).
-- The physics step is driven entirely through `PropertyBus` instances owned by each `Aircraft::Instance`. Systems read/write a shared set of named properties (`core/property_paths.hpp`) so every subsystem can exchange orientation, forces, control inputs, environment data, and telemetry without tight coupling.
+## Core Runtime & Subsystems
+- **Subsystem Manager**: `core::App` utilizes a `SubsystemManager` to manage the lifecycle of all major engine components. Each subsystem (`Input`, `UIManager`, `SimSubsystem`) implements a standard interface: `init()`, `update(double dt)`, and `shutdown()`. This allows systems to be added or removed without modifying the core engine loop.
+- **Global Property Tree**: The "nervous system" of the engine is a global `PropertyBus`. Subsystems communicate by reading and writing to standardized property paths (e.g., `controls/flight/elevator`, `velocities/airspeed-kt`). This eliminates direct dependencies between systems; for example, the Input system does not know the Physics system exists.
+- **Main Loop**: `App::run` orchestrates the execution. It updates all subsystems, handles fixed-step physics accumulation (`1/120s`), and manages the rendering lifecycle with state interpolation for visual smoothness.
 
-## Input, controls, and the property bus
-- `Input` owns raw GLFW state and reduces it into `FlightInput` values (pitch, roll, yaw, throttle, etc.). Bindings are defined in `assets/config/controls.json` and normalized against layouts from `assets/config/layouts.json` before the throttle/axis values are written back into the property bus on each physics tick (`src/input/input.cpp`, `assets/config/controls.json`).
-- The `PropertyBus` stores doubles, vectors, and quaternions via string keys so systems such as `JsbsimSystem`, `EnvironmentSystem`, and HUD widgets can read what they need without owning the data.
+## Data Flow
+1. **Input Subsystem**: Polls hardware (GLFW) and publishes normalized control values to the property tree under the `controls/` branch. It also issues simulation commands (e.g., `sim/commands/toggle-camera`).
+2. **Simulation Subsystem**: Manages global simulation state, including `sim/time` and `sim/paused`.
+3. **Physics (JSBSim)**: The `JsbsimSystem` (an `AircraftComponent`) reads control inputs from the property tree and computed values from the `EnvironmentSystem`. After running the FDM, it publishes the resulting telemetry (airspeed, altitude, orientation) back to the property bus.
+4. **UI & HUD**: The `HudOverlay` and other UI elements read telemetry directly from the property tree. They have no knowledge of the underlying physics engine, making the UI purely data-driven.
 
-## Aircraft systems and physics
-- `Aircraft::Instance` is the per-aircraft owner of geometry, state, and systems (`src/aircraft/aircraft_instance.cpp`). Its init path loads a model/texture, spawns `EnvironmentSystem` and `JsbsimSystem`, seeds `position`, `velocity`, and `orientation`, and caches a copy of the previous bus state for interpolation.
-- `EnvironmentSystem` samples the global `Atmosphere` for density and wind, writing `atmosphere/*` entries into the bus that JSBSim or other systems can reuse (`src/aircraft/systems/environment/environment_system.cpp`).
-- `JsbsimSystem` exposes JSBSim as an `AircraftComponent`. It lazily initialises `FGFDMExec`, maps GL input to JSBSim commands/wind, runs `FGFDMExec::Run()`, and pushes JSBSim outputs (position, velocity, orientation matrix, angular velocity, true airspeed) back onto the bus in Nuage/world coordinates (`src/aircraft/systems/physics/jsbsim_system.cpp`).
+## Aircraft System
+- `Aircraft::Instance` is a container for a specific aircraft's state and components. It maintains a local `PropertyBus` for instance-specific data.
+- **Components**: Functional logic (Physics, Engines, Systems) is implemented as `AircraftComponent` subclasses. They are initialized with access to both the instance's state and the global property tree.
 
-## Graphics, UI, and camera
-- `AssetStore` caches shaders, meshes, models, and textures so render code can request them on demand without reloading files (`src/graphics/asset_store.cpp`); models may split into multiple `Mesh` parts and track whether texturing is available.
-- Rendering combines the camera's view (updated relative to the player `Aircraft::Instance` with interpolation) with the aircraft/model transform built from the bus position/orientation. The HUD is drawn by `UIManager`, which owns a font atlas, simple shader, and vertex buffer for text elements (`src/ui/ui_manager.cpp`).
+## Graphics & Assets
+- **AssetStore**: A central repository for shaders, textures, and models. It ensures assets are loaded once and shared across the engine.
+- **Camera**: A flexible camera system (Chase, Orbit) that tracks targets by reading their interpolated position and orientation from the property tree.
+- **Terrain**: Managed by `TerrainRenderer`, which handles tile loading and LOD based on the current camera position.
 
-## Build and asset pipeline
-- `CMakeLists.txt` pulls in GLFW/OpenGL and embeds static JSBSim (disabling unused modules). The build copies `assets/`, JSBSim engines/systems, and any selected `JSBSIM_MODELS` (currently `c172p`) into the binary output directory so runtime loading just needs the `assets/jsbsim` tree.
-- Assets/configs live under `assets/` (controls, layouts, scenery, simulator, terrain). Aircraft definitions reside in `assets/config/aircraft/` and only need to describe mesh spawn data plus the `jsbsim` block; physics/lift/engine sections are ignored when JSBSim is active because `JsbsimSystem` now owns the dynamics.
+## Configuration
+- **Standardized Paths**: Nuage uses a hierarchical property naming convention (e.g., `controls/engines/current/throttle`).
+- **JSON Configs**: Aircraft, controls, and simulator settings are defined in JSON files in `assets/config/`, allowing for rapid iteration without recompilation.

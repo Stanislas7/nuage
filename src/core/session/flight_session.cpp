@@ -29,8 +29,6 @@ bool FlightSession::init() {
     m_terrain.init(assets);
     m_terrain.setup(m_config.terrainPath, assets);
 
-    setupHUD();
-
     if (!m_config.aircraftPath.empty()) {
         m_aircraft.spawnPlayer(m_config.aircraftPath);
     }
@@ -53,13 +51,6 @@ void FlightSession::render(float alpha) {
     m_terrain.render(vp, sunDir, m_camera.position());
     
     m_aircraft.render(vp, alpha, sunDir);
-}
-
-void FlightSession::setupHUD() {
-}
-
-void FlightSession::drawHUD(UIManager& ui) {
-    m_hud.draw(ui, m_aircraft);
 }
 
 } // namespace nuage

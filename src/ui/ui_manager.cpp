@@ -1,6 +1,12 @@
 #include "ui/ui_manager.hpp"
+#include "ui/overlays/pause_overlay.hpp"
+#include "ui/overlays/debug_overlay.hpp"
+#include "ui/overlays/hud_overlay.hpp"
 #include "core/app.hpp"
+#include "core/properties/property_bus.hpp"
+#include "core/properties/property_paths.hpp"
 #include "graphics/glad.h"
+#include "aircraft/aircraft.hpp"
 #include <GLFW/glfw3.h>
 #include <array>
 #include <algorithm>
@@ -15,6 +21,10 @@ UIManager::~UIManager() {
 
 void UIManager::init() {
     if (!m_app) return;
+
+    m_pauseOverlay = std::make_unique<PauseOverlay>();
+    m_debugOverlay = std::make_unique<DebugOverlay>();
+    m_hudOverlay = std::make_unique<HudOverlay>();
 
     int width, height;
     glfwGetFramebufferSize(m_app->window(), &width, &height);
@@ -71,6 +81,10 @@ void UIManager::shutdown() {
     m_font.reset();
     m_shader = nullptr;
 
+    m_pauseOverlay.reset();
+    m_debugOverlay.reset();
+    m_hudOverlay.reset();
+
     if (m_vao) glDeleteVertexArrays(1, &m_vao);
     if (m_vbo) glDeleteBuffers(1, &m_vbo);
     if (m_whiteTexture) glDeleteTextures(1, &m_whiteTexture);
@@ -82,6 +96,13 @@ void UIManager::shutdown() {
 
 void UIManager::update(double dt) {
     if (!m_app) return;
+
+    bool paused = PropertyBus::global().get(Properties::Sim::PAUSED, false);
+    bool debugVisible = PropertyBus::global().get(Properties::Sim::DEBUG_VISIBLE, false);
+    
+    if (m_pauseOverlay) m_pauseOverlay->update(paused, *this);
+    if (m_debugOverlay) m_debugOverlay->update(debugVisible, *this);
+
     int width, height;
     glfwGetFramebufferSize(m_app->window(), &width, &height);
 
@@ -115,6 +136,26 @@ void UIManager::update(double dt) {
     }
 }
 
+void UIManager::render() {
+    begin();
+
+    // draw Simulation hud (if aircraft is present)
+    if (m_aircraft && m_hudOverlay) {
+        m_hudOverlay->draw(*this, *m_aircraft);
+    }
+
+    // draw overlays
+    bool paused = PropertyBus::global().get(Properties::Sim::PAUSED, false);
+    bool debugVisible = PropertyBus::global().get(Properties::Sim::DEBUG_VISIBLE, false);
+
+    if (m_pauseOverlay) m_pauseOverlay->draw(paused, *this);
+    if (m_debugOverlay) m_debugOverlay->draw(debugVisible, *this);
+
+    drawPersistent();
+
+    end();
+}
+
 void UIManager::begin() {
     if (!m_shader || !m_font) return;
 
@@ -135,7 +176,7 @@ void UIManager::end() {
 }
 
 void UIManager::drawPersistent() {
-    // 1. Draw Buttons
+    // draw buttons
     for (const auto& btn : m_buttons) {
         if (!btn->visible) continue;
         Vec3 fillColor = btn->isHovered() ? btn->getHoverColor() : btn->color;
@@ -181,7 +222,7 @@ void UIManager::drawPersistent() {
         drawText(btn->getText(), tx, ty, Anchor::TopLeft, btn->scale, Vec3(1, 1, 1), 1.0f);
     }
 
-    // 2. Draw Texts
+    // draw texts
     for (const auto& text : m_texts) {
         if (!text || !text->visible) continue;
         if (text->getContent().empty()) continue;

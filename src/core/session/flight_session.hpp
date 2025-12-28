@@ -25,7 +25,6 @@ public:
     bool init();
     void update(float dt);
     void render(float alpha);
-    void drawHUD(UIManager& ui);
 
     Aircraft& aircraft() { return m_aircraft; }
     Camera& camera() { return m_camera; }

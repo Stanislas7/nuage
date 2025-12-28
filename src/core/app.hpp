@@ -74,8 +74,6 @@ private:
     std::shared_ptr<Input> m_input;
     std::shared_ptr<UIManager> m_ui;
     AssetStore m_assets;
-    PauseOverlay m_pauseOverlay;
-    DebugOverlay m_debugOverlay;
     // Active Flight Session
     std::unique_ptr<FlightSession> m_session;
 

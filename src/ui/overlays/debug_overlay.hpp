@@ -5,6 +5,7 @@
 namespace nuage {
 
 class Button;
+class UIManager;
 
 class DebugOverlay {
 public:

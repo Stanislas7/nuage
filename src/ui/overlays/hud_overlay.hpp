@@ -5,6 +5,7 @@
 namespace nuage {
 
 class Aircraft;
+class UIManager;
 
 class HudOverlay {
 public:
