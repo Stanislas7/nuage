@@ -213,7 +213,7 @@ void UIManager::drawPersistent() {
                             btn->getCornerRadius(), fillColor, 1.0f, btn->anchor);
         }
 
-        Text tempText(btn->getText(), m_font.get(), m_app);
+        Text tempText(btn->getText(), m_font.get());
         tempText.scaleVal(btn->scale);
         Vec3 textSize = tempText.getSize();
         Vec3 bPos = btn->getAnchoredPosition(m_windowWidth, m_windowHeight);
@@ -312,7 +312,7 @@ void UIManager::drawText(const std::string& content, float x, float y, Anchor an
                          float scale, const Vec3& color, float alpha) {
     if (content.empty() || !m_font || !m_shader) return;
 
-    Text text(content, m_font.get(), m_app);
+    Text text(content, m_font.get());
     text.pos(x, y).scaleVal(scale).anchorMode(anchor);
 
     Vec3 pos = text.getAnchoredPosition(m_windowWidth, m_windowHeight);
@@ -335,12 +335,12 @@ void UIManager::drawText(const std::string& content, float x, float y, Anchor an
 }
 
 Text& UIManager::text(const std::string& content) {
-    m_texts.push_back(std::make_unique<Text>(content, m_font.get(), m_app));
+    m_texts.push_back(std::make_unique<Text>(content, m_font.get()));
     return *m_texts.back();
 }
 
 Button& UIManager::button(const std::string& text) {
-    m_buttons.push_back(std::make_unique<Button>(text, m_font.get(), m_app));
+    m_buttons.push_back(std::make_unique<Button>(text, m_font.get()));
     return *m_buttons.back();
 }
 

@@ -6,12 +6,11 @@
 namespace nuage {
 
 class Font;
-class App;
 struct Vec3;
 
 class Text : public UIElement {
 public:
-    Text(const std::string& content, Font* font, App* app);
+    Text(const std::string& content, Font* font);
     ~Text() = default;
 
     Text& content(const std::string& text);
@@ -23,7 +22,6 @@ public:
 private:
     std::string m_content;
     Font* m_font = nullptr;
-    App* m_app = nullptr;
 };
 
 }

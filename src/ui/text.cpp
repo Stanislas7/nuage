@@ -1,12 +1,11 @@
 #include "ui/text.hpp"
 #include "ui/font/font.hpp"
-#include "core/app.hpp"
 #include <GLFW/glfw3.h>
 
 namespace nuage {
 
-Text::Text(const std::string& content, Font* font, App* app)
-    : m_content(content), m_font(font), m_app(app) {
+Text::Text(const std::string& content, Font* font)
+    : m_content(content), m_font(font) {
 }
 
 Text& Text::content(const std::string& text) {

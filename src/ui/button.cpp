@@ -1,11 +1,10 @@
 #include "ui/button.hpp"
 #include "ui/font/font.hpp"
-#include "core/app.hpp"
 
 namespace nuage {
 
-Button::Button(const std::string& text, Font* font, App* app)
-    : m_text(text), m_font(font), m_app(app) {
+Button::Button(const std::string& text, Font* font)
+    : m_text(text), m_font(font) {
     color = Vec3(0.5f, 0.5f, 0.5f); // Default background color
 }
 
