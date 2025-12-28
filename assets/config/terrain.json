@@ -2,5 +2,18 @@
   "compiledManifest": "../terrain/compiled/manifest.json",
   "compiledVisibleRadius": 1,
   "compiledMaxLoadsPerFrame": 2,
-  "compiledDebugLog": true
+  "compiledDebugLog": true,
+  "terrainVisuals": {
+    "heightMin": 0.0,
+    "heightMax": 2000.0,
+    "noiseScale": 0.0012,
+    "noiseStrength": 0.45,
+    "slopeStart": 0.18,
+    "slopeEnd": 0.55,
+    "slopeDarken": 0.45,
+    "fogDistance": 9000.0,
+    "desaturate": 0.28,
+    "tint": [0.45, 0.52, 0.33],
+    "tintStrength": 0.22
+  }
 }

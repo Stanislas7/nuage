@@ -17,6 +17,10 @@
 
 namespace nuage {
 
+namespace {
+Vec3 terrainFogColor(const Vec3& sunDir);
+}
+
 void TerrainRenderer::init(AssetStore& assets) {
     m_shader = assets.getShader("basic");
     m_texturedShader = assets.getShader("textured");
@@ -35,6 +39,17 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_mesh = nullptr;
     m_texture = nullptr;
     m_textured = false;
+    m_terrainHeightMin = 0.0f;
+    m_terrainHeightMax = 1500.0f;
+    m_terrainNoiseScale = 0.002f;
+    m_terrainNoiseStrength = 0.3f;
+    m_terrainSlopeStart = 0.3f;
+    m_terrainSlopeEnd = 0.7f;
+    m_terrainSlopeDarken = 0.3f;
+    m_terrainFogDistance = 12000.0f;
+    m_terrainDesaturate = 0.2f;
+    m_terrainTint = Vec3(0.45f, 0.52f, 0.33f);
+    m_terrainTintStrength = 0.15f;
 
     if (configPath.empty()) {
         auto terrainData = MeshBuilder::terrain(20000.0f, 40);
@@ -80,6 +95,20 @@ void TerrainRenderer::render(const Mat4& vp, const Vec3& sunDir, const Vec3& cam
     shader->use();
     shader->setMat4("uMVP", vp);
     applyDirectionalLighting(shader, sunDir);
+    shader->setBool("uTerrainShading", true);
+    shader->setVec3("uCameraPos", cameraPos);
+    shader->setVec3("uTerrainFogColor", terrainFogColor(sunDir));
+    shader->setFloat("uTerrainHeightMin", m_terrainHeightMin);
+    shader->setFloat("uTerrainHeightMax", m_terrainHeightMax);
+    shader->setFloat("uTerrainNoiseScale", m_terrainNoiseScale);
+    shader->setFloat("uTerrainNoiseStrength", m_terrainNoiseStrength);
+    shader->setFloat("uTerrainSlopeStart", m_terrainSlopeStart);
+    shader->setFloat("uTerrainSlopeEnd", m_terrainSlopeEnd);
+    shader->setFloat("uTerrainSlopeDarken", m_terrainSlopeDarken);
+    shader->setFloat("uTerrainFogDistance", m_terrainFogDistance);
+    shader->setFloat("uTerrainDesaturate", m_terrainDesaturate);
+    shader->setVec3("uTerrainTint", m_terrainTint);
+    shader->setFloat("uTerrainTintStrength", m_terrainTintStrength);
     if (m_textured && m_texture) {
         m_texture->bind(0);
         shader->setInt("uTexture", 0);
@@ -111,6 +140,33 @@ void TerrainRenderer::setupProcedural(const std::string& configPath) {
     m_procLoadsPerFrame = std::max(1, m_procLoadsPerFrame);
     m_procTileSizeMeters = std::max(1.0f, m_procTileSizeMeters);
     m_procHeightAmplitude = std::max(0.0f, m_procHeightAmplitude);
+
+    m_terrainHeightMin = m_procHeightBase - m_procHeightAmplitude;
+    m_terrainHeightMax = m_procHeightBase + m_procHeightAmplitude;
+    if (config.contains("terrainVisuals") && config["terrainVisuals"].is_object()) {
+        const auto& visuals = config["terrainVisuals"];
+        m_terrainHeightMin = visuals.value("heightMin", m_terrainHeightMin);
+        m_terrainHeightMax = visuals.value("heightMax", m_terrainHeightMax);
+        m_terrainNoiseScale = visuals.value("noiseScale", m_terrainNoiseScale);
+        m_terrainNoiseStrength = visuals.value("noiseStrength", m_terrainNoiseStrength);
+        m_terrainSlopeStart = visuals.value("slopeStart", m_terrainSlopeStart);
+        m_terrainSlopeEnd = visuals.value("slopeEnd", m_terrainSlopeEnd);
+        m_terrainSlopeDarken = visuals.value("slopeDarken", m_terrainSlopeDarken);
+        m_terrainFogDistance = visuals.value("fogDistance", m_terrainFogDistance);
+        m_terrainDesaturate = visuals.value("desaturate", m_terrainDesaturate);
+        m_terrainTintStrength = visuals.value("tintStrength", m_terrainTintStrength);
+        if (visuals.contains("tint") && visuals["tint"].is_array() && visuals["tint"].size() == 3) {
+            m_terrainTint = Vec3(
+                visuals["tint"][0].get<float>(),
+                visuals["tint"][1].get<float>(),
+                visuals["tint"][2].get<float>()
+            );
+        }
+    }
+    if (m_terrainHeightMax <= m_terrainHeightMin) {
+        m_terrainHeightMax = m_terrainHeightMin + 1.0f;
+    }
+    m_terrainFogDistance = std::max(1.0f, m_terrainFogDistance);
 
     m_textured = false;
     m_procedural = true;
@@ -180,6 +236,31 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
         return;
     }
 
+    if (config.contains("terrainVisuals") && config["terrainVisuals"].is_object()) {
+        const auto& visuals = config["terrainVisuals"];
+        m_terrainHeightMin = visuals.value("heightMin", m_terrainHeightMin);
+        m_terrainHeightMax = visuals.value("heightMax", m_terrainHeightMax);
+        m_terrainNoiseScale = visuals.value("noiseScale", m_terrainNoiseScale);
+        m_terrainNoiseStrength = visuals.value("noiseStrength", m_terrainNoiseStrength);
+        m_terrainSlopeStart = visuals.value("slopeStart", m_terrainSlopeStart);
+        m_terrainSlopeEnd = visuals.value("slopeEnd", m_terrainSlopeEnd);
+        m_terrainSlopeDarken = visuals.value("slopeDarken", m_terrainSlopeDarken);
+        m_terrainFogDistance = visuals.value("fogDistance", m_terrainFogDistance);
+        m_terrainDesaturate = visuals.value("desaturate", m_terrainDesaturate);
+        m_terrainTintStrength = visuals.value("tintStrength", m_terrainTintStrength);
+        if (visuals.contains("tint") && visuals["tint"].is_array() && visuals["tint"].size() == 3) {
+            m_terrainTint = Vec3(
+                visuals["tint"][0].get<float>(),
+                visuals["tint"][1].get<float>(),
+                visuals["tint"][2].get<float>()
+            );
+        }
+    }
+    if (m_terrainHeightMax <= m_terrainHeightMin) {
+        m_terrainHeightMax = m_terrainHeightMin + 1.0f;
+    }
+    m_terrainFogDistance = std::max(1.0f, m_terrainFogDistance);
+
     m_textured = false;
     m_compiled = true;
 }
@@ -197,6 +278,31 @@ Vec3 heightColorLocal(float t) {
     }
     float k = (t - 0.7f) / 0.3f;
     return Vec3(0.55f + 0.35f * k, 0.5f + 0.35f * k, 0.45f + 0.3f * k);
+}
+
+float smoothstepLocal(float edge0, float edge1, float x) {
+    float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+    return t * t * (3.0f - 2.0f * t);
+}
+
+Vec3 mixColor(const Vec3& a, const Vec3& b, float t) {
+    return a * (1.0f - t) + b * t;
+}
+
+Vec3 terrainFogColor(const Vec3& sunDir) {
+    Vec3 dir = sunDir.normalized();
+    float elevation = std::clamp(dir.y, -1.0f, 1.0f);
+    float dayFactor = smoothstepLocal(-0.25f, 0.35f, elevation);
+    float duskFactor = smoothstepLocal(-0.35f, 0.12f, elevation)
+        * (1.0f - smoothstepLocal(0.15f, 0.5f, elevation));
+
+    Vec3 horizonDay(0.72f, 0.82f, 0.94f);
+    Vec3 horizonNight(0.04f, 0.06f, 0.12f);
+    Vec3 horizonDusk(0.96f, 0.55f, 0.32f);
+
+    Vec3 horizon = mixColor(horizonNight, horizonDay, dayFactor);
+    horizon = mixColor(horizon, horizonDusk, duskFactor);
+    return horizon;
 }
 }
 
@@ -260,10 +366,10 @@ bool TerrainRenderer::loadCompiledMask(const std::string& path, int expectedRes,
 
 Vec3 TerrainRenderer::maskClassColor(std::uint8_t cls) const {
     switch (cls) {
-        case 1: return Vec3(0.1f, 0.35f, 0.8f);
-        case 2: return Vec3(0.6f, 0.6f, 0.6f);
-        case 3: return Vec3(0.1f, 0.5f, 0.1f);
-        case 4: return Vec3(0.55f, 0.7f, 0.25f);
+        case 1: return Vec3(0.14f, 0.32f, 0.55f);
+        case 2: return Vec3(0.56f, 0.54f, 0.5f);
+        case 3: return Vec3(0.2f, 0.42f, 0.22f);
+        case 4: return Vec3(0.46f, 0.55f, 0.32f);
         default: return Vec3(1.0f, 1.0f, 1.0f);
     }
 }
@@ -281,16 +387,46 @@ void TerrainRenderer::applyMaskToVerts(std::vector<float>& verts, const std::vec
         float pz = verts[i * stride + 2];
         float fx = (px - tileMinX) / tileSize;
         float fz = (pz - tileMinZ) / tileSize;
-        int mx = std::clamp(static_cast<int>(std::floor(fx * maskRes)), 0, maskRes - 1);
-        int mz = std::clamp(static_cast<int>(std::floor(fz * maskRes)), 0, maskRes - 1);
-        std::uint8_t cls = mask[mz * maskRes + mx];
-        if (cls == 0) {
+        float mx = fx * (maskRes - 1);
+        float mz = fz * (maskRes - 1);
+        int x0 = std::clamp(static_cast<int>(std::floor(mx)), 0, maskRes - 1);
+        int z0 = std::clamp(static_cast<int>(std::floor(mz)), 0, maskRes - 1);
+        int x1 = std::min(x0 + 1, maskRes - 1);
+        int z1 = std::min(z0 + 1, maskRes - 1);
+        float tx = mx - static_cast<float>(x0);
+        float tz = mz - static_cast<float>(z0);
+
+        auto clsAt = [&](int x, int z) {
+            return mask[static_cast<size_t>(z) * maskRes + static_cast<size_t>(x)];
+        };
+
+        float w00 = (1.0f - tx) * (1.0f - tz);
+        float w10 = tx * (1.0f - tz);
+        float w01 = (1.0f - tx) * tz;
+        float w11 = tx * tz;
+
+        float total = 0.0f;
+        Vec3 blended(0.0f, 0.0f, 0.0f);
+
+        std::uint8_t c00 = clsAt(x0, z0);
+        if (c00 != 0) { blended = blended + maskClassColor(c00) * w00; total += w00; }
+        std::uint8_t c10 = clsAt(x1, z0);
+        if (c10 != 0) { blended = blended + maskClassColor(c10) * w10; total += w10; }
+        std::uint8_t c01 = clsAt(x0, z1);
+        if (c01 != 0) { blended = blended + maskClassColor(c01) * w01; total += w01; }
+        std::uint8_t c11 = clsAt(x1, z1);
+        if (c11 != 0) { blended = blended + maskClassColor(c11) * w11; total += w11; }
+
+        if (total <= 0.0f) {
             continue;
         }
-        Vec3 color = maskClassColor(cls);
-        verts[i * stride + 6] = color.x;
-        verts[i * stride + 7] = color.y;
-        verts[i * stride + 8] = color.z;
+
+        Vec3 base(verts[i * stride + 6], verts[i * stride + 7], verts[i * stride + 8]);
+        Vec3 maskColor = blended * (1.0f / total);
+        Vec3 mixed = base * (1.0f - total) + maskColor * total;
+        verts[i * stride + 6] = mixed.x;
+        verts[i * stride + 7] = mixed.y;
+        verts[i * stride + 8] = mixed.z;
     }
 }
 
@@ -533,6 +669,20 @@ void TerrainRenderer::renderProcedural(const Mat4& vp, const Vec3& sunDir, const
             m_shader->use();
             m_shader->setMat4("uMVP", vp);
             applyDirectionalLighting(m_shader, sunDir);
+            m_shader->setBool("uTerrainShading", true);
+            m_shader->setVec3("uCameraPos", cameraPos);
+            m_shader->setVec3("uTerrainFogColor", terrainFogColor(sunDir));
+            m_shader->setFloat("uTerrainHeightMin", m_terrainHeightMin);
+            m_shader->setFloat("uTerrainHeightMax", m_terrainHeightMax);
+            m_shader->setFloat("uTerrainNoiseScale", m_terrainNoiseScale);
+            m_shader->setFloat("uTerrainNoiseStrength", m_terrainNoiseStrength);
+            m_shader->setFloat("uTerrainSlopeStart", m_terrainSlopeStart);
+            m_shader->setFloat("uTerrainSlopeEnd", m_terrainSlopeEnd);
+            m_shader->setFloat("uTerrainSlopeDarken", m_terrainSlopeDarken);
+            m_shader->setFloat("uTerrainFogDistance", m_terrainFogDistance);
+            m_shader->setFloat("uTerrainDesaturate", m_terrainDesaturate);
+            m_shader->setVec3("uTerrainTint", m_terrainTint);
+            m_shader->setFloat("uTerrainTintStrength", m_terrainTintStrength);
             tile->mesh->draw();
         }
     }
@@ -596,6 +746,20 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
             m_shader->use();
             m_shader->setMat4("uMVP", vp);
             applyDirectionalLighting(m_shader, sunDir);
+            m_shader->setBool("uTerrainShading", true);
+            m_shader->setVec3("uCameraPos", cameraPos);
+            m_shader->setVec3("uTerrainFogColor", terrainFogColor(sunDir));
+            m_shader->setFloat("uTerrainHeightMin", m_terrainHeightMin);
+            m_shader->setFloat("uTerrainHeightMax", m_terrainHeightMax);
+            m_shader->setFloat("uTerrainNoiseScale", m_terrainNoiseScale);
+            m_shader->setFloat("uTerrainNoiseStrength", m_terrainNoiseStrength);
+            m_shader->setFloat("uTerrainSlopeStart", m_terrainSlopeStart);
+            m_shader->setFloat("uTerrainSlopeEnd", m_terrainSlopeEnd);
+            m_shader->setFloat("uTerrainSlopeDarken", m_terrainSlopeDarken);
+            m_shader->setFloat("uTerrainFogDistance", m_terrainFogDistance);
+            m_shader->setFloat("uTerrainDesaturate", m_terrainDesaturate);
+            m_shader->setVec3("uTerrainTint", m_terrainTint);
+            m_shader->setFloat("uTerrainTintStrength", m_terrainTintStrength);
             tile->mesh->draw();
         }
     }

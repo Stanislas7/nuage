@@ -99,6 +99,23 @@ Acceptance tests
 Top risks + de-risk
 - Risk: OSM parsing complexity => use a single library and keep mask resolution low
 
+## Stage 2.5: Terrain visuals (shader-only)
+Purpose: improve terrain legibility without textures or heavier data.
+
+Runtime changes
+- Add low-frequency color variation (noise tint)
+- Add altitude-based tinting
+- Darken steep slopes to soften landuse edges
+- Add distance haze toward sky color
+
+Acceptance tests
+- Reduced "paint bucket" look on large landuse blocks
+- Landuse edges less harsh on hills
+- Distant terrain blends naturally without banding
+
+Top risks + de-risk
+- Risk: values too strong => expose tweakable shader params in config
+
 ## Stage 3: Optional imagery (offline only)
 Purpose: optional texture layer, still offline compiled and streamed.
 

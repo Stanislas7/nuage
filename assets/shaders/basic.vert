@@ -5,6 +5,7 @@ layout(location = 2) in vec3 aColor;
 
 out vec3 vColor;
 out vec3 vNormal;
+out vec3 vWorldPos;
 
 uniform mat4 uMVP;
 
@@ -12,4 +13,5 @@ void main() {
     gl_Position = uMVP * vec4(aPos, 1.0);
     vColor = aColor;
     vNormal = aNormal;
+    vWorldPos = aPos;
 }

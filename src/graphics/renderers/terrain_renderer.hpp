@@ -98,6 +98,18 @@ private:
     bool m_procDebugBorders = true;
     bool m_procDebugLog = true;
     int m_procTilesLoadedThisFrame = 0;
+
+    float m_terrainHeightMin = 0.0f;
+    float m_terrainHeightMax = 1500.0f;
+    float m_terrainNoiseScale = 0.002f;
+    float m_terrainNoiseStrength = 0.3f;
+    float m_terrainSlopeStart = 0.3f;
+    float m_terrainSlopeEnd = 0.7f;
+    float m_terrainSlopeDarken = 0.3f;
+    float m_terrainFogDistance = 12000.0f;
+    float m_terrainDesaturate = 0.2f;
+    Vec3 m_terrainTint = Vec3(0.45f, 0.52f, 0.33f);
+    float m_terrainTintStrength = 0.15f;
 };
 
 } // namespace nuage
