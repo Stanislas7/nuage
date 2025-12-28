@@ -9,17 +9,17 @@
 namespace nuage {
 
 namespace {
-constexpr float kPanelWidth = 560.0f;
-constexpr float kPanelHeight = 220.0f;
+constexpr float kPanelWidth = 640.0f;
+constexpr float kPanelHeight = 260.0f;
 constexpr float kPanelRadius = 18.0f;
 constexpr float kPanelBottomMargin = 80.0f;
-constexpr float kButtonWidth = 180.0f;
+constexpr float kButtonWidth = 220.0f;
 constexpr float kButtonHeight = 46.0f;
 constexpr float kButtonSpacing = 32.0f;
-constexpr float kRowGap = 20.0f;
+constexpr float kRowGap = 26.0f;
 constexpr float kRow1Offset = 28.0f;
-constexpr float kTitleOffset = -78.0f;
-constexpr float kCurrentOffset = -52.0f;
+constexpr float kTitleOffset = -96.0f;
+constexpr float kCurrentOffset = -56.0f;
 const Vec3 kPanelColor = Vec3(0.08f, 0.1f, 0.14f);
 const Vec3 kPanelHoverColor = Vec3(0.11f, 0.13f, 0.18f);
 const Vec3 kButtonBlue = Vec3(0.12f, 0.45f, 0.86f);
@@ -49,10 +49,7 @@ void PauseOverlay::draw(bool paused, UIManager& ui) {
 
     // Draw text
     ui.drawText("PAUSED", 0, -220, Anchor::Center, 1.5f, Vec3(1, 1, 1), 1.0f);
-    ui.drawText("Press SPACE to resume", 0, -160, Anchor::Center, 0.6f, Vec3(1, 1, 1), 0.85f);
 
-    ui.drawRoundedRect(0, m_panelCenterY, kPanelWidth, kPanelHeight, kPanelRadius,
-                       kPanelColor, 0.75f, Anchor::Center);
     ui.drawText("Time of Day Presets", 0, m_panelCenterY + kTitleOffset, Anchor::Center, 0.6f, Vec3(1, 1, 1), 1.0f);
 
     App* app = ui.app();
