@@ -1,6 +1,6 @@
 {
   "tileId": [-3, -4],
-  "gridResolution": 129,
-  "minHeight": 100.176,
-  "maxHeight": 287.661
+  "gridResolution": 257,
+  "minHeight": -0.35827,
+  "maxHeight": 95.7184
 }
