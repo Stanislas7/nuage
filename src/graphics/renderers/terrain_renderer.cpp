@@ -47,7 +47,8 @@ std::uint32_t hashTileSeed(int x, int y, int seed) {
 }
 
 bool sampleGrid(const std::vector<float>& gridVerts, int res, float tileMinX, float tileMinZ, float tileSize,
-                float worldX, float worldZ, float& outHeight, Vec3& outNormal, float& outWater) {
+                float worldX, float worldZ, float& outHeight, Vec3& outNormal,
+                float& outWater, float& outUrban, float& outForest) {
     if (res < 2 || tileSize <= 0.0f) {
         return false;
     }
@@ -92,6 +93,22 @@ bool sampleGrid(const std::vector<float>& gridVerts, int res, float tileMinX, fl
     float w0 = lerp(w00, w10, tx);
     float w1 = lerp(w01, w11, tx);
     outWater = lerp(w0, w1, tz);
+
+    float u00 = sample(x0, z0, 7);
+    float u10 = sample(x1, z0, 7);
+    float u01 = sample(x0, z1, 7);
+    float u11 = sample(x1, z1, 7);
+    float u0 = lerp(u00, u10, tx);
+    float u1 = lerp(u01, u11, tx);
+    outUrban = lerp(u0, u1, tz);
+
+    float f00 = sample(x0, z0, 8);
+    float f10 = sample(x1, z0, 8);
+    float f01 = sample(x0, z1, 8);
+    float f11 = sample(x1, z1, 8);
+    float f0 = lerp(f00, f10, tx);
+    float f1 = lerp(f01, f11, tx);
+    outForest = lerp(f0, f1, tz);
 
     return true;
 }
@@ -139,7 +156,10 @@ std::unique_ptr<Mesh> buildTreeMeshForTile(const std::vector<float>& gridVerts, 
         float height = 0.0f;
         Vec3 normal;
         float water = 0.0f;
-        if (!sampleGrid(gridVerts, res, tileMinX, tileMinZ, tileSize, x, z, height, normal, water)) {
+        float urban = 0.0f;
+        float forest = 0.0f;
+        if (!sampleGrid(gridVerts, res, tileMinX, tileMinZ, tileSize, x, z,
+                        height, normal, water, urban, forest)) {
             continue;
         }
         float slope = 1.0f - std::clamp(normal.y, 0.0f, 1.0f);
@@ -148,6 +168,15 @@ std::unique_ptr<Mesh> buildTreeMeshForTile(const std::vector<float>& gridVerts, 
         }
         if (useWaterMask && water > 0.35f) {
             continue;
+        }
+        if (urban > 0.35f) {
+            continue;
+        }
+        if (useWaterMask) {
+            float forestChance = std::clamp(forest, 0.0f, 1.0f);
+            if (rand01(rng) > forestChance) {
+                continue;
+            }
         }
 
         float treeHeight = lerp(minHeight, maxHeight, rand01(rng));
