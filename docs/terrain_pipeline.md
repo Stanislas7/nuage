@@ -122,6 +122,45 @@ Optional compiler smoothing (mask edges):
 --mask-smooth 1
 ```
 
+## Terrain textures (runtime)
+Textures are blended using masks (water/urban/forest/grass) plus slope-based rock and procedural dirt.
+Extra controls help push a more "sim" look without ortho:
+- **Macro variation:** large-scale patchiness to avoid flat repeats.
+- **Micro variation:** high-frequency contrast to reduce blur.
+- **Grass/forest/urban tint pairs:** mix between lush/dry and cool/warm looks.
+- **Water detail:** procedural noise to break up flat water color.
+
+Example config:
+```
+"terrainTextures": {
+  "enabled": true,
+  "grass": "../textures/terrain/sparse_grass_diff_2k.jpg",
+  "forest": "../textures/terrain/forest_ground_04_diff_2k.png",
+  "rock": "../textures/terrain/rock_05_diff_2k.png",
+  "dirt": "../textures/terrain/dirt_diff_2k.jpg",
+  "urban": "../textures/terrain/asphalt_02_diff_2k.png",
+  "texScale": 0.04,
+  "detailScale": 0.18,
+  "detailStrength": 0.26,
+  "macroScale": 0.0008,
+  "macroStrength": 0.32,
+  "grassTintA": [0.78, 0.98, 0.65],
+  "grassTintB": [0.5, 0.7, 0.45],
+  "grassTintStrength": 0.45,
+  "forestTintA": [0.62, 0.78, 0.55],
+  "forestTintB": [0.45, 0.6, 0.4],
+  "forestTintStrength": 0.25,
+  "urbanTintA": [0.95, 0.95, 0.96],
+  "urbanTintB": [0.7, 0.72, 0.75],
+  "urbanTintStrength": 0.25,
+  "microScale": 0.3,
+  "microStrength": 0.18,
+  "waterDetailScale": 0.12,
+  "waterDetailStrength": 0.3,
+  "waterColor": [0.14, 0.32, 0.55]
+}
+```
+
 ## Trees (runtime, optional)
 Trees are generated per compiled tile at runtime (simple trunk + cone canopy). They
 use the existing mask weights: avoid water + urban, favor forest. No recompile needed.

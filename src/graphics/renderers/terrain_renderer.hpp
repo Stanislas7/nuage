@@ -23,6 +23,32 @@ class Texture;
  */
 class TerrainRenderer {
 public:
+    struct TerrainTextureSettings {
+        bool enabled = false;
+        float texScale = 0.02f;
+        float detailScale = 0.08f;
+        float detailStrength = 0.35f;
+        float rockSlopeStart = 0.35f;
+        float rockSlopeEnd = 0.7f;
+        float rockStrength = 0.7f;
+        float macroScale = 0.0012f;
+        float macroStrength = 0.25f;
+        Vec3 grassTintA = Vec3(0.75f, 0.95f, 0.65f);
+        Vec3 grassTintB = Vec3(0.55f, 0.7f, 0.45f);
+        float grassTintStrength = 0.35f;
+        Vec3 forestTintA = Vec3(0.7f, 0.85f, 0.6f);
+        Vec3 forestTintB = Vec3(0.5f, 0.65f, 0.45f);
+        float forestTintStrength = 0.25f;
+        Vec3 urbanTintA = Vec3(0.95f, 0.95f, 0.95f);
+        Vec3 urbanTintB = Vec3(0.75f, 0.78f, 0.8f);
+        float urbanTintStrength = 0.2f;
+        float microScale = 0.22f;
+        float microStrength = 0.18f;
+        float waterDetailScale = 0.08f;
+        float waterDetailStrength = 0.25f;
+        Vec3 waterColor = Vec3(0.14f, 0.32f, 0.55f);
+    };
+
     void init(AssetStore& assets);
     void shutdown();
     void setup(const std::string& configPath, AssetStore& assets);
@@ -41,6 +67,8 @@ public:
     void setTreesEnabled(bool enabled);
     TerrainVisualSettings& visuals() { return m_visuals; }
     const TerrainVisualSettings& visuals() const { return m_visuals; }
+    TerrainTextureSettings& textureSettings() { return m_textureSettings; }
+    const TerrainTextureSettings& textureSettings() const { return m_textureSettings; }
     void clampVisuals() { m_visuals.clamp(); }
 
 private:
@@ -60,17 +88,6 @@ private:
         bool textured = false;
         bool procedural = false;
         bool compiled = false;
-    };
-
-    struct TerrainTextureSettings {
-        bool enabled = false;
-        float texScale = 0.02f;
-        float detailScale = 0.08f;
-        float detailStrength = 0.35f;
-        float rockSlopeStart = 0.35f;
-        float rockSlopeEnd = 0.7f;
-        float rockStrength = 0.7f;
-        Vec3 waterColor = Vec3(0.14f, 0.32f, 0.55f);
     };
 
     void setupProcedural(const std::string& configPath);

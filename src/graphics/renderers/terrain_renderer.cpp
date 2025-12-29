@@ -650,6 +650,28 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
     m_textureSettings.rockSlopeStart = texConfig.value("rockSlopeStart", m_textureSettings.rockSlopeStart);
     m_textureSettings.rockSlopeEnd = texConfig.value("rockSlopeEnd", m_textureSettings.rockSlopeEnd);
     m_textureSettings.rockStrength = texConfig.value("rockStrength", m_textureSettings.rockStrength);
+    m_textureSettings.macroScale = texConfig.value("macroScale", m_textureSettings.macroScale);
+    m_textureSettings.macroStrength = texConfig.value("macroStrength", m_textureSettings.macroStrength);
+    m_textureSettings.grassTintStrength = texConfig.value("grassTintStrength", m_textureSettings.grassTintStrength);
+    m_textureSettings.forestTintStrength = texConfig.value("forestTintStrength", m_textureSettings.forestTintStrength);
+    m_textureSettings.urbanTintStrength = texConfig.value("urbanTintStrength", m_textureSettings.urbanTintStrength);
+    m_textureSettings.microScale = texConfig.value("microScale", m_textureSettings.microScale);
+    m_textureSettings.microStrength = texConfig.value("microStrength", m_textureSettings.microStrength);
+    m_textureSettings.waterDetailScale = texConfig.value("waterDetailScale", m_textureSettings.waterDetailScale);
+    m_textureSettings.waterDetailStrength = texConfig.value("waterDetailStrength", m_textureSettings.waterDetailStrength);
+    auto loadTint = [&](const char* key, Vec3& out) {
+        if (texConfig.contains(key) && texConfig[key].is_array() && texConfig[key].size() == 3) {
+            out = Vec3(texConfig[key][0].get<float>(),
+                       texConfig[key][1].get<float>(),
+                       texConfig[key][2].get<float>());
+        }
+    };
+    loadTint("grassTintA", m_textureSettings.grassTintA);
+    loadTint("grassTintB", m_textureSettings.grassTintB);
+    loadTint("forestTintA", m_textureSettings.forestTintA);
+    loadTint("forestTintB", m_textureSettings.forestTintB);
+    loadTint("urbanTintA", m_textureSettings.urbanTintA);
+    loadTint("urbanTintB", m_textureSettings.urbanTintB);
     if (texConfig.contains("waterColor") && texConfig["waterColor"].is_array()
         && texConfig["waterColor"].size() == 3) {
         m_textureSettings.waterColor = Vec3(texConfig["waterColor"][0].get<float>(),
@@ -721,6 +743,21 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     shader->setFloat("uTerrainRockSlopeStart", m_textureSettings.rockSlopeStart);
     shader->setFloat("uTerrainRockSlopeEnd", m_textureSettings.rockSlopeEnd);
     shader->setFloat("uTerrainRockStrength", m_textureSettings.rockStrength);
+    shader->setFloat("uTerrainMacroScale", m_textureSettings.macroScale);
+    shader->setFloat("uTerrainMacroStrength", m_textureSettings.macroStrength);
+    shader->setVec3("uTerrainGrassTintA", m_textureSettings.grassTintA);
+    shader->setVec3("uTerrainGrassTintB", m_textureSettings.grassTintB);
+    shader->setFloat("uTerrainGrassTintStrength", m_textureSettings.grassTintStrength);
+    shader->setVec3("uTerrainForestTintA", m_textureSettings.forestTintA);
+    shader->setVec3("uTerrainForestTintB", m_textureSettings.forestTintB);
+    shader->setFloat("uTerrainForestTintStrength", m_textureSettings.forestTintStrength);
+    shader->setVec3("uTerrainUrbanTintA", m_textureSettings.urbanTintA);
+    shader->setVec3("uTerrainUrbanTintB", m_textureSettings.urbanTintB);
+    shader->setFloat("uTerrainUrbanTintStrength", m_textureSettings.urbanTintStrength);
+    shader->setFloat("uTerrainMicroScale", m_textureSettings.microScale);
+    shader->setFloat("uTerrainMicroStrength", m_textureSettings.microStrength);
+    shader->setFloat("uTerrainWaterDetailScale", m_textureSettings.waterDetailScale);
+    shader->setFloat("uTerrainWaterDetailStrength", m_textureSettings.waterDetailStrength);
     shader->setVec3("uTerrainWaterColor", m_textureSettings.waterColor);
 
     grass->bind(0);
@@ -1104,6 +1141,16 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
 
     std::unordered_set<std::string> desiredKeys;
     desiredKeys.reserve(static_cast<size_t>((m_compiledVisibleRadius * 2 + 1) * (m_compiledVisibleRadius * 2 + 1)));
+    std::unordered_map<std::int64_t, bool> wantsLod1;
+    wantsLod1.reserve(desiredKeys.size());
+
+    struct VisibleTile {
+        TileResource* tile;
+        std::int64_t key;
+        float distSq;
+    };
+    std::vector<VisibleTile> visibleTiles;
+    visibleTiles.reserve(desiredKeys.size());
 
     for (int dy = -m_compiledVisibleRadius; dy <= m_compiledVisibleRadius; ++dy) {
         for (int dx = -m_compiledVisibleRadius; dx <= m_compiledVisibleRadius; ++dx) {
@@ -1124,33 +1171,55 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
             float distX = tile->center.x - cameraPos.x;
             float distZ = tile->center.z - cameraPos.z;
             float distSq = distX * distX + distZ * distZ;
+            std::int64_t tileKey = packedTileKey(tx, ty);
+            bool wants = tile->meshLod1 && m_compiledLod1DistanceSq > 0.0f
+                && distSq >= m_compiledLod1DistanceSq;
+            wantsLod1[tileKey] = wants;
+            visibleTiles.push_back({tile, tileKey, distSq});
+        }
+    }
 
-            m_shader->use();
-            m_shader->setMat4("uMVP", vp);
-            applyDirectionalLighting(m_shader, sunDir);
-            m_visuals.bind(m_shader, sunDir, cameraPos);
-            bindTerrainTextures(m_shader, m_compiledMaskResolution > 0);
-            Mesh* meshToDraw = tile->mesh;
-            if (tile->meshLod1 && m_compiledLod1DistanceSq > 0.0f) {
-                if (distSq >= m_compiledLod1DistanceSq) {
-                    meshToDraw = tile->meshLod1;
+    for (const auto& entry : visibleTiles) {
+        TileResource* tile = entry.tile;
+        if (!tile || !tile->mesh) {
+            continue;
+        }
+
+        bool useLod1 = false;
+        if (tile->meshLod1 && m_compiledLod1DistanceSq > 0.0f) {
+            auto it = wantsLod1.find(entry.key);
+            if (it != wantsLod1.end() && it->second) {
+                auto neighborOk = [&](int dx, int dy) {
+                    auto nit = wantsLod1.find(packedTileKey(tile->x + dx, tile->y + dy));
+                    return (nit != wantsLod1.end() && nit->second);
+                };
+                if (neighborOk(-1, 0) && neighborOk(1, 0)
+                    && neighborOk(0, -1) && neighborOk(0, 1)) {
+                    useLod1 = true;
                 }
             }
-            meshToDraw->draw();
+        }
 
-            if (m_treesEnabled && tile->treeMesh) {
-                bool inRange = (m_treesMaxDistanceSq <= 0.0f) || (distSq <= m_treesMaxDistanceSq);
-                bool nearLod0 = (m_compiledLod1DistanceSq <= 0.0f) || (distSq < m_compiledLod1DistanceSq);
-                if (inRange && nearLod0) {
-                    m_shader->use();
-                    m_shader->setMat4("uMVP", vp);
-                    applyDirectionalLighting(m_shader, sunDir);
-                    m_shader->setBool("uTerrainShading", false);
-                    m_shader->setBool("uTerrainUseTextures", false);
-                    m_shader->setBool("uTerrainUseMasks", false);
-                    m_shader->setBool("uUseUniformColor", false);
-                    tile->treeMesh->draw();
-                }
+        m_shader->use();
+        m_shader->setMat4("uMVP", vp);
+        applyDirectionalLighting(m_shader, sunDir);
+        m_visuals.bind(m_shader, sunDir, cameraPos);
+        bindTerrainTextures(m_shader, m_compiledMaskResolution > 0);
+        Mesh* meshToDraw = useLod1 ? tile->meshLod1 : tile->mesh;
+        meshToDraw->draw();
+
+        if (m_treesEnabled && tile->treeMesh) {
+            bool inRange = (m_treesMaxDistanceSq <= 0.0f) || (entry.distSq <= m_treesMaxDistanceSq);
+            bool nearLod0 = (m_compiledLod1DistanceSq <= 0.0f) || (entry.distSq < m_compiledLod1DistanceSq);
+            if (inRange && nearLod0) {
+                m_shader->use();
+                m_shader->setMat4("uMVP", vp);
+                applyDirectionalLighting(m_shader, sunDir);
+                m_shader->setBool("uTerrainShading", false);
+                m_shader->setBool("uTerrainUseTextures", false);
+                m_shader->setBool("uTerrainUseMasks", false);
+                m_shader->setBool("uUseUniformColor", false);
+                tile->treeMesh->draw();
             }
         }
     }
