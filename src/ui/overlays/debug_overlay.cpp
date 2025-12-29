@@ -9,7 +9,7 @@
 namespace nuage {
 
 namespace {
-constexpr float kPanelWidth = 384.0f;
+constexpr float kPanelWidth = 460.0f;
 constexpr float kPanelRadius = 18.0f;
 constexpr float kPanelMargin = 28.0f;
 constexpr float kRowHeight = 38.0f;
@@ -21,7 +21,7 @@ constexpr float kHeaderTextY = 14.0f;
 constexpr float kDividerY = 40.0f;
 constexpr float kButtonSize = 24.0f;
 constexpr float kButtonGap = 10.0f;
-constexpr float kValueOffset = 176.0f;
+constexpr float kValueOffset = 220.0f;
 
 const Vec3 kPanelColor = Vec3(0.08f, 0.1f, 0.14f);
 const Vec3 kPanelOutline = Vec3(0.28f, 0.32f, 0.38f);

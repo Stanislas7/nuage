@@ -22,6 +22,8 @@ DEM + OSM (offline) -> terrainc -> tiles/ + manifest.json -> runtime streamer
 - Skirts on tile borders to hide LOD seams.
 - OSM water + landuse masks (used for texture blending and tree placement).
 - Terrain shading pass: low-frequency color variation, altitude tint, slope darkening, and distance haze.
+- Runtime landclass texturing with macro/micro variation and tint pairs.
+- Procedural water detail (noise modulates water color).
 - Small, fixed working set (radius tiles).
 - No runtime GIS or reprojection.
 - Deterministic results with explicit bounds and parameters.
@@ -31,7 +33,8 @@ DEM + OSM (offline) -> terrainc -> tiles/ + manifest.json -> runtime streamer
 - No runtime GeoTIFF/VRT/OSM parsing.
 - No quadtree/LOD or pyramids.
 - No imagery required or used.
-- No full material system (debug colors only).
+- No full material system (single-pass blend with fixed textures).
+- No textured water surface (water is shaded color + noise only).
 
 ## Tile product (contract)
 Output folder:
@@ -75,6 +78,7 @@ Key fields:
 - Loads at most a small number of tiles per frame.
 - Tiles are created once per lifetime; evicted tiles free GPU memory.
 - Compiled tiles use a 2-level LOD swap and border skirts (configurable).
+- LOD1 is only used when a tile and its 4-neighbors are also in LOD1 to avoid seams.
 
 Visible radius is configured in `assets/config/terrain.json`:
 ```
