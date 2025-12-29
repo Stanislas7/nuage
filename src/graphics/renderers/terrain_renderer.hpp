@@ -1,5 +1,6 @@
 #pragma once
 
+#include "math/geo.hpp"
 #include "math/mat4.hpp"
 #include "math/vec3.hpp"
 #include "graphics/renderers/terrain/terrain_visual_settings.hpp"
@@ -56,6 +57,9 @@ public:
     bool isProcedural() const { return m_procedural; }
     bool isCompiled() const { return m_compiled; }
     bool treesEnabled() const { return m_treesEnabled; }
+    bool hasCompiledOrigin() const { return m_compiledOriginValid; }
+    GeoOrigin compiledOrigin() const { return m_compiledOrigin; }
+    Vec3 compiledGeoToWorld(double latDeg, double lonDeg, double altMeters) const;
     int compiledVisibleRadius() const { return m_compiledVisibleRadius; }
     int compiledLoadsPerFrame() const { return m_compiledLoadsPerFrame; }
     int proceduralVisibleRadius() const { return m_procVisibleRadius; }
@@ -137,6 +141,8 @@ private:
     float m_compiledMinZ = 0.0f;
     float m_compiledMaxX = 0.0f;
     float m_compiledMaxZ = 0.0f;
+    GeoOrigin m_compiledOrigin;
+    bool m_compiledOriginValid = false;
     int m_compiledMaskResolution = 0;
     std::unordered_set<std::int64_t> m_compiledTiles;
     int m_compiledTilesLoadedThisFrame = 0;

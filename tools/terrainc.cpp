@@ -700,9 +700,20 @@ int main(int argc, char** argv) {
 
     std::filesystem::path manifestPath = outDir / "manifest.json";
     std::ofstream manifest(manifestPath);
+    constexpr double kDegToRad = 3.141592653589793 / 180.0;
+    double metersPerLat = 111320.0;
+    double metersPerLon = 111320.0 * std::cos(cfg.originLat * kDegToRad);
     manifest << "{\n";
     manifest << "  \"version\": \"1.0\",\n";
     manifest << "  \"originLLA\": [" << cfg.originLat << ", " << cfg.originLon << ", " << cfg.originAlt << "],\n";
+    manifest << "  \"projection\": {\n";
+    manifest << "    \"type\": \"equirectangular\",\n";
+    manifest << "    \"lat0\": " << cfg.originLat << ",\n";
+    manifest << "    \"lon0\": " << cfg.originLon << ",\n";
+    manifest << "    \"metersPerLat\": " << metersPerLat << ",\n";
+    manifest << "    \"metersPerLon\": " << metersPerLon << "\n";
+    manifest << "  },\n";
+    manifest << "  \"enuBasis\": [\"east\", \"up\", \"north\"],\n";
     manifest << "  \"tileSizeMeters\": " << cfg.tileSize << ",\n";
     manifest << "  \"gridResolution\": " << cfg.gridResolution << ",\n";
     manifest << "  \"heightScaleMeters\": 1.0,\n";

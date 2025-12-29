@@ -66,12 +66,19 @@ Runtime note: tiles are converted to indexed grids on load for lower vertex band
 
 ### `manifest.json`
 Key fields:
+- `originLLA` (lat, lon, alt of local ENU origin, degrees/meters)
+- `projection` (equirectangular params used for lon/lat -> meters)
+- `enuBasis` (axis mapping: east, up, north)
 - `tileSizeMeters`
 - `gridResolution`
 - `maskResolution` (if masks exist)
 - `boundsENU`
 - `availableLayers` (["height"] or ["height","mask"])
 - `tileIndex` (list of [tx,ty] tiles present)
+
+Coordinate system:
+- Local ENU with X=east, Y=up, Z=north.
+- Equirectangular projection centered at `originLLA` (sufficient for regional tiles).
 
 ## Runtime streaming
 - Uses a fixed radius (default 1 => 3x3 tiles).

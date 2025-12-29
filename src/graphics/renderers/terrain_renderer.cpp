@@ -575,6 +575,13 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
         m_compiledMaxX = manifest["boundsENU"][2].get<float>();
         m_compiledMaxZ = manifest["boundsENU"][3].get<float>();
     }
+    m_compiledOriginValid = false;
+    if (manifest.contains("originLLA") && manifest["originLLA"].is_array() && manifest["originLLA"].size() == 3) {
+        m_compiledOrigin.latDeg = manifest["originLLA"][0].get<double>();
+        m_compiledOrigin.lonDeg = manifest["originLLA"][1].get<double>();
+        m_compiledOrigin.altMeters = manifest["originLLA"][2].get<double>();
+        m_compiledOriginValid = true;
+    }
 
     m_compiledVisibleRadius = config.value("compiledVisibleRadius", 1);
     m_compiledLoadsPerFrame = config.value("compiledMaxLoadsPerFrame", 2);
@@ -633,6 +640,13 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
 
     m_textured = false;
     m_compiled = true;
+}
+
+Vec3 TerrainRenderer::compiledGeoToWorld(double latDeg, double lonDeg, double altMeters) const {
+    if (!m_compiledOriginValid) {
+        return Vec3(0.0f, 0.0f, 0.0f);
+    }
+    return llaToEnu(m_compiledOrigin, latDeg, lonDeg, altMeters);
 }
 
 void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std::string& configPath) {
