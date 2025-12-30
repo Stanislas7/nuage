@@ -19,7 +19,7 @@
 namespace nuage {
 
 void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere,
-                              const GeoOrigin* terrainOrigin) {
+                              const GeoOrigin* terrainOrigin, const TerrainRenderer* terrain) {
     auto jsonOpt = loadJsonConfig(configPath);
     if (!jsonOpt) {
         std::cerr << "Failed to load aircraft config: " << configPath << std::endl;
@@ -40,7 +40,11 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     if (terrainOrigin) {
         jsbsimConfig.originLatDeg = terrainOrigin->latDeg;
         jsbsimConfig.originLonDeg = terrainOrigin->lonDeg;
+        jsbsimConfig.originAltMeters = terrainOrigin->altMeters;
         jsbsimConfig.hasOrigin = true;
+    }
+    if (terrain) {
+        jsbsimConfig.terrain = terrain;
     }
 
     // Initialize visuals
@@ -90,8 +94,13 @@ void Aircraft::Instance::update(float dt) {
 }
 
 void Aircraft::Instance::applyGroundCollision(const TerrainRenderer& terrain) {
+    if (auto jsb = getSystem<JsbsimSystem>()) {
+        if (jsb->hasGroundCallback()) {
+            return;
+        }
+    }
     float groundY = 0.0f;
-    if (!terrain.sampleHeight(m_currentState.position.x, m_currentState.position.z, groundY)) {
+    if (!terrain.sampleSurfaceHeight(m_currentState.position.x, m_currentState.position.z, groundY)) {
         return;
     }
     if (m_currentState.position.y < groundY) {

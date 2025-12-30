@@ -2,10 +2,15 @@
 #include "core/properties/property_context.hpp"
 #include "core/properties/property_paths.hpp"
 #include "aircraft/aircraft_state.hpp"
+#include "math/geo.hpp"
+#include "graphics/renderers/terrain_renderer.hpp"
 #include <FGFDMExec.h>
+#include <input_output/FGGroundCallback.h>
+#include <models/FGInertial.h>
 #include <models/FGPropagate.h>
 #include <math/FGColumnVector3.h>
 #include <math/FGMatrix33.h>
+#include <math/FGLocation.h>
 #include <simgear/misc/sg_path.hxx>
 #include <initialization/FGInitialCondition.h>
 #include <algorithm>
@@ -17,6 +22,9 @@ namespace {
 constexpr double kFtToM = 0.3048;
 constexpr double kMToFt = 1.0 / kFtToM;
 constexpr double kEarthRadiusM = 6378137.0; // WGS84 semi-major
+constexpr double kDegToRad = 3.141592653589793 / 180.0;
+constexpr double kWgs84SemiMajorFt = 6378137.0 / kFtToM;
+constexpr double kWgs84SemiMinorFt = 6356752.3142 / kFtToM;
 
 float clampInput(double v) {
     return static_cast<float>(std::clamp(v, -1.0, 1.0));
@@ -72,6 +80,59 @@ Quat quatFromMatrix(const float m[3][3]) {
     float z = 0.25f * s;
     return Quat(w, x, y, z).normalized();
 }
+
+class TerrainGroundCallback : public JSBSim::FGGroundCallback {
+public:
+    TerrainGroundCallback(const TerrainRenderer* terrain, GeoOrigin origin)
+        : m_terrain(terrain), m_origin(origin) {}
+
+    double GetAGLevel(double t, const JSBSim::FGLocation& location,
+                      JSBSim::FGLocation& contact,
+                      JSBSim::FGColumnVector3& normal,
+                      JSBSim::FGColumnVector3& v,
+                      JSBSim::FGColumnVector3& w) const override {
+        (void)t;
+        v.InitMatrix();
+        w.InitMatrix();
+
+        JSBSim::FGLocation l = location;
+        l.SetEllipse(kWgs84SemiMajorFt, kWgs84SemiMinorFt);
+        double latRad = l.GetGeodLatitudeRad();
+        double lonRad = l.GetLongitude();
+        double cosLat = std::cos(latRad);
+        normal = JSBSim::FGColumnVector3(cosLat * std::cos(lonRad),
+                                         cosLat * std::sin(lonRad),
+                                         std::sin(latRad));
+
+        double latDeg = l.GetGeodLatitudeDeg();
+        double lonDeg = l.GetLongitudeDeg();
+        Vec3 enu = llaToEnu(m_origin, latDeg, lonDeg, m_origin.altMeters);
+
+        float groundMeters = 0.0f;
+        if (!m_terrain || !m_terrain->sampleSurfaceHeightNoLoad(enu.x, enu.z, groundMeters)) {
+            if (m_hasLastHeight) {
+                groundMeters = m_lastHeightMeters;
+            } else {
+                groundMeters = 0.0f;
+            }
+        } else {
+            m_lastHeightMeters = groundMeters;
+            m_hasLastHeight = true;
+        }
+
+        double groundFt = groundMeters * kMToFt;
+        contact.SetEllipse(kWgs84SemiMajorFt, kWgs84SemiMinorFt);
+        contact.SetPositionGeodetic(lonRad, latRad, groundFt);
+
+        return l.GetGeodAltitude() - groundFt;
+    }
+
+private:
+    const TerrainRenderer* m_terrain = nullptr;
+    GeoOrigin m_origin;
+    mutable float m_lastHeightMeters = 0.0f;
+    mutable bool m_hasLastHeight = false;
+};
 }
 
 JsbsimSystem::JsbsimSystem(JsbsimConfig config)
@@ -114,6 +175,16 @@ void JsbsimSystem::ensureInitialized(float dt) {
 
     if (!m_fdm->LoadModel(m_config.modelName)) {
         return;
+    }
+
+    auto inertial = m_fdm->GetInertial();
+    if (inertial && m_config.terrain) {
+        GeoOrigin origin;
+        origin.latDeg = m_config.hasOrigin ? m_config.originLatDeg : m_config.initLatDeg;
+        origin.lonDeg = m_config.hasOrigin ? m_config.originLonDeg : m_config.initLonDeg;
+        origin.altMeters = m_config.originAltMeters;
+        inertial->SetGroundCallback(new TerrainGroundCallback(m_config.terrain, origin));
+        m_hasGroundCallback = true;
     }
 
     m_fdm->RunIC();
@@ -229,6 +300,10 @@ void JsbsimSystem::update(float dt) {
     }
 
     m_fdm->Setdt(dt);
+    if (m_config.terrain) {
+        const_cast<TerrainRenderer*>(m_config.terrain)
+            ->preloadPhysicsAt(m_acState->position.x, m_acState->position.z);
+    }
     syncInputs();
     m_fdm->Run();
     syncOutputs();

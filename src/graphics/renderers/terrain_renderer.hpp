@@ -61,6 +61,9 @@ public:
     GeoOrigin compiledOrigin() const { return m_compiledOrigin; }
     Vec3 compiledGeoToWorld(double latDeg, double lonDeg, double altMeters) const;
     bool sampleHeight(float worldX, float worldZ, float& outHeight) const;
+    bool sampleSurfaceHeight(float worldX, float worldZ, float& outHeight) const;
+    bool sampleSurfaceHeightNoLoad(float worldX, float worldZ, float& outHeight) const;
+    void preloadPhysicsAt(float worldX, float worldZ, int radius = 0);
     int compiledVisibleRadius() const { return m_compiledVisibleRadius; }
     int compiledLoadsPerFrame() const { return m_compiledLoadsPerFrame; }
     int proceduralVisibleRadius() const { return m_procVisibleRadius; }
@@ -102,8 +105,8 @@ private:
     void setupCompiled(const std::string& configPath);
     void renderProcedural(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
     void renderCompiled(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
-    TileResource* ensureProceduralTileLoaded(int x, int y);
-    TileResource* ensureCompiledTileLoaded(int x, int y);
+    TileResource* ensureProceduralTileLoaded(int x, int y, bool force = false);
+    TileResource* ensureCompiledTileLoaded(int x, int y, bool force = false);
     float proceduralHeight(float worldX, float worldZ) const;
     Vec3 proceduralTileTint(int tileX, int tileY) const;
     std::int64_t packedTileKey(int x, int y) const;
@@ -127,6 +130,17 @@ private:
     bool m_runwaysEnabled = false;
     Vec3 m_runwayColor = Vec3(0.12f, 0.12f, 0.12f);
     float m_runwayHeightOffset = 0.15f;
+
+    struct RunwayCollider {
+        Vec3 center;
+        Vec3 dir;
+        Vec3 perp;
+        float halfLength = 0.0f;
+        float halfWidth = 0.0f;
+        float h0 = 0.0f;
+        float h1 = 0.0f;
+    };
+    std::vector<RunwayCollider> m_runwayColliders;
 
     bool m_procedural = false;
     bool m_compiled = false;

@@ -785,6 +785,7 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
 void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::string& configPath) {
     m_runwayMesh.reset();
     m_runwaysEnabled = false;
+    m_runwayColliders.clear();
 
     if (!config.contains("runways") || !config["runways"].is_object()) {
         return;
@@ -864,6 +865,17 @@ void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::strin
             Vec3 dir(dx / length, 0.0f, dz / length);
             Vec3 perp(-dir.z, 0.0f, dir.x);
             float halfWidth = widthMeters * 0.5f;
+            float halfLength = length * 0.5f;
+
+            RunwayCollider collider;
+            collider.center = (lePos + hePos) * 0.5f;
+            collider.dir = dir;
+            collider.perp = perp;
+            collider.halfLength = halfLength;
+            collider.halfWidth = halfWidth;
+            collider.h0 = lePos.y;
+            collider.h1 = hePos.y;
+            m_runwayColliders.push_back(collider);
 
             Vec3 leOffset = perp * halfWidth;
             Vec3 heOffset = perp * halfWidth;
@@ -896,6 +908,70 @@ void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::strin
         m_runwayMesh = std::make_unique<Mesh>();
         m_runwayMesh->init(verts);
     }
+}
+
+bool TerrainRenderer::sampleSurfaceHeight(float worldX, float worldZ, float& outHeight) const {
+    if (m_runwaysEnabled && !m_runwayColliders.empty()) {
+        for (const auto& runway : m_runwayColliders) {
+            Vec3 delta(worldX - runway.center.x, 0.0f, worldZ - runway.center.z);
+            float along = delta.x * runway.dir.x + delta.z * runway.dir.z;
+            float side = delta.x * runway.perp.x + delta.z * runway.perp.z;
+            if (std::abs(along) <= runway.halfLength && std::abs(side) <= runway.halfWidth) {
+                float t = (along + runway.halfLength) / (2.0f * runway.halfLength);
+                t = std::clamp(t, 0.0f, 1.0f);
+                float runwayY = runway.h0 + (runway.h1 - runway.h0) * t;
+                outHeight = runwayY + m_runwayHeightOffset;
+                return true;
+            }
+        }
+    }
+    return sampleHeight(worldX, worldZ, outHeight);
+}
+
+bool TerrainRenderer::sampleSurfaceHeightNoLoad(float worldX, float worldZ, float& outHeight) const {
+    if (m_runwaysEnabled && !m_runwayColliders.empty()) {
+        for (const auto& runway : m_runwayColliders) {
+            Vec3 delta(worldX - runway.center.x, 0.0f, worldZ - runway.center.z);
+            float along = delta.x * runway.dir.x + delta.z * runway.dir.z;
+            float side = delta.x * runway.perp.x + delta.z * runway.perp.z;
+            if (std::abs(along) <= runway.halfLength && std::abs(side) <= runway.halfWidth) {
+                float t = (along + runway.halfLength) / (2.0f * runway.halfLength);
+                t = std::clamp(t, 0.0f, 1.0f);
+                float runwayY = runway.h0 + (runway.h1 - runway.h0) * t;
+                outHeight = runwayY + m_runwayHeightOffset;
+                return true;
+            }
+        }
+    }
+
+    if (m_procedural) {
+        outHeight = proceduralHeight(worldX, worldZ);
+        return true;
+    }
+    if (!m_compiled) {
+        return false;
+    }
+
+    int tx = static_cast<int>(std::floor(worldX / m_compiledTileSizeMeters));
+    int ty = static_cast<int>(std::floor(worldZ / m_compiledTileSizeMeters));
+    std::string key = "C_x" + std::to_string(tx) + "_y" + std::to_string(ty);
+    auto it = m_tileCache.find(key);
+    if (it == m_tileCache.end()) {
+        return false;
+    }
+    const TileResource& tile = it->second;
+    if (!tile.hasGrid || tile.gridVerts.empty() || tile.gridRes <= 1) {
+        return false;
+    }
+
+    float tileMinX = static_cast<float>(tx) * m_compiledTileSizeMeters;
+    float tileMinZ = static_cast<float>(ty) * m_compiledTileSizeMeters;
+    Vec3 normal;
+    float water = 0.0f;
+    float urban = 0.0f;
+    float forest = 0.0f;
+    return sampleGrid(tile.gridVerts, tile.gridRes, tileMinX, tileMinZ, m_compiledTileSizeMeters,
+                      worldX, worldZ, outHeight, normal, water, urban, forest);
 }
 
 void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
@@ -991,13 +1067,13 @@ std::int64_t TerrainRenderer::packedTileKey(int x, int y) const {
 }
 
 
-TerrainRenderer::TileResource* TerrainRenderer::ensureProceduralTileLoaded(int x, int y) {
+TerrainRenderer::TileResource* TerrainRenderer::ensureProceduralTileLoaded(int x, int y, bool force) {
     std::string key = "P_x" + std::to_string(x) + "_y" + std::to_string(y);
     auto found = m_tileCache.find(key);
     if (found != m_tileCache.end()) {
         return &found->second;
     }
-    if (m_procTilesLoadedThisFrame >= m_procLoadsPerFrame) {
+    if (!force && m_procTilesLoadedThisFrame >= m_procLoadsPerFrame) {
         return nullptr;
     }
 
@@ -1128,7 +1204,7 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureProceduralTileLoaded(int x
     return &inserted.first->second;
 }
 
-TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, int y) {
+TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, int y, bool force) {
     if (!m_assets) {
         return nullptr;
     }
@@ -1141,7 +1217,7 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
     if (found != m_tileCache.end()) {
         return &found->second;
     }
-    if (m_compiledTilesLoadedThisFrame >= m_compiledLoadsPerFrame) {
+    if (!force && m_compiledTilesLoadedThisFrame >= m_compiledLoadsPerFrame) {
         return nullptr;
     }
 
@@ -1248,6 +1324,29 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
         std::cout << "[terrain] loaded compiled tile " << x << "," << y << "\n";
     }
     return &inserted.first->second;
+}
+
+void TerrainRenderer::preloadPhysicsAt(float worldX, float worldZ, int radius) {
+    if (m_procedural) {
+        int cx = static_cast<int>(std::floor(worldX / m_procTileSizeMeters));
+        int cy = static_cast<int>(std::floor(worldZ / m_procTileSizeMeters));
+        for (int dy = -radius; dy <= radius; ++dy) {
+            for (int dx = -radius; dx <= radius; ++dx) {
+                ensureProceduralTileLoaded(cx + dx, cy + dy, true);
+            }
+        }
+        return;
+    }
+    if (!m_compiled) {
+        return;
+    }
+    int cx = static_cast<int>(std::floor(worldX / m_compiledTileSizeMeters));
+    int cy = static_cast<int>(std::floor(worldZ / m_compiledTileSizeMeters));
+    for (int dy = -radius; dy <= radius; ++dy) {
+        for (int dx = -radius; dx <= radius; ++dx) {
+            ensureCompiledTileLoaded(cx + dx, cy + dy, true);
+        }
+    }
 }
 
 void TerrainRenderer::renderProcedural(const Mat4& vp, const Vec3& sunDir, const Vec3& cameraPos) {

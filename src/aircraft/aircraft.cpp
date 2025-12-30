@@ -31,11 +31,13 @@ void Aircraft::shutdown() {
     destroyAll();
 }
 
-Aircraft::Instance* Aircraft::spawnPlayer(const std::string& configPath, const GeoOrigin* terrainOrigin) {
+Aircraft::Instance* Aircraft::spawnPlayer(const std::string& configPath,
+                                          const GeoOrigin* terrainOrigin,
+                                          const TerrainRenderer* terrain) {
     if (!m_assets || !m_atmosphere) return nullptr;
 
     auto aircraft = std::make_unique<Aircraft::Instance>();
-    aircraft->init(configPath, *m_assets, *m_atmosphere, terrainOrigin);
+    aircraft->init(configPath, *m_assets, *m_atmosphere, terrainOrigin, terrain);
     
     m_player = aircraft.get();
     m_instances.push_back(std::move(aircraft));

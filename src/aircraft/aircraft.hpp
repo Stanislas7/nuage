@@ -29,7 +29,7 @@ public:
     class Instance {
     public:
         void init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere,
-                  const GeoOrigin* terrainOrigin);
+                  const GeoOrigin* terrainOrigin, const TerrainRenderer* terrain);
         void update(float dt);
         void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
         void applyGroundCollision(const TerrainRenderer& terrain);
@@ -64,6 +64,8 @@ public:
         PropertyContext m_properties;
         AircraftState m_currentState;
         AircraftState m_prevState;
+        std::vector<Vec3> m_groundContactPoints;
+        float m_groundPadding = 0.05f;
         
         std::vector<std::unique_ptr<AircraftComponent>> m_systems;
         AircraftVisual m_visual;
@@ -75,7 +77,9 @@ public:
     void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
     void shutdown();
 
-    Instance* spawnPlayer(const std::string& configPath, const GeoOrigin* terrainOrigin = nullptr);
+    Instance* spawnPlayer(const std::string& configPath,
+                          const GeoOrigin* terrainOrigin = nullptr,
+                          const TerrainRenderer* terrain = nullptr);
 
     Instance* player() { return m_player; }
     const std::vector<std::unique_ptr<Instance>>& all() const { return m_instances; }
