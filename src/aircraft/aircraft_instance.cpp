@@ -8,6 +8,7 @@
 #include "graphics/model.hpp"
 #include "environment/atmosphere.hpp"
 #include "math/mat4.hpp"
+#include "graphics/renderers/terrain_renderer.hpp"
 #include "utils/config_loader.hpp"
 #include "aircraft/aircraft_config_keys.hpp"
 
@@ -85,6 +86,22 @@ void Aircraft::Instance::update(float dt) {
 
     for (auto& system : m_systems) {
         system->update(dt);
+    }
+}
+
+void Aircraft::Instance::applyGroundCollision(const TerrainRenderer& terrain) {
+    float groundY = 0.0f;
+    if (!terrain.sampleHeight(m_currentState.position.x, m_currentState.position.z, groundY)) {
+        return;
+    }
+    if (m_currentState.position.y < groundY) {
+        m_currentState.position.y = groundY;
+        if (m_currentState.velocity.y < 0.0f) {
+            m_currentState.velocity.y = 0.0f;
+        }
+        if (m_prevState.position.y < groundY) {
+            m_prevState.position.y = groundY;
+        }
     }
 }
 

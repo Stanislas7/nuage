@@ -60,6 +60,7 @@ public:
     bool hasCompiledOrigin() const { return m_compiledOriginValid; }
     GeoOrigin compiledOrigin() const { return m_compiledOrigin; }
     Vec3 compiledGeoToWorld(double latDeg, double lonDeg, double altMeters) const;
+    bool sampleHeight(float worldX, float worldZ, float& outHeight) const;
     int compiledVisibleRadius() const { return m_compiledVisibleRadius; }
     int compiledLoadsPerFrame() const { return m_compiledLoadsPerFrame; }
     int proceduralVisibleRadius() const { return m_procVisibleRadius; }
@@ -89,9 +90,12 @@ private:
         int level = 0;
         int x = 0;
         int y = 0;
+        int gridRes = 0;
         bool textured = false;
         bool procedural = false;
         bool compiled = false;
+        bool hasGrid = false;
+        std::vector<float> gridVerts;
     };
 
     void setupProcedural(const std::string& configPath);

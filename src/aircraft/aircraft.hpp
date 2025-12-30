@@ -22,6 +22,7 @@ class Shader;
 class Texture;
 class Model;
 class Input;
+class TerrainRenderer;
 
 class Aircraft {
 public:
@@ -31,6 +32,7 @@ public:
                   const GeoOrigin* terrainOrigin);
         void update(float dt);
         void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
+        void applyGroundCollision(const TerrainRenderer& terrain);
 
         PropertyBus& state() { return m_state; }
         const PropertyBus& state() const { return m_state; }
@@ -69,6 +71,7 @@ public:
 
     void init(AssetStore& assets, Atmosphere& atmosphere);
     void fixedUpdate(float dt);
+    void applyGroundCollision(const TerrainRenderer& terrain);
     void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
     void shutdown();
 

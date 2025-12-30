@@ -667,6 +667,36 @@ Vec3 TerrainRenderer::compiledGeoToWorld(double latDeg, double lonDeg, double al
     return llaToEnu(m_compiledOrigin, latDeg, lonDeg, altMeters);
 }
 
+bool TerrainRenderer::sampleHeight(float worldX, float worldZ, float& outHeight) const {
+    if (m_procedural) {
+        outHeight = proceduralHeight(worldX, worldZ);
+        return true;
+    }
+    if (!m_compiled) {
+        return false;
+    }
+
+    int tx = static_cast<int>(std::floor(worldX / m_compiledTileSizeMeters));
+    int ty = static_cast<int>(std::floor(worldZ / m_compiledTileSizeMeters));
+    if (m_compiledTiles.find(packedTileKey(tx, ty)) == m_compiledTiles.end()) {
+        return false;
+    }
+
+    auto tile = const_cast<TerrainRenderer*>(this)->ensureCompiledTileLoaded(tx, ty);
+    if (!tile || !tile->hasGrid || tile->gridVerts.empty() || tile->gridRes <= 1) {
+        return false;
+    }
+
+    float tileMinX = static_cast<float>(tx) * m_compiledTileSizeMeters;
+    float tileMinZ = static_cast<float>(ty) * m_compiledTileSizeMeters;
+    Vec3 normal;
+    float water = 0.0f;
+    float urban = 0.0f;
+    float forest = 0.0f;
+    return sampleGrid(tile->gridVerts, tile->gridRes, tileMinX, tileMinZ, m_compiledTileSizeMeters,
+                      worldX, worldZ, outHeight, normal, water, urban, forest);
+}
+
 void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std::string& configPath) {
     m_textureSettings = TerrainTextureSettings{};
     if (!config.contains("terrainTextures") || !config["terrainTextures"].is_object()) {
@@ -1168,15 +1198,20 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
     resource.level = 0;
     resource.x = x;
     resource.y = y;
+    resource.gridRes = builtGrid ? (m_compiledGridResolution + 1) : 0;
     resource.textured = false;
     resource.procedural = false;
     resource.compiled = true;
+    resource.hasGrid = builtGrid;
+    if (builtGrid) {
+        resource.gridVerts = std::move(gridVerts);
+    }
 
     if (builtGrid && m_compiledGridResolution >= 2) {
         int res = m_compiledGridResolution + 1;
         std::vector<float> lodVerts;
         std::vector<std::uint32_t> lodIndices;
-        buildLodVertices(gridVerts, res, res, 2, lodVerts);
+        buildLodVertices(resource.gridVerts.empty() ? gridVerts : resource.gridVerts, res, res, 2, lodVerts);
         buildLodIndices(res, res, 2, lodIndices);
         addSkirt(lodVerts, lodIndices, (res - 1) / 2 + 1, (res - 1) / 2 + 1, m_compiledSkirtDepth);
         if (!lodVerts.empty() && !lodIndices.empty()) {
@@ -1190,7 +1225,8 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
     if (builtGrid && m_treesEnabled) {
         int res = m_compiledGridResolution + 1;
         bool useWaterMask = m_compiledMaskResolution > 0;
-        resource.ownedTreeMesh = buildTreeMeshForTile(gridVerts, res, x, y,
+        resource.ownedTreeMesh = buildTreeMeshForTile(resource.gridVerts.empty() ? gridVerts : resource.gridVerts,
+                                                      res, x, y,
                                                       tileMinX, tileMinZ,
                                                       m_compiledTileSizeMeters, useWaterMask,
                                                       m_treesEnabled, m_treesDensityPerSqKm,

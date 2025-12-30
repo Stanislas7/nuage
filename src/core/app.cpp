@@ -193,6 +193,7 @@ void App::updatePhysics() {
     m_physicsAccumulator += m_deltaTime;
     while (m_physicsAccumulator >= FIXED_DT) {
         m_session->aircraft().fixedUpdate(FIXED_DT);
+        m_session->aircraft().applyGroundCollision(m_session->terrain());
         m_physicsAccumulator -= FIXED_DT;
     }
 }

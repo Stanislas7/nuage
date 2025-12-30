@@ -15,6 +15,12 @@ void Aircraft::fixedUpdate(float dt) {
     }
 }
 
+void Aircraft::applyGroundCollision(const TerrainRenderer& terrain) {
+    for (auto& ac : m_instances) {
+        ac->applyGroundCollision(terrain);
+    }
+}
+
 void Aircraft::render(const Mat4& viewProjection, float alpha, const Vec3& lightDir) {
     for (auto& ac : m_instances) {
         ac->render(viewProjection, alpha, lightDir);
