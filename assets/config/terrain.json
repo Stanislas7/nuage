@@ -4,7 +4,7 @@
   "compiledMaxLoadsPerFrame": 2,
   "compiledLod1Distance": 3000.0,
   "compiledSkirtDepth": 180.0,
-  "compiledDebugLog": false,
+  "compiledDebugLog": true,
   "terrainTrees": {
     "enabled": false,
     "densityPerSqKm": 800.0,
@@ -36,11 +36,19 @@
   },
   "terrainTextures": {
     "enabled": true,
-    "grass": "../textures/terrain/sparse_grass_diff_2k.jpg",
+    "grass": "../textures/terrain/cc0/Grass003_1K-JPG_Color.jpg",
     "forest": "../textures/terrain/forest_ground_04_diff_2k.png",
-    "rock": "../textures/terrain/rock_05_diff_2k.png",
-    "dirt": "../textures/terrain/dirt_diff_2k.jpg",
-    "urban": "../textures/terrain/asphalt_02_diff_2k.png",
+    "rock": "../textures/terrain/cc0/Rock033_1K-JPG_Color.jpg",
+    "dirt": "../textures/terrain/cc0/Ground029_1K-JPG_Color.jpg",
+    "urban": "../textures/terrain/cc0/Asphalt009_1K-JPG_Color.jpg",
+    "grassNormal": "../textures/terrain/cc0/Grass003_1K-JPG_NormalGL.jpg",
+    "grassRoughness": "../textures/terrain/cc0/Grass003_1K-JPG_Roughness.jpg",
+    "dirtNormal": "../textures/terrain/cc0/Ground029_1K-JPG_NormalGL.jpg",
+    "dirtRoughness": "../textures/terrain/cc0/Ground029_1K-JPG_Roughness.jpg",
+    "rockNormal": "../textures/terrain/cc0/Rock033_1K-JPG_NormalGL.jpg",
+    "rockRoughness": "../textures/terrain/cc0/Rock033_1K-JPG_Roughness.jpg",
+    "urbanNormal": "../textures/terrain/cc0/Asphalt009_1K-JPG_NormalGL.jpg",
+    "urbanRoughness": "../textures/terrain/cc0/Asphalt009_1K-JPG_Roughness.jpg",
     "texScale": 0.04,
     "detailScale": 0.18,
     "detailStrength": 0.26,
@@ -49,6 +57,11 @@
     "rockStrength": 0.7,
     "macroScale": 0.0016,
     "macroStrength": 0.32,
+    "farmlandStrength": 0.65,
+    "farmlandStripeScale": 0.0032,
+    "farmlandStripeContrast": 0.55,
+    "scrubStrength": 0.3,
+    "scrubNoiseScale": 0.0015,
     "grassTintA": [0.78, 0.98, 0.65],
     "grassTintB": [0.5, 0.7, 0.45],
     "grassTintStrength": 1.0,
@@ -68,6 +81,7 @@
     "enabled": true,
     "json": "../terrain/compiled/runways.json",
     "color": [0.12, 0.12, 0.12],
-    "heightOffset": 0.2
+    "heightOffset": 1.5,
+    "texture": "../textures/terrain/cc0/Asphalt012_1K-JPG_Color.jpg"
   }
 }

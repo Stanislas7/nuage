@@ -56,6 +56,39 @@ bool Texture::loadFromFile(const std::string& path, bool flipY, bool repeat) {
     return true;
 }
 
+bool Texture::loadFromData(const unsigned char* data, int width, int height, int channels, bool repeat) {
+    if (!data || width <= 0 || height <= 0 || channels <= 0) {
+        return false;
+    }
+    if (m_id) {
+        glDeleteTextures(1, &m_id);
+        m_id = 0;
+    }
+
+    GLenum format = GL_RED;
+    GLint internalFormat = GL_R8;
+    if (channels == 3) {
+        format = GL_RGB;
+        internalFormat = GL_RGB8;
+    } else if (channels == 4) {
+        format = GL_RGBA;
+        internalFormat = GL_RGBA8;
+    }
+
+    glGenTextures(1, &m_id);
+    glBindTexture(GL_TEXTURE_2D, m_id);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    GLint wrapMode = repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    return true;
+}
+
 void Texture::bind(GLuint unit) const {
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, m_id);

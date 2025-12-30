@@ -99,28 +99,47 @@ public:
         l.SetEllipse(kWgs84SemiMajorFt, kWgs84SemiMinorFt);
         double latRad = l.GetGeodLatitudeRad();
         double lonRad = l.GetLongitude();
+        double sinLat = std::sin(latRad);
         double cosLat = std::cos(latRad);
-        normal = JSBSim::FGColumnVector3(cosLat * std::cos(lonRad),
-                                         cosLat * std::sin(lonRad),
-                                         std::sin(latRad));
+        double sinLon = std::sin(lonRad);
+        double cosLon = std::cos(lonRad);
 
         double latDeg = l.GetGeodLatitudeDeg();
         double lonDeg = l.GetLongitudeDeg();
         Vec3 enu = llaToEnu(m_origin, latDeg, lonDeg, m_origin.altMeters);
 
-        float groundMeters = 0.0f;
-        if (!m_terrain || !m_terrain->sampleSurfaceHeightNoLoad(enu.x, enu.z, groundMeters)) {
+        TerrainRenderer::TerrainSample sample;
+        bool hasSample = m_terrain && m_terrain->sampleSurfaceNoLoad(enu.x, enu.z, sample);
+        if (!hasSample && m_terrain) {
+            // Allow a one-off load if the cached ring missed; avoids zero height on tall terrain.
+            hasSample = m_terrain->sampleSurface(enu.x, enu.z, sample);
+        }
+        if (!hasSample) {
             if (m_hasLastHeight) {
-                groundMeters = m_lastHeightMeters;
+                sample.height = m_lastHeightMeters;
+                sample.normal = m_lastNormal;
             } else {
-                groundMeters = 0.0f;
+                sample.height = 0.0f;
+                sample.normal = Vec3(0.0f, 1.0f, 0.0f);
             }
         } else {
-            m_lastHeightMeters = groundMeters;
+            m_lastHeightMeters = sample.height;
+            m_lastNormal = sample.normal;
             m_hasLastHeight = true;
         }
 
-        double groundFt = groundMeters * kMToFt;
+        auto enuToEcef = [&](const Vec3& n) {
+            double e = static_cast<double>(n.x);
+            double u = static_cast<double>(n.y);
+            double nn = static_cast<double>(n.z);
+            double x = -sinLon * e - sinLat * cosLon * nn + cosLat * cosLon * u;
+            double y =  cosLon * e - sinLat * sinLon * nn + cosLat * sinLon * u;
+            double z =  cosLat * nn + sinLat * u;
+            return JSBSim::FGColumnVector3(x, y, z);
+        };
+        normal = enuToEcef(sample.normal);
+
+        double groundFt = static_cast<double>(sample.height) * kMToFt;
         contact.SetEllipse(kWgs84SemiMajorFt, kWgs84SemiMinorFt);
         contact.SetPositionGeodetic(lonRad, latRad, groundFt);
 
@@ -132,6 +151,7 @@ private:
     GeoOrigin m_origin;
     mutable float m_lastHeightMeters = 0.0f;
     mutable bool m_hasLastHeight = false;
+    mutable Vec3 m_lastNormal = Vec3(0.0f, 1.0f, 0.0f);
 };
 }
 
@@ -302,7 +322,7 @@ void JsbsimSystem::update(float dt) {
     m_fdm->Setdt(dt);
     if (m_config.terrain) {
         const_cast<TerrainRenderer*>(m_config.terrain)
-            ->preloadPhysicsAt(m_acState->position.x, m_acState->position.z);
+            ->preloadPhysicsAt(m_acState->position.x, m_acState->position.z, 1);
     }
     syncInputs();
     m_fdm->Run();

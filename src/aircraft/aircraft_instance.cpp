@@ -8,6 +8,7 @@
 #include "graphics/model.hpp"
 #include "environment/atmosphere.hpp"
 #include "math/mat4.hpp"
+#include "math/geo.hpp"
 #include "graphics/renderers/terrain_renderer.hpp"
 #include "utils/config_loader.hpp"
 #include "aircraft/aircraft_config_keys.hpp"
@@ -42,6 +43,14 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         jsbsimConfig.originLonDeg = terrainOrigin->lonDeg;
         jsbsimConfig.originAltMeters = terrainOrigin->altMeters;
         jsbsimConfig.hasOrigin = true;
+        // Align JSBSim initial lat/lon with terrain origin + spawn ENU offset.
+        double spawnLat = terrainOrigin->latDeg;
+        double spawnLon = terrainOrigin->lonDeg;
+        double spawnAlt = terrainOrigin->altMeters;
+        enuToLla(*terrainOrigin, m_currentState.position, spawnLat, spawnLon, spawnAlt);
+        jsbsimConfig.initLatDeg = spawnLat;
+        jsbsimConfig.initLonDeg = spawnLon;
+        // JSBSim takes altitude in feet; we set in ensureInitialized, but keep meters here.
     }
     if (terrain) {
         jsbsimConfig.terrain = terrain;

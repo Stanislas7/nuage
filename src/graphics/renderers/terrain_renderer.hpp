@@ -34,6 +34,11 @@ public:
         float rockStrength = 0.7f;
         float macroScale = 0.0012f;
         float macroStrength = 0.25f;
+        float farmlandStrength = 0.5f;
+        float farmlandStripeScale = 0.004f;
+        float farmlandStripeContrast = 0.6f;
+        float scrubStrength = 0.25f;
+        float scrubNoiseScale = 0.0016f;
         Vec3 grassTintA = Vec3(0.75f, 0.95f, 0.65f);
         Vec3 grassTintB = Vec3(0.55f, 0.7f, 0.45f);
         float grassTintStrength = 0.35f;
@@ -50,6 +55,15 @@ public:
         Vec3 waterColor = Vec3(0.14f, 0.32f, 0.55f);
     };
 
+    struct TerrainSample {
+        float height = 0.0f;
+        Vec3 normal = Vec3(0.0f, 1.0f, 0.0f);
+        float water = 0.0f;
+        float urban = 0.0f;
+        float forest = 0.0f;
+        bool onRunway = false;
+    };
+
     void init(AssetStore& assets);
     void shutdown();
     void setup(const std::string& configPath, AssetStore& assets);
@@ -60,6 +74,8 @@ public:
     bool hasCompiledOrigin() const { return m_compiledOriginValid; }
     GeoOrigin compiledOrigin() const { return m_compiledOrigin; }
     Vec3 compiledGeoToWorld(double latDeg, double lonDeg, double altMeters) const;
+    bool sampleSurface(float worldX, float worldZ, TerrainSample& outSample) const;
+    bool sampleSurfaceNoLoad(float worldX, float worldZ, TerrainSample& outSample) const;
     bool sampleHeight(float worldX, float worldZ, float& outHeight) const;
     bool sampleSurfaceHeight(float worldX, float worldZ, float& outHeight) const;
     bool sampleSurfaceHeightNoLoad(float worldX, float worldZ, float& outHeight) const;
@@ -88,8 +104,12 @@ private:
         Mesh* meshLod1 = nullptr;
         Mesh* treeMesh = nullptr;
         Texture* texture = nullptr;
+        std::unique_ptr<Texture> ownedMaskTexture;
+        Texture* maskTexture = nullptr;
         Vec3 center{0, 0, 0};
         float radius = 0.0f;
+        float tileMinX = 0.0f;
+        float tileMinZ = 0.0f;
         int level = 0;
         int x = 0;
         int y = 0;
@@ -109,10 +129,16 @@ private:
     TileResource* ensureCompiledTileLoaded(int x, int y, bool force = false);
     float proceduralHeight(float worldX, float worldZ) const;
     Vec3 proceduralTileTint(int tileX, int tileY) const;
+    Vec3 proceduralNormal(float worldX, float worldZ) const;
     std::int64_t packedTileKey(int x, int y) const;
     void applyTextureConfig(const nlohmann::json& config, const std::string& configPath);
     void bindTerrainTextures(Shader* shader, bool useMasks) const;
     void loadRunways(const nlohmann::json& config, const std::string& configPath);
+    bool sampleRunway(float worldX, float worldZ, TerrainSample& outSample) const;
+    bool sampleCompiledSurface(int tx, int ty, float worldX, float worldZ,
+                               bool forceLoad, TerrainSample& outSample) const;
+    bool sampleCompiledSurfaceCached(int tx, int ty, float worldX, float worldZ,
+                                     TerrainSample& outSample) const;
 
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
@@ -125,11 +151,20 @@ private:
     Texture* m_texRock = nullptr;
     Texture* m_texDirt = nullptr;
     Texture* m_texUrban = nullptr;
+    Texture* m_texGrassNormal = nullptr;
+    Texture* m_texDirtNormal = nullptr;
+    Texture* m_texRockNormal = nullptr;
+    Texture* m_texUrbanNormal = nullptr;
+    Texture* m_texGrassRough = nullptr;
+    Texture* m_texDirtRough = nullptr;
+    Texture* m_texRockRough = nullptr;
+    Texture* m_texUrbanRough = nullptr;
 
     std::unique_ptr<Mesh> m_runwayMesh;
     bool m_runwaysEnabled = false;
     Vec3 m_runwayColor = Vec3(0.12f, 0.12f, 0.12f);
     float m_runwayHeightOffset = 0.15f;
+    Texture* m_runwayTexture = nullptr;
 
     struct RunwayCollider {
         Vec3 center;

@@ -247,9 +247,12 @@ int classFromTags(const nlohmann::json& tags) {
         }
         if (v == "meadow" || v == "grass" || v == "grassland" || v == "farmland" ||
             v == "orchard" || v == "vineyard" || v == "plant_nursery" || v == "greenfield") {
+            return 5;
+        }
+        if (v == "cemetery" || v == "allotments" || v == "recreation_ground") {
             return 4;
         }
-        return 4;
+        return 5;
     }
     std::string natural = getTag("natural");
     if (!natural.empty()) {
@@ -258,7 +261,10 @@ int classFromTags(const nlohmann::json& tags) {
             return 3;
         }
         if (v == "grassland" || v == "scrub" || v == "heath") {
-            return 4;
+            return 5;
+        }
+        if (v == "bare_rock" || v == "scree" || v == "shingle" || v == "sand" || v == "beach") {
+            return 6;
         }
     }
     return 0;

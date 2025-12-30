@@ -62,7 +62,9 @@ Runtime note: tiles are converted to indexed grids on load for lower vertex band
   - 1 = water
   - 2 = urban
   - 3 = forest
-  - 4 = grass/crop
+  - 4 = grass/general green
+  - 5 = farmland/crop/orchard/meadow/grassland
+  - 6 = rock/sand/beach/bare ground
 
 ### `manifest.json`
 Key fields:
@@ -217,6 +219,21 @@ build/terrainc \
 ## How to run
 - Ensure `assets/config/terrain.json` points to the compiled manifest.
 - Run the sim; the runtime will stream tiles automatically.
+
+## Data prep quickstart (DEM + OSM + runways)
+1. Grab a DEM GeoTIFF for your bbox (USGS/ESA/etc) and convert to 16-bit PNG: `gdal_translate -of PNG -ot UInt16 input.tif assets/terrain/sources/height.png`.
+2. Download an OSM PBF covering the same bbox (e.g., Geofabrik) and clip it: `osmium extract -b xmin,ymin,xmax,ymax region.osm.pbf -o assets/terrain/sources/region.osm.pbf`.
+3. Generate runways in ENU using the OurAirports CSVs:  
+   `build/ourairports_import --airports assets/data/airports.csv --runways assets/data/runways.csv --out assets/terrain/sources/runways_region.json --min-lat <ymin> --min-lon <xmin> --max-lat <ymax> --max-lon <xmax>`
+4. Compile everything: `build/terrainc --heightmap assets/terrain/sources/height.png --height-min <m> --height-max <m> --tile-size 2000 --grid 257 --osm assets/terrain/sources/region.osm.pbf --mask-res 256 --xmin <xmin> --ymin <ymin> --xmax <xmax> --ymax <ymax> --runways-json assets/terrain/sources/runways_region.json --out assets/terrain/compiled`.
+5. Point `assets/config/terrain.json` at the new manifest/runways JSON and run the sim.
+
+### Optional: richer OSM masks (future)
+Add more filters when exporting OSM to drive better landclass/decals later:
+- Roads/rails: `highway=*`, `railway=*` (for future decals or texture bias).
+- Water detail: `waterway=*`, `natural=wetland`, `natural=beach`.
+- Farmland detail: `landuse=farmland|orchard|vineyard|meadow|grass`.
+- Bare/rocky: `natural=bare_rock|scree`.
 
 ## Pros
 - Deterministic, offline results.

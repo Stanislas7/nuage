@@ -22,4 +22,14 @@ Vec3 llaToEnu(const GeoOrigin& origin, double latDeg, double lonDeg, double altM
                 static_cast<float>(north));
 }
 
+void enuToLla(const GeoOrigin& origin, const Vec3& enu, double& outLatDeg, double& outLonDeg, double& outAltMeters) {
+    double lat0Rad = origin.latDeg * kDegToRad;
+    double metersPerLon = kEarthRadiusM * std::cos(lat0Rad);
+    double metersPerLat = kEarthRadiusM;
+
+    outLatDeg = origin.latDeg + (static_cast<double>(enu.z) / metersPerLat) * (180.0 / 3.141592653589793);
+    outLonDeg = origin.lonDeg + (static_cast<double>(enu.x) / metersPerLon) * (180.0 / 3.141592653589793);
+    outAltMeters = origin.altMeters + static_cast<double>(enu.y);
+}
+
 } // namespace nuage

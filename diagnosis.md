@@ -22,6 +22,11 @@ path that improves quality without relying on down-resing.
 - Textures: grass/forest/rock/dirt/urban with macro/micro variation.
 - Trees: simple procedural placement based on masks.
 
+## Recent fixes (ground/terrain)
+- JSBSim ground callback now samples compiled/procedural terrain (including runways) and feeds the real surface normal instead of a spherical normal; cached last sample prevents hard zero-height fallbacks.
+- Terrain sampling is unified via `TerrainRenderer::TerrainSample` (height + normal + mask weights + runway flag) so physics/collision callers can share one codepath.
+- Physics preload now pulls the surrounding tile ring for JSBSim to avoid missing height data during streaming.
+
 ## Visual gaps vs X-Plane / P3D
 - LOD blending: hard swaps vs geomorph / dithered transitions.
 - Material richness: no normals/roughness/decals; limited microstructure.

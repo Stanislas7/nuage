@@ -667,9 +667,16 @@ Vec3 TerrainRenderer::compiledGeoToWorld(double latDeg, double lonDeg, double al
     return llaToEnu(m_compiledOrigin, latDeg, lonDeg, altMeters);
 }
 
-bool TerrainRenderer::sampleHeight(float worldX, float worldZ, float& outHeight) const {
+bool TerrainRenderer::sampleSurface(float worldX, float worldZ, TerrainSample& outSample) const {
+    outSample = TerrainSample{};
+
+    if (sampleRunway(worldX, worldZ, outSample)) {
+        return true;
+    }
+
     if (m_procedural) {
-        outHeight = proceduralHeight(worldX, worldZ);
+        outSample.height = proceduralHeight(worldX, worldZ);
+        outSample.normal = proceduralNormal(worldX, worldZ);
         return true;
     }
     if (!m_compiled) {
@@ -678,23 +685,130 @@ bool TerrainRenderer::sampleHeight(float worldX, float worldZ, float& outHeight)
 
     int tx = static_cast<int>(std::floor(worldX / m_compiledTileSizeMeters));
     int ty = static_cast<int>(std::floor(worldZ / m_compiledTileSizeMeters));
-    if (m_compiledTiles.find(packedTileKey(tx, ty)) == m_compiledTiles.end()) {
+    return sampleCompiledSurface(tx, ty, worldX, worldZ, true, outSample);
+}
+
+bool TerrainRenderer::sampleSurfaceNoLoad(float worldX, float worldZ, TerrainSample& outSample) const {
+    outSample = TerrainSample{};
+
+    if (sampleRunway(worldX, worldZ, outSample)) {
+        return true;
+    }
+
+    if (m_procedural) {
+        outSample.height = proceduralHeight(worldX, worldZ);
+        outSample.normal = proceduralNormal(worldX, worldZ);
+        return true;
+    }
+    if (!m_compiled) {
         return false;
     }
 
-    auto tile = const_cast<TerrainRenderer*>(this)->ensureCompiledTileLoaded(tx, ty);
+    int tx = static_cast<int>(std::floor(worldX / m_compiledTileSizeMeters));
+    int ty = static_cast<int>(std::floor(worldZ / m_compiledTileSizeMeters));
+    return sampleCompiledSurfaceCached(tx, ty, worldX, worldZ, outSample);
+}
+
+bool TerrainRenderer::sampleHeight(float worldX, float worldZ, float& outHeight) const {
+    TerrainSample sample;
+    if (!sampleSurface(worldX, worldZ, sample)) {
+        return false;
+    }
+    outHeight = sample.height;
+    return true;
+}
+
+bool TerrainRenderer::sampleSurfaceHeight(float worldX, float worldZ, float& outHeight) const {
+    TerrainSample sample;
+    if (!sampleSurface(worldX, worldZ, sample)) {
+        return false;
+    }
+    outHeight = sample.height;
+    return true;
+}
+
+bool TerrainRenderer::sampleSurfaceHeightNoLoad(float worldX, float worldZ, float& outHeight) const {
+    TerrainSample sample;
+    if (!sampleSurfaceNoLoad(worldX, worldZ, sample)) {
+        return false;
+    }
+    outHeight = sample.height;
+    return true;
+}
+
+bool TerrainRenderer::sampleRunway(float worldX, float worldZ, TerrainSample& outSample) const {
+    if (!m_runwaysEnabled || m_runwayColliders.empty()) {
+        return false;
+    }
+    for (const auto& runway : m_runwayColliders) {
+        Vec3 delta(worldX - runway.center.x, 0.0f, worldZ - runway.center.z);
+        float along = delta.x * runway.dir.x + delta.z * runway.dir.z;
+        float side = delta.x * runway.perp.x + delta.z * runway.perp.z;
+        if (std::abs(along) > runway.halfLength || std::abs(side) > runway.halfWidth) {
+            continue;
+        }
+        float t = (along + runway.halfLength) / (2.0f * runway.halfLength);
+        t = std::clamp(t, 0.0f, 1.0f);
+        float runwayY = runway.h0 + (runway.h1 - runway.h0) * t;
+
+        float slopeY = (runway.h1 - runway.h0) / std::max(0.001f, runway.halfLength * 2.0f);
+        Vec3 dirSlope(runway.dir.x, slopeY, runway.dir.z);
+        Vec3 perpFlat(runway.perp.x, 0.0f, runway.perp.z);
+        Vec3 normal = perpFlat.cross(dirSlope);
+        if (normal.length() < 1e-4f) {
+            normal = Vec3(0.0f, 1.0f, 0.0f);
+        } else {
+            normal = normal.normalized();
+        }
+
+        outSample.height = runwayY + m_runwayHeightOffset;
+        outSample.normal = normal;
+        outSample.water = 0.0f;
+        outSample.urban = 0.0f;
+        outSample.forest = 0.0f;
+        outSample.onRunway = true;
+        return true;
+    }
+    return false;
+}
+
+bool TerrainRenderer::sampleCompiledSurface(int tx, int ty, float worldX, float worldZ,
+                                            bool forceLoad, TerrainSample& outSample) const {
+    if (m_compiledTiles.find(packedTileKey(tx, ty)) == m_compiledTiles.end()) {
+        return false;
+    }
+    auto* tile = const_cast<TerrainRenderer*>(this)->ensureCompiledTileLoaded(tx, ty, forceLoad);
     if (!tile || !tile->hasGrid || tile->gridVerts.empty() || tile->gridRes <= 1) {
         return false;
     }
 
     float tileMinX = static_cast<float>(tx) * m_compiledTileSizeMeters;
     float tileMinZ = static_cast<float>(ty) * m_compiledTileSizeMeters;
-    Vec3 normal;
-    float water = 0.0f;
-    float urban = 0.0f;
-    float forest = 0.0f;
     return sampleGrid(tile->gridVerts, tile->gridRes, tileMinX, tileMinZ, m_compiledTileSizeMeters,
-                      worldX, worldZ, outHeight, normal, water, urban, forest);
+                      worldX, worldZ, outSample.height, outSample.normal,
+                      outSample.water, outSample.urban, outSample.forest);
+}
+
+bool TerrainRenderer::sampleCompiledSurfaceCached(int tx, int ty, float worldX, float worldZ,
+                                                  TerrainSample& outSample) const {
+    if (m_compiledTiles.find(packedTileKey(tx, ty)) == m_compiledTiles.end()) {
+        return false;
+    }
+    std::string key = "C_x" + std::to_string(tx) + "_y" + std::to_string(ty);
+    auto it = m_tileCache.find(key);
+    if (it == m_tileCache.end()) {
+        return false;
+    }
+    const TileResource& tile = it->second;
+    if (!tile.hasGrid || tile.gridVerts.empty() || tile.gridRes <= 1) {
+        return false;
+    }
+
+    float tileMinX = static_cast<float>(tx) * m_compiledTileSizeMeters;
+    float tileMinZ = static_cast<float>(ty) * m_compiledTileSizeMeters;
+    return sampleGrid(tile.gridVerts, tile.gridRes, tileMinX, tileMinZ, m_compiledTileSizeMeters,
+                      worldX, worldZ, outSample.height, outSample.normal,
+                      outSample.water, outSample.urban, outSample.forest);
 }
 
 void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std::string& configPath) {
@@ -714,6 +828,11 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
     m_textureSettings.rockStrength = texConfig.value("rockStrength", m_textureSettings.rockStrength);
     m_textureSettings.macroScale = texConfig.value("macroScale", m_textureSettings.macroScale);
     m_textureSettings.macroStrength = texConfig.value("macroStrength", m_textureSettings.macroStrength);
+    m_textureSettings.farmlandStrength = texConfig.value("farmlandStrength", m_textureSettings.farmlandStrength);
+    m_textureSettings.farmlandStripeScale = texConfig.value("farmlandStripeScale", m_textureSettings.farmlandStripeScale);
+    m_textureSettings.farmlandStripeContrast = texConfig.value("farmlandStripeContrast", m_textureSettings.farmlandStripeContrast);
+    m_textureSettings.scrubStrength = texConfig.value("scrubStrength", m_textureSettings.scrubStrength);
+    m_textureSettings.scrubNoiseScale = texConfig.value("scrubNoiseScale", m_textureSettings.scrubNoiseScale);
     m_textureSettings.grassTintStrength = texConfig.value("grassTintStrength", m_textureSettings.grassTintStrength);
     m_textureSettings.forestTintStrength = texConfig.value("forestTintStrength", m_textureSettings.forestTintStrength);
     m_textureSettings.urbanTintStrength = texConfig.value("urbanTintStrength", m_textureSettings.urbanTintStrength);
@@ -777,6 +896,14 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
     loadedAny |= loadTex("rock", m_texRock, "terrain_rock");
     loadedAny |= loadTex("dirt", m_texDirt, "terrain_dirt");
     loadedAny |= loadTex("urban", m_texUrban, "terrain_urban");
+    loadTex("grassNormal", m_texGrassNormal, "terrain_grass_n");
+    loadTex("dirtNormal", m_texDirtNormal, "terrain_dirt_n");
+    loadTex("rockNormal", m_texRockNormal, "terrain_rock_n");
+    loadTex("urbanNormal", m_texUrbanNormal, "terrain_urban_n");
+    loadTex("grassRoughness", m_texGrassRough, "terrain_grass_r");
+    loadTex("dirtRoughness", m_texDirtRough, "terrain_dirt_r");
+    loadTex("rockRoughness", m_texRockRough, "terrain_rock_r");
+    loadTex("urbanRoughness", m_texUrbanRough, "terrain_urban_r");
     if (!loadedAny) {
         m_textureSettings.enabled = false;
     }
@@ -786,6 +913,7 @@ void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::strin
     m_runwayMesh.reset();
     m_runwaysEnabled = false;
     m_runwayColliders.clear();
+    m_runwayTexture = nullptr;
 
     if (!config.contains("runways") || !config["runways"].is_object()) {
         return;
@@ -795,6 +923,8 @@ void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::strin
     if (!m_runwaysEnabled) {
         return;
     }
+    float runwayTexScaleU = runwaysConfig.value("textureScaleU", 5.0f);
+    float runwayTexScaleV = runwaysConfig.value("textureScaleV", 30.0f);
 
     std::filesystem::path cfg(configPath);
     auto resolve = [&](const std::string& p) {
@@ -803,6 +933,13 @@ void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::strin
         if (path.is_absolute()) return p;
         return (cfg.parent_path() / path).string();
     };
+
+    std::string runwayTexPath = resolve(runwaysConfig.value("texture", ""));
+    if (!runwayTexPath.empty() && m_assets) {
+        if (m_assets->loadTexture("runway_tex", runwayTexPath, true)) {
+            m_runwayTexture = m_assets->getTexture("runway_tex");
+        }
+    }
 
     std::string runwaysPath = resolve(runwaysConfig.value("json", ""));
     if (runwaysPath.empty()) {
@@ -825,7 +962,7 @@ void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::strin
     m_runwayHeightOffset = std::max(0.0f, runwaysConfig.value("heightOffset", m_runwayHeightOffset));
 
     std::vector<float> verts;
-    constexpr int stride = 9;
+    constexpr int stride = 8; // pos(3) normal(3) uv(2)
     if (runways.contains("runways") && runways["runways"].is_array()) {
         for (const auto& runway : runways["runways"]) {
             if (!runway.is_object()) {
@@ -884,94 +1021,37 @@ void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::strin
             Vec3 p1(lePos.x - leOffset.x, lePos.y + m_runwayHeightOffset, lePos.z - leOffset.z);
             Vec3 p2(hePos.x - heOffset.x, hePos.y + m_runwayHeightOffset, hePos.z - heOffset.z);
             Vec3 p3(hePos.x + heOffset.x, hePos.y + m_runwayHeightOffset, hePos.z + heOffset.z);
+            float uvU0 = (widthMeters * 0.5f) / std::max(0.1f, runwayTexScaleU);
+            float uvU1 = -uvU0;
+            float uvV0 = 0.0f;
+            float uvV1 = length / std::max(0.1f, runwayTexScaleV);
 
             Vec3 normal(0.0f, 1.0f, 0.0f);
-            auto push = [&](const Vec3& pos) {
+            auto push = [&](const Vec3& pos, const Vec2& uv) {
                 verts.insert(verts.end(), {
                     pos.x, pos.y, pos.z,
                     normal.x, normal.y, normal.z,
-                    m_runwayColor.x, m_runwayColor.y, m_runwayColor.z
+                    uv.x, uv.y
                 });
             };
 
-            push(p0);
-            push(p1);
-            push(p2);
+            push(p0, Vec2(uvU0, uvV0));
+            push(p1, Vec2(uvU1, uvV0));
+            push(p2, Vec2(uvU1, uvV1));
 
-            push(p0);
-            push(p2);
-            push(p3);
+            push(p0, Vec2(uvU0, uvV0));
+            push(p2, Vec2(uvU1, uvV1));
+            push(p3, Vec2(uvU0, uvV1));
         }
     }
 
     if (!verts.empty()) {
         m_runwayMesh = std::make_unique<Mesh>();
-        m_runwayMesh->init(verts);
+        m_runwayMesh->initTextured(verts);
+        std::cout << "[runways] loaded " << (verts.size() / 8 / 6) << " runway quads from " << runwaysPath << "\n";
+    } else {
+        std::cout << "[runways] no runway mesh built from " << runwaysPath << "\n";
     }
-}
-
-bool TerrainRenderer::sampleSurfaceHeight(float worldX, float worldZ, float& outHeight) const {
-    if (m_runwaysEnabled && !m_runwayColliders.empty()) {
-        for (const auto& runway : m_runwayColliders) {
-            Vec3 delta(worldX - runway.center.x, 0.0f, worldZ - runway.center.z);
-            float along = delta.x * runway.dir.x + delta.z * runway.dir.z;
-            float side = delta.x * runway.perp.x + delta.z * runway.perp.z;
-            if (std::abs(along) <= runway.halfLength && std::abs(side) <= runway.halfWidth) {
-                float t = (along + runway.halfLength) / (2.0f * runway.halfLength);
-                t = std::clamp(t, 0.0f, 1.0f);
-                float runwayY = runway.h0 + (runway.h1 - runway.h0) * t;
-                outHeight = runwayY + m_runwayHeightOffset;
-                return true;
-            }
-        }
-    }
-    return sampleHeight(worldX, worldZ, outHeight);
-}
-
-bool TerrainRenderer::sampleSurfaceHeightNoLoad(float worldX, float worldZ, float& outHeight) const {
-    if (m_runwaysEnabled && !m_runwayColliders.empty()) {
-        for (const auto& runway : m_runwayColliders) {
-            Vec3 delta(worldX - runway.center.x, 0.0f, worldZ - runway.center.z);
-            float along = delta.x * runway.dir.x + delta.z * runway.dir.z;
-            float side = delta.x * runway.perp.x + delta.z * runway.perp.z;
-            if (std::abs(along) <= runway.halfLength && std::abs(side) <= runway.halfWidth) {
-                float t = (along + runway.halfLength) / (2.0f * runway.halfLength);
-                t = std::clamp(t, 0.0f, 1.0f);
-                float runwayY = runway.h0 + (runway.h1 - runway.h0) * t;
-                outHeight = runwayY + m_runwayHeightOffset;
-                return true;
-            }
-        }
-    }
-
-    if (m_procedural) {
-        outHeight = proceduralHeight(worldX, worldZ);
-        return true;
-    }
-    if (!m_compiled) {
-        return false;
-    }
-
-    int tx = static_cast<int>(std::floor(worldX / m_compiledTileSizeMeters));
-    int ty = static_cast<int>(std::floor(worldZ / m_compiledTileSizeMeters));
-    std::string key = "C_x" + std::to_string(tx) + "_y" + std::to_string(ty);
-    auto it = m_tileCache.find(key);
-    if (it == m_tileCache.end()) {
-        return false;
-    }
-    const TileResource& tile = it->second;
-    if (!tile.hasGrid || tile.gridVerts.empty() || tile.gridRes <= 1) {
-        return false;
-    }
-
-    float tileMinX = static_cast<float>(tx) * m_compiledTileSizeMeters;
-    float tileMinZ = static_cast<float>(ty) * m_compiledTileSizeMeters;
-    Vec3 normal;
-    float water = 0.0f;
-    float urban = 0.0f;
-    float forest = 0.0f;
-    return sampleGrid(tile.gridVerts, tile.gridRes, tileMinX, tileMinZ, m_compiledTileSizeMeters,
-                      worldX, worldZ, outHeight, normal, water, urban, forest);
 }
 
 void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
@@ -999,6 +1079,11 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     shader->setFloat("uTerrainRockStrength", m_textureSettings.rockStrength);
     shader->setFloat("uTerrainMacroScale", m_textureSettings.macroScale);
     shader->setFloat("uTerrainMacroStrength", m_textureSettings.macroStrength);
+    shader->setFloat("uTerrainFarmlandStrength", m_textureSettings.farmlandStrength);
+    shader->setFloat("uTerrainFarmlandStripeScale", m_textureSettings.farmlandStripeScale);
+    shader->setFloat("uTerrainFarmlandStripeContrast", m_textureSettings.farmlandStripeContrast);
+    shader->setFloat("uTerrainScrubStrength", m_textureSettings.scrubStrength);
+    shader->setFloat("uTerrainScrubNoiseScale", m_textureSettings.scrubNoiseScale);
     shader->setVec3("uTerrainGrassTintA", m_textureSettings.grassTintA);
     shader->setVec3("uTerrainGrassTintB", m_textureSettings.grassTintB);
     shader->setFloat("uTerrainGrassTintStrength", m_textureSettings.grassTintStrength);
@@ -1024,6 +1109,19 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     shader->setInt("uTerrainTexDirt", 3);
     urban->bind(4);
     shader->setInt("uTerrainTexUrban", 4);
+    auto bindOpt = [&](Texture* tex, int unit, const char* name) {
+        if (!tex) return;
+        tex->bind(unit);
+        shader->setInt(name, unit);
+    };
+    bindOpt(m_texGrassNormal, 6, "uTerrainTexGrassNormal");
+    bindOpt(m_texDirtNormal, 7, "uTerrainTexDirtNormal");
+    bindOpt(m_texRockNormal, 8, "uTerrainTexRockNormal");
+    bindOpt(m_texUrbanNormal, 9, "uTerrainTexUrbanNormal");
+    bindOpt(m_texGrassRough, 10, "uTerrainTexGrassRough");
+    bindOpt(m_texDirtRough, 11, "uTerrainTexDirtRough");
+    bindOpt(m_texRockRough, 12, "uTerrainTexRockRough");
+    bindOpt(m_texUrbanRough, 13, "uTerrainTexUrbanRough");
 }
 
 namespace {
@@ -1049,6 +1147,17 @@ float TerrainRenderer::proceduralHeight(float worldX, float worldZ) const {
     float h3 = std::sin((worldX - phase) * (m_procFrequency * 0.5f)) * std::sin((worldZ + phase) * (m_procFrequency * 0.5f));
     float combined = h1 * 0.6f + h2 * 0.25f + h3 * 0.15f;
     return m_procHeightBase + combined * m_procHeightAmplitude;
+}
+
+Vec3 TerrainRenderer::proceduralNormal(float worldX, float worldZ) const {
+    constexpr float delta = 2.0f;
+    float dHx = proceduralHeight(worldX + delta, worldZ) - proceduralHeight(worldX - delta, worldZ);
+    float dHz = proceduralHeight(worldX, worldZ + delta) - proceduralHeight(worldX, worldZ - delta);
+    Vec3 normal(-dHx / (2.0f * delta), 1.0f, -dHz / (2.0f * delta));
+    if (normal.length() < 1e-4f) {
+        return Vec3(0.0f, 1.0f, 0.0f);
+    }
+    return normal.normalized();
 }
 
 Vec3 TerrainRenderer::proceduralTileTint(int tileX, int tileY) const {
@@ -1234,12 +1343,12 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
 
     float tileMinX = static_cast<float>(x) * m_compiledTileSizeMeters;
     float tileMinZ = static_cast<float>(y) * m_compiledTileSizeMeters;
+    std::vector<std::uint8_t> maskData;
     if (m_compiledMaskResolution > 0) {
         std::filesystem::path maskPath = std::filesystem::path(m_compiledManifestDir)
             / "tiles" / ("tile_" + std::to_string(x) + "_" + std::to_string(y) + ".mask");
-        std::vector<std::uint8_t> mask;
-        if (load_compiled_mask(maskPath.string(), m_compiledMaskResolution, mask)) {
-            apply_mask_to_verts(verts, mask, m_compiledMaskResolution, m_compiledTileSizeMeters, tileMinX, tileMinZ);
+        if (load_compiled_mask(maskPath.string(), m_compiledMaskResolution, maskData)) {
+            apply_mask_to_verts(verts, maskData, m_compiledMaskResolution, m_compiledTileSizeMeters, tileMinX, tileMinZ);
         }
     }
 
@@ -1271,6 +1380,8 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
                            0.0f,
                            (static_cast<float>(y) + 0.5f) * m_compiledTileSizeMeters);
     resource.radius = m_compiledTileSizeMeters * 0.5f;
+    resource.tileMinX = tileMinX;
+    resource.tileMinZ = tileMinZ;
     resource.level = 0;
     resource.x = x;
     resource.y = y;
@@ -1281,6 +1392,13 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
     resource.hasGrid = builtGrid;
     if (builtGrid) {
         resource.gridVerts = std::move(gridVerts);
+    }
+    if (!maskData.empty()) {
+        auto tex = std::make_unique<Texture>();
+        if (tex->loadFromData(maskData.data(), m_compiledMaskResolution, m_compiledMaskResolution, 1, false)) {
+            resource.maskTexture = tex.get();
+            resource.ownedMaskTexture = std::move(tex);
+        }
     }
 
     if (builtGrid && m_compiledGridResolution >= 2) {
@@ -1381,6 +1499,7 @@ void TerrainRenderer::renderProcedural(const Mat4& vp, const Vec3& sunDir, const
             applyDirectionalLighting(m_shader, sunDir);
             m_visuals.bind(m_shader, sunDir, cameraPos);
             bindTerrainTextures(m_shader, false);
+            m_shader->setBool("uTerrainHasMaskTex", false);
             tile->mesh->draw();
         }
     }
@@ -1488,6 +1607,15 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
         applyDirectionalLighting(m_shader, sunDir);
         m_visuals.bind(m_shader, sunDir, cameraPos);
         bindTerrainTextures(m_shader, m_compiledMaskResolution > 0);
+        bool hasMask = (tile->maskTexture != nullptr);
+        m_shader->setBool("uTerrainHasMaskTex", hasMask);
+        if (hasMask) {
+            tile->maskTexture->bind(5);
+            m_shader->setInt("uTerrainMaskTex", 5);
+            m_shader->setVec2("uTerrainMaskOrigin", Vec2(tile->tileMinX, tile->tileMinZ));
+            float invSize = 1.0f / m_compiledTileSizeMeters;
+            m_shader->setVec2("uTerrainMaskInvSize", Vec2(invSize, invSize));
+        }
         Mesh* meshToDraw = useLod1 ? tile->meshLod1 : tile->mesh;
         meshToDraw->draw();
 
@@ -1531,14 +1659,28 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
     }
 
     if (m_runwaysEnabled && m_runwayMesh) {
-        m_shader->use();
-        m_shader->setMat4("uMVP", vp);
-        applyDirectionalLighting(m_shader, sunDir);
-        m_shader->setBool("uTerrainShading", false);
-        m_shader->setBool("uTerrainUseTextures", false);
-        m_shader->setBool("uTerrainUseMasks", false);
-        m_shader->setBool("uUseUniformColor", true);
-        m_shader->setVec3("uColor", m_runwayColor);
+        Shader* rs = (m_texturedShader && m_runwayTexture) ? m_texturedShader : m_shader;
+        rs->use();
+        rs->setMat4("uMVP", vp);
+        applyDirectionalLighting(rs, sunDir);
+        if (rs == m_texturedShader && m_runwayTexture) {
+            if (m_compiledDebugLog) {
+                std::cout << "[runways] drawing textured runway mesh\n";
+            }
+        } else if (m_compiledDebugLog) {
+            std::cout << "[runways] drawing flat-color runway mesh\n";
+        }
+        if (rs == m_texturedShader && m_runwayTexture) {
+            m_runwayTexture->bind(0);
+            rs->setInt("uTexture", 0);
+            rs->setBool("uUseUniformColor", false);
+        } else {
+            rs->setBool("uTerrainShading", false);
+            rs->setBool("uTerrainUseTextures", false);
+            rs->setBool("uTerrainUseMasks", false);
+            rs->setBool("uUseUniformColor", true);
+            rs->setVec3("uColor", m_runwayColor);
+        }
         m_runwayMesh->draw();
     }
 }

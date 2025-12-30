@@ -11,5 +11,6 @@ struct GeoOrigin {
 };
 
 Vec3 llaToEnu(const GeoOrigin& origin, double latDeg, double lonDeg, double altMeters);
+void enuToLla(const GeoOrigin& origin, const Vec3& enu, double& outLatDeg, double& outLonDeg, double& outAltMeters);
 
 } // namespace nuage
