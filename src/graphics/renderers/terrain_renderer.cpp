@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -24,6 +25,7 @@ constexpr int kMaxVisibleRadius = 8;
 constexpr int kMaxLoadsPerFrame = 8;
 constexpr float kMetersPerKm = 1000.0f;
 constexpr float kSqMetersPerSqKm = 1000000.0f;
+constexpr double kFtToM = 0.3048;
 
 float rand01(std::uint32_t& state) {
     state = state * 1664525u + 1013904223u;
@@ -358,6 +360,21 @@ void addSkirt(std::vector<float>& verts, std::vector<std::uint32_t>& indices,
         indices.push_back(s0);
     }
 }
+
+bool parseNumber(const nlohmann::json& value, double& out) {
+    if (value.is_number_float() || value.is_number_integer() || value.is_number_unsigned()) {
+        out = value.get<double>();
+        return true;
+    }
+    if (value.is_string()) {
+        const std::string s = value.get<std::string>();
+        if (s.empty()) return false;
+        char* end = nullptr;
+        out = std::strtod(s.c_str(), &end);
+        return end != s.c_str();
+    }
+    return false;
+}
 }
 
 void TerrainRenderer::init(AssetStore& assets) {
@@ -637,6 +654,7 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
     m_visuals.applyConfig(config);
     m_visuals.clamp();
     applyTextureConfig(config, configPath);
+    loadRunways(config, configPath);
 
     m_textured = false;
     m_compiled = true;
@@ -731,6 +749,122 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
     loadedAny |= loadTex("urban", m_texUrban, "terrain_urban");
     if (!loadedAny) {
         m_textureSettings.enabled = false;
+    }
+}
+
+void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::string& configPath) {
+    m_runwayMesh.reset();
+    m_runwaysEnabled = false;
+
+    if (!config.contains("runways") || !config["runways"].is_object()) {
+        return;
+    }
+    const auto& runwaysConfig = config["runways"];
+    m_runwaysEnabled = runwaysConfig.value("enabled", true);
+    if (!m_runwaysEnabled) {
+        return;
+    }
+
+    std::filesystem::path cfg(configPath);
+    auto resolve = [&](const std::string& p) {
+        if (p.empty()) return p;
+        std::filesystem::path path(p);
+        if (path.is_absolute()) return p;
+        return (cfg.parent_path() / path).string();
+    };
+
+    std::string runwaysPath = resolve(runwaysConfig.value("json", ""));
+    if (runwaysPath.empty()) {
+        return;
+    }
+
+    auto runwaysOpt = loadJsonConfig(runwaysPath);
+    if (!runwaysOpt) {
+        std::cerr << "Failed to load runways JSON: " << runwaysPath << "\n";
+        return;
+    }
+    const auto& runways = *runwaysOpt;
+
+    if (runwaysConfig.contains("color") && runwaysConfig["color"].is_array()
+        && runwaysConfig["color"].size() == 3) {
+        m_runwayColor = Vec3(runwaysConfig["color"][0].get<float>(),
+                             runwaysConfig["color"][1].get<float>(),
+                             runwaysConfig["color"][2].get<float>());
+    }
+    m_runwayHeightOffset = std::max(0.0f, runwaysConfig.value("heightOffset", m_runwayHeightOffset));
+
+    std::vector<float> verts;
+    constexpr int stride = 9;
+    if (runways.contains("runways") && runways["runways"].is_array()) {
+        for (const auto& runway : runways["runways"]) {
+            if (!runway.is_object()) {
+                continue;
+            }
+            std::string closed = runway.value("closed", "");
+            if (closed == "1" || closed == "true" || closed == "TRUE") {
+                continue;
+            }
+            if (!runway.contains("leENU") || !runway.contains("heENU")) {
+                continue;
+            }
+            const auto& le = runway["leENU"];
+            const auto& he = runway["heENU"];
+            if (!le.is_array() || !he.is_array() || le.size() != 3 || he.size() != 3) {
+                continue;
+            }
+
+            double widthFt = 0.0;
+            if (!runway.contains("widthFt") || !parseNumber(runway["widthFt"], widthFt)) {
+                continue;
+            }
+            float widthMeters = static_cast<float>(widthFt * kFtToM);
+            if (widthMeters <= 0.1f) {
+                continue;
+            }
+
+            Vec3 lePos(le[0].get<float>(), le[1].get<float>(), le[2].get<float>());
+            Vec3 hePos(he[0].get<float>(), he[1].get<float>(), he[2].get<float>());
+
+            float dx = hePos.x - lePos.x;
+            float dz = hePos.z - lePos.z;
+            float length = std::sqrt(dx * dx + dz * dz);
+            if (length < 1.0f) {
+                continue;
+            }
+            Vec3 dir(dx / length, 0.0f, dz / length);
+            Vec3 perp(-dir.z, 0.0f, dir.x);
+            float halfWidth = widthMeters * 0.5f;
+
+            Vec3 leOffset = perp * halfWidth;
+            Vec3 heOffset = perp * halfWidth;
+
+            Vec3 p0(lePos.x + leOffset.x, lePos.y + m_runwayHeightOffset, lePos.z + leOffset.z);
+            Vec3 p1(lePos.x - leOffset.x, lePos.y + m_runwayHeightOffset, lePos.z - leOffset.z);
+            Vec3 p2(hePos.x - heOffset.x, hePos.y + m_runwayHeightOffset, hePos.z - heOffset.z);
+            Vec3 p3(hePos.x + heOffset.x, hePos.y + m_runwayHeightOffset, hePos.z + heOffset.z);
+
+            Vec3 normal(0.0f, 1.0f, 0.0f);
+            auto push = [&](const Vec3& pos) {
+                verts.insert(verts.end(), {
+                    pos.x, pos.y, pos.z,
+                    normal.x, normal.y, normal.z,
+                    m_runwayColor.x, m_runwayColor.y, m_runwayColor.z
+                });
+            };
+
+            push(p0);
+            push(p1);
+            push(p2);
+
+            push(p0);
+            push(p2);
+            push(p3);
+        }
+    }
+
+    if (!verts.empty()) {
+        m_runwayMesh = std::make_unique<Mesh>();
+        m_runwayMesh->init(verts);
     }
 }
 
@@ -1259,6 +1393,18 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
             }
             m_tileCache.erase(it);
         }
+    }
+
+    if (m_runwaysEnabled && m_runwayMesh) {
+        m_shader->use();
+        m_shader->setMat4("uMVP", vp);
+        applyDirectionalLighting(m_shader, sunDir);
+        m_shader->setBool("uTerrainShading", false);
+        m_shader->setBool("uTerrainUseTextures", false);
+        m_shader->setBool("uTerrainUseMasks", false);
+        m_shader->setBool("uUseUniformColor", true);
+        m_shader->setVec3("uColor", m_runwayColor);
+        m_runwayMesh->draw();
     }
 }
 

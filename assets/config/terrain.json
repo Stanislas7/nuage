@@ -6,7 +6,7 @@
   "compiledSkirtDepth": 180.0,
   "compiledDebugLog": false,
   "terrainTrees": {
-    "enabled": true,
+    "enabled": false,
     "densityPerSqKm": 800.0,
     "minHeight": 4.0,
     "maxHeight": 10.0,
@@ -63,5 +63,11 @@
     "waterDetailScale": 0.12,
     "waterDetailStrength": 0.3,
     "waterColor": [0.14, 0.32, 0.55]
+  },
+  "runways": {
+    "enabled": true,
+    "json": "../terrain/compiled/runways.json",
+    "color": [0.9, 0.1, 0.1],
+    "heightOffset": 3.0
   }
 }

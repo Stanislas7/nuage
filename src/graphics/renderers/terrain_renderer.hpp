@@ -105,6 +105,7 @@ private:
     std::int64_t packedTileKey(int x, int y) const;
     void applyTextureConfig(const nlohmann::json& config, const std::string& configPath);
     void bindTerrainTextures(Shader* shader, bool useMasks) const;
+    void loadRunways(const nlohmann::json& config, const std::string& configPath);
 
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
@@ -117,6 +118,11 @@ private:
     Texture* m_texRock = nullptr;
     Texture* m_texDirt = nullptr;
     Texture* m_texUrban = nullptr;
+
+    std::unique_ptr<Mesh> m_runwayMesh;
+    bool m_runwaysEnabled = false;
+    Vec3 m_runwayColor = Vec3(0.12f, 0.12f, 0.12f);
+    float m_runwayHeightOffset = 0.15f;
 
     bool m_procedural = false;
     bool m_compiled = false;

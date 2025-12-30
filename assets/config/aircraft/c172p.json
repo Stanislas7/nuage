@@ -3,11 +3,11 @@
     "jsbsim": {
         "enabled": true,
         "model": "c172p",
-        "latitudeDeg": 0.0,
-        "longitudeDeg": 0.0
+        "latitudeDeg": 47.54050064086914,
+        "longitudeDeg": -122.31099700927734
     },
     "spawn": {
-        "position": [0.0, 1500.0, -500.0],
+        "position": [2924.88232421875, 1000.18160009384155, -12189.4130859375],
         "airspeed": 60.0
     },
     "model": {

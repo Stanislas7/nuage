@@ -7,12 +7,14 @@
 #include <iostream>
 #include <limits>
 #include <unordered_map>
+#include <unordered_set>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "utils/stb_image.h"
+#include "utils/config_loader.hpp"
 #include "utils/json.hpp"
 #include "math/vec2.hpp"
 #include "math/vec3.hpp"
@@ -25,6 +27,7 @@ struct Config {
     std::string heightmapPath;
     std::string osmPath;
     std::string outDir;
+    std::string runwaysJsonPath;
     float sizeX = 0.0f;
     float sizeZ = 0.0f;
     float heightMin = 0.0f;
@@ -41,12 +44,35 @@ struct Config {
     double originLat = 0.0;
     double originLon = 0.0;
     double originAlt = 0.0;
+    float runwayBlendMeters = 60.0f;
+};
+
+struct RunwayInput {
+    nuage::Vec3 le;
+    nuage::Vec3 he;
+    float widthMeters = 0.0f;
+    std::string airportIdent;
+    std::string leIdent;
+    std::string heIdent;
+    std::string closed;
+    double widthFt = 0.0;
+};
+
+struct Runway {
+    nuage::Vec3 center;
+    nuage::Vec3 dir;
+    nuage::Vec3 perp;
+    float halfLength = 0.0f;
+    float halfWidth = 0.0f;
+    float h0 = 0.0f;
+    float h1 = 0.0f;
 };
 
 void printUsage() {
     std::cout << "Usage: terrainc --heightmap <path> --size-x <meters> --size-z <meters>\n"
               << "               --height-min <m> --height-max <m> --tile-size <m>\n"
               << "               --grid <cells> --out <dir>\n"
+              << "               [--runways-json <path> --runway-blend <meters>]\n"
               << "               [--origin-lat <deg>] [--origin-lon <deg>] [--origin-alt <m>]\n"
               << "               [--osm <path> --mask-res <pixels> --xmin <lon> --ymin <lat>\n"
               << "                --xmax <lon> --ymax <lat> --mask-smooth <passes>]\n";
@@ -89,6 +115,12 @@ bool parseArgs(int argc, char** argv, Config& cfg) {
             cfg.gridResolution = std::stoi(v);
         } else if (arg == "--out") {
             if (!next(cfg.outDir)) return false;
+        } else if (arg == "--runways-json") {
+            if (!next(cfg.runwaysJsonPath)) return false;
+        } else if (arg == "--runway-blend") {
+            std::string v;
+            if (!next(v)) return false;
+            cfg.runwayBlendMeters = std::stof(v);
         } else if (arg == "--osm") {
             if (!next(cfg.osmPath)) return false;
         } else if (arg == "--mask-res") {
@@ -143,6 +175,7 @@ bool parseArgs(int argc, char** argv, Config& cfg) {
     if (cfg.tileSize <= 0.0f) cfg.tileSize = 2000.0f;
     cfg.gridResolution = std::max(2, cfg.gridResolution);
     if (cfg.heightMax <= cfg.heightMin) cfg.heightMax = cfg.heightMin + 1.0f;
+    cfg.runwayBlendMeters = std::max(0.0f, cfg.runwayBlendMeters);
     return true;
 }
 
@@ -252,6 +285,70 @@ nuage::Vec2 projectLonLat(const Projection& proj, double lon, double lat) {
     float x = static_cast<float>((lon - proj.lon0) * proj.metersPerLon);
     float z = static_cast<float>((lat - proj.lat0) * proj.metersPerLat);
     return nuage::Vec2(x, z);
+}
+
+float sampleHeightAtWorld(const Heightmap& hm, const Config& cfg, float minX, float minZ,
+                          float heightRange, float worldX, float worldZ) {
+    float u = (worldX - minX) / cfg.sizeX;
+    float v = (worldZ - minZ) / cfg.sizeZ;
+    u = clamp01(u);
+    v = clamp01(v);
+    float hx = u * static_cast<float>(hm.width - 1);
+    float hz = v * static_cast<float>(hm.height - 1);
+    float raw = bilinearSample(hm, hx, hz) / 65535.0f;
+    return cfg.heightMin + raw * heightRange;
+}
+
+float applyRunwayFlatten(float worldX, float worldZ, float baseHeight,
+                         const std::vector<Runway>& runways, float blendMeters) {
+    if (runways.empty()) {
+        return baseHeight;
+    }
+
+    float bestWeight = 0.0f;
+    float bestHeight = baseHeight;
+    float blend = std::max(blendMeters, 0.001f);
+
+    for (const auto& runway : runways) {
+        nuage::Vec3 delta(worldX - runway.center.x, 0.0f, worldZ - runway.center.z);
+        float along = delta.x * runway.dir.x + delta.z * runway.dir.z;
+        float side = delta.x * runway.perp.x + delta.z * runway.perp.z;
+        float absAlong = std::abs(along);
+        float absSide = std::abs(side);
+
+        if (absAlong > runway.halfLength + blend || absSide > runway.halfWidth + blend) {
+            continue;
+        }
+
+        float dx = std::max(absAlong - runway.halfLength, 0.0f);
+        float dz = std::max(absSide - runway.halfWidth, 0.0f);
+        float dist = std::sqrt(dx * dx + dz * dz);
+        float weight = 1.0f;
+        if (dist > 0.0f) {
+            weight = 1.0f - std::min(dist / blend, 1.0f);
+        }
+
+        float t = (along + runway.halfLength) / (2.0f * runway.halfLength);
+        t = std::clamp(t, 0.0f, 1.0f);
+        float runwayHeight = runway.h0 + (runway.h1 - runway.h0) * t;
+
+        if (weight > bestWeight) {
+            bestWeight = weight;
+            bestHeight = runwayHeight;
+        }
+    }
+
+    if (bestWeight <= 0.0f) {
+        return baseHeight;
+    }
+    return baseHeight + (bestHeight - baseHeight) * bestWeight;
+}
+
+bool parseDoubleSafe(const std::string& s, double& out) {
+    if (s.empty()) return false;
+    char* end = nullptr;
+    out = std::strtod(s.c_str(), &end);
+    return end != s.c_str();
 }
 
 bool runCommand(const std::string& command) {
@@ -480,6 +577,130 @@ int main(int argc, char** argv) {
 
     float heightRange = cfg.heightMax - cfg.heightMin;
 
+    std::vector<RunwayInput> runwayInputs;
+    std::vector<Runway> runways;
+    std::vector<RunwayInput> runwayOutputs;
+    if (!cfg.runwaysJsonPath.empty()) {
+        auto runwaysOpt = nuage::loadJsonConfig(cfg.runwaysJsonPath);
+        if (!runwaysOpt) {
+            std::cerr << "Failed to load runways JSON: " << cfg.runwaysJsonPath << "\n";
+            return 1;
+        }
+        const auto& runwaysJson = *runwaysOpt;
+        std::unordered_set<std::string> heliports;
+        if (runwaysJson.contains("airports") && runwaysJson["airports"].is_array()) {
+            for (const auto& airport : runwaysJson["airports"]) {
+                if (!airport.is_object()) continue;
+                std::string type = airport.value("type", "");
+                if (type != "heliport") continue;
+                std::string ident = airport.value("ident", "");
+                if (!ident.empty()) {
+                    heliports.insert(ident);
+                }
+            }
+        }
+
+        if (runwaysJson.contains("runways") && runwaysJson["runways"].is_array()) {
+            for (const auto& runway : runwaysJson["runways"]) {
+                if (!runway.is_object()) continue;
+                std::string airportIdent = runway.value("airportIdent", "");
+                if (!airportIdent.empty() && heliports.find(airportIdent) != heliports.end()) {
+                    continue;
+                }
+                std::string closed = runway.value("closed", "");
+                if (closed == "1" || closed == "true" || closed == "TRUE") {
+                    continue;
+                }
+
+                if (!runway.contains("leENU") || !runway.contains("heENU")) continue;
+                const auto& le = runway["leENU"];
+                const auto& he = runway["heENU"];
+                if (!le.is_array() || !he.is_array() || le.size() != 3 || he.size() != 3) {
+                    continue;
+                }
+
+                std::string widthFtStr = runway.value("widthFt", "");
+                double widthFt = 0.0;
+                if (!parseDoubleSafe(widthFtStr, widthFt)) {
+                    continue;
+                }
+                float widthMeters = static_cast<float>(widthFt * 0.3048);
+                if (widthMeters <= 0.0f) {
+                    continue;
+                }
+
+                RunwayInput input;
+                input.le = nuage::Vec3(le[0].get<float>(), le[1].get<float>(), le[2].get<float>());
+                input.he = nuage::Vec3(he[0].get<float>(), he[1].get<float>(), he[2].get<float>());
+                input.widthMeters = widthMeters;
+                input.airportIdent = airportIdent;
+                input.leIdent = runway.value("leIdent", "");
+                input.heIdent = runway.value("heIdent", "");
+                input.closed = closed;
+                input.widthFt = widthFt;
+                runwayInputs.push_back(input);
+            }
+        }
+
+        for (const auto& input : runwayInputs) {
+            if (input.le.x < minX || input.le.x > maxX || input.le.z < minZ || input.le.z > maxZ) {
+                continue;
+            }
+            if (input.he.x < minX || input.he.x > maxX || input.he.z < minZ || input.he.z > maxZ) {
+                continue;
+            }
+            float dx = input.he.x - input.le.x;
+            float dz = input.he.z - input.le.z;
+            float length = std::sqrt(dx * dx + dz * dz);
+            if (length < 1.0f) {
+                continue;
+            }
+
+            Runway runway;
+            runway.center = (input.le + input.he) * 0.5f;
+            runway.dir = nuage::Vec3(dx / length, 0.0f, dz / length);
+            runway.perp = nuage::Vec3(-runway.dir.z, 0.0f, runway.dir.x);
+            runway.halfLength = length * 0.5f;
+            runway.halfWidth = input.widthMeters * 0.5f;
+            runway.h0 = sampleHeightAtWorld(hm, cfg, minX, minZ, heightRange, input.le.x, input.le.z);
+            runway.h1 = sampleHeightAtWorld(hm, cfg, minX, minZ, heightRange, input.he.x, input.he.z);
+            runways.push_back(runway);
+
+            RunwayInput output = input;
+            output.le.y = runway.h0;
+            output.he.y = runway.h1;
+            runwayOutputs.push_back(output);
+        }
+        if (!runwayInputs.empty()) {
+            std::cout << "[terrainc] runways loaded: " << runways.size() << "\n";
+        }
+
+        if (!runwayOutputs.empty()) {
+            std::filesystem::path outRunwaysPath = outDir / "runways.json";
+            std::ofstream runwaysOut(outRunwaysPath);
+            if (runwaysOut.is_open()) {
+                nlohmann::json outJson;
+                outJson["source"] = "terrainc";
+                outJson["runways"] = nlohmann::json::array();
+                for (const auto& output : runwayOutputs) {
+                    nlohmann::json entry;
+                    entry["airportIdent"] = output.airportIdent;
+                    entry["leIdent"] = output.leIdent;
+                    entry["heIdent"] = output.heIdent;
+                    entry["closed"] = output.closed;
+                    entry["widthFt"] = output.widthFt;
+                    entry["leENU"] = {output.le.x, output.le.y, output.le.z};
+                    entry["heENU"] = {output.he.x, output.he.y, output.he.z};
+                    outJson["runways"].push_back(entry);
+                }
+                runwaysOut << outJson.dump(2) << "\n";
+                std::cout << "[terrainc] wrote runways runtime: " << outRunwaysPath.string() << "\n";
+            } else {
+                std::cerr << "Failed to write runways runtime JSON.\n";
+            }
+        }
+    }
+
     std::vector<Polygon> waterPolys;
     std::vector<Polygon> landPolys;
     std::vector<Polygon> allPolys;
@@ -614,6 +835,7 @@ int main(int argc, char** argv) {
                     float hz = v * static_cast<float>(hm.height - 1);
                     float raw = bilinearSample(hm, hx, hz) / 65535.0f;
                     float height = cfg.heightMin + raw * heightRange;
+                    height = applyRunwayFlatten(worldX, worldZ, height, runways, cfg.runwayBlendMeters);
 
                     localMinH = std::min(localMinH, height);
                     localMaxH = std::max(localMaxH, height);

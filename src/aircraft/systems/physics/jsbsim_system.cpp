@@ -82,8 +82,10 @@ JsbsimSystem::JsbsimSystem(JsbsimConfig config)
 void JsbsimSystem::init(AircraftState& state, PropertyContext& properties) {
     m_acState = &state;
     m_properties = &properties;
-    m_originLatRad = m_config.initLatDeg * 3.1415926535 / 180.0;
-    m_originLonRad = m_config.initLonDeg * 3.1415926535 / 180.0;
+    double originLat = m_config.hasOrigin ? m_config.originLatDeg : m_config.initLatDeg;
+    double originLon = m_config.hasOrigin ? m_config.originLonDeg : m_config.initLonDeg;
+    m_originLatRad = originLat * 3.1415926535 / 180.0;
+    m_originLonRad = originLon * 3.1415926535 / 180.0;
 }
 
 void JsbsimSystem::ensureInitialized(float dt) {

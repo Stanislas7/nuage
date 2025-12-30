@@ -14,6 +14,9 @@ struct JsbsimConfig {
     std::string rootPath = "assets/jsbsim";
     double initLatDeg = 0.0;
     double initLonDeg = 0.0;
+    double originLatDeg = 0.0;
+    double originLonDeg = 0.0;
+    bool hasOrigin = false;
 };
 
 class JsbsimSystem : public AircraftComponent {

@@ -17,7 +17,8 @@
 
 namespace nuage {
 
-void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere) {
+void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere,
+                              const GeoOrigin* terrainOrigin) {
     auto jsonOpt = loadJsonConfig(configPath);
     if (!jsonOpt) {
         std::cerr << "Failed to load aircraft config: " << configPath << std::endl;
@@ -34,6 +35,11 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         jsbsimConfig.rootPath = jsb.value(ConfigKeys::JSBSIM_ROOT, jsbsimConfig.rootPath);
         jsbsimConfig.initLatDeg = jsb.value(ConfigKeys::JSBSIM_LAT, jsbsimConfig.initLatDeg);
         jsbsimConfig.initLonDeg = jsb.value(ConfigKeys::JSBSIM_LON, jsbsimConfig.initLonDeg);
+    }
+    if (terrainOrigin) {
+        jsbsimConfig.originLatDeg = terrainOrigin->latDeg;
+        jsbsimConfig.originLonDeg = terrainOrigin->lonDeg;
+        jsbsimConfig.hasOrigin = true;
     }
 
     // Initialize visuals

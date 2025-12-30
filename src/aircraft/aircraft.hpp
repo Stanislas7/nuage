@@ -5,6 +5,7 @@
 #include "aircraft/aircraft_state.hpp"
 #include "aircraft/aircraft_visual.hpp"
 #include "core/properties/property_context.hpp"
+#include "math/geo.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
 #include "math/mat4.hpp"
@@ -26,7 +27,8 @@ class Aircraft {
 public:
     class Instance {
     public:
-        void init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere);
+        void init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere,
+                  const GeoOrigin* terrainOrigin);
         void update(float dt);
         void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
 
@@ -70,7 +72,7 @@ public:
     void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
     void shutdown();
 
-    Instance* spawnPlayer(const std::string& configPath);
+    Instance* spawnPlayer(const std::string& configPath, const GeoOrigin* terrainOrigin = nullptr);
 
     Instance* player() { return m_player; }
     const std::vector<std::unique_ptr<Instance>>& all() const { return m_instances; }
