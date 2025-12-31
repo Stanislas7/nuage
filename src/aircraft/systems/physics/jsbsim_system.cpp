@@ -217,11 +217,13 @@ void JsbsimSystem::syncInputs() {
     double aileron = local.get(Properties::Controls::AILERON);
     double rudder = local.get(Properties::Controls::RUDDER);
     double throttle = local.get(Properties::Controls::THROTTLE);
+    double flaps = local.get(Properties::Controls::FLAPS, 0.0);
 
     m_fdm->SetPropertyValue("fcs/elevator-cmd-norm", clampInput(elevator));
     m_fdm->SetPropertyValue("fcs/aileron-cmd-norm", clampInput(-aileron));
     m_fdm->SetPropertyValue("fcs/rudder-cmd-norm", clampInput(rudder));
     m_fdm->SetPropertyValue("fcs/throttle-cmd-norm", clampInput(throttle));
+    m_fdm->SetPropertyValue("fcs/flap-cmd-norm", std::clamp(flaps, 0.0, 1.0));
 
     Vec3 wind = local.get(Properties::Atmosphere::WIND_PREFIX);
     double windNorth = wind.z * kMToFt;
@@ -311,6 +313,8 @@ void JsbsimSystem::syncOutputs() {
     local.set(Properties::Orientation::ROLL_DEG, m_fdm->GetPropertyValue("attitude/phi-deg"));
     local.set(Properties::Orientation::HEADING_DEG, m_fdm->GetPropertyValue("attitude/psi-deg"));
     local.set(Properties::Velocities::VERTICAL_SPEED_FPS, m_fdm->GetPropertyValue("velocities/v-down-fps") * -1.0);
+    local.set(Properties::Surfaces::FLAPS_DEG, m_fdm->GetPropertyValue("fcs/flap-pos-deg"));
+    local.set(Properties::Surfaces::FLAPS_NORM, m_fdm->GetPropertyValue("fcs/flap-pos-norm"));
 }
 
 void JsbsimSystem::update(float dt) {

@@ -4,7 +4,12 @@
             "name": "qwerty",
             "default": true,
             "detect": {},
-            "controls": {}
+            "controls": {
+                "buttons": {
+                    "flaps_down": "O",
+                    "flaps_up": "P"
+                }
+            }
         },
         {
             "name": "azerty",
@@ -30,7 +35,9 @@
                     }
                 },
                 "buttons": {
-                    "debug_menu": "H"
+                    "debug_menu": "H",
+                    "flaps_down": "O",
+                    "flaps_up": "P"
                 }
             }
         }

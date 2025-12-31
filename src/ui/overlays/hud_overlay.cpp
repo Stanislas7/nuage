@@ -16,6 +16,8 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
     float altitudeFeet = static_cast<float>(bus.get(Properties::Position::ALTITUDE_FT, 0.0));
     float headingDegrees = static_cast<float>(bus.get(Properties::Orientation::HEADING_DEG, 0.0));
     float powerPercent = static_cast<float>(bus.get(Properties::Controls::THROTTLE, 0.0));
+    float flapPercent = std::clamp(static_cast<float>(bus.get(Properties::Surfaces::FLAPS_NORM, 0.0)), 0.0f, 1.0f);
+    float flapDeg = static_cast<float>(bus.get(Properties::Surfaces::FLAPS_DEG, 0.0));
 
     // Gauge constants
     constexpr float kHudLeftX = 20.0f;
@@ -96,7 +98,7 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
 
     // 3. Info Box (Alt/Speed)
     constexpr float kInfoBoxPadding = 16.0f;
-    constexpr float kInfoBoxHeight = 80.0f;
+    constexpr float kInfoBoxHeight = 96.0f;
     constexpr float kInfoBoxRadius = 10.0f;
     const Vec3 kInfoBoxBack = Vec3(0.18f, 0.2f, 0.23f);
     const Vec3 kInfoText = Vec3(0.95f, 0.96f, 0.98f);
@@ -113,6 +115,9 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
 
     std::string altText = formatWithCommas(static_cast<int>(std::round(altitudeFeet))) + " ft";
     std::string speedText = formatWithCommas(static_cast<int>(std::round(airspeedKts))) + " kts";
+    int flapDegInt = static_cast<int>(std::round(flapDeg));
+    int flapPercentInt = static_cast<int>(std::round(flapPercent * 100.0f));
+    std::string flapText = "Flaps " + std::to_string(flapDegInt) + " deg (" + std::to_string(flapPercentInt) + "%)";
 
     float infoBoxX = kCompassX;
     float infoBoxY = kCompassY + kCompassSize + kInfoBoxPadding;
@@ -126,6 +131,8 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
     ui.drawText(altText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop,
                 Anchor::TopLeft, 0.55f, kInfoText, 0.98f);
     ui.drawText(speedText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap,
+                Anchor::TopLeft, 0.55f, kInfoText, 0.98f);
+    ui.drawText(flapText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap * 2.0f,
                 Anchor::TopLeft, 0.55f, kInfoText, 0.98f);
 }
 

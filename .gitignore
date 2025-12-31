@@ -58,3 +58,5 @@ assets/*.tiff
 assets/**/*.tiff
 assets/*.vrt
 assets/**/*.vrt
+
+assets/output.png

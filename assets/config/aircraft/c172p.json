@@ -8,7 +8,7 @@
     },
     "spawn": {
         "position": [-16827.0, 600.0, 44338.0],
-        "airspeed": 0.0
+        "airspeed": 70.0
     },
     "model": {
         "name": "c172p_mesh",

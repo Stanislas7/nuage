@@ -91,11 +91,13 @@ void Aircraft::Instance::update(float dt) {
     double aileron = global.get(Properties::Controls::AILERON, 0.0);
     double rudder = global.get(Properties::Controls::RUDDER, 0.0);
     double throttle = global.get(Properties::Controls::THROTTLE, 0.0);
+    double flaps = global.get(Properties::Controls::FLAPS, 0.0);
 
     local.set(Properties::Controls::ELEVATOR, elevator);
     local.set(Properties::Controls::AILERON, aileron);
     local.set(Properties::Controls::RUDDER, rudder);
     local.set(Properties::Controls::THROTTLE, throttle);
+    local.set(Properties::Controls::FLAPS, flaps);
 
     for (auto& system : m_systems) {
         system->update(dt);

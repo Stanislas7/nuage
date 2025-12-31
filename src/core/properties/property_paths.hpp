@@ -12,6 +12,7 @@ namespace Controls {
     inline constexpr TypedProperty<double> AILERON("controls/flight/aileron");
     inline constexpr TypedProperty<double> RUDDER("controls/flight/rudder");
     inline constexpr TypedProperty<double> THROTTLE("controls/engines/current/throttle");
+    inline constexpr TypedProperty<double> FLAPS("controls/flight/flaps");
     inline constexpr TypedProperty<double> BRAKE_LEFT("controls/gear/brake-left");
     inline constexpr TypedProperty<double> BRAKE_RIGHT("controls/gear/brake-right");
 }
@@ -36,6 +37,11 @@ namespace Orientation {
     inline constexpr TypedProperty<double> PITCH_DEG("orientation/pitch-deg");
     inline constexpr TypedProperty<double> ROLL_DEG("orientation/roll-deg");
     inline constexpr TypedProperty<double> HEADING_DEG("orientation/heading-deg");
+}
+
+namespace Surfaces {
+    inline constexpr TypedProperty<double> FLAPS_DEG("surfaces/flaps/position-deg");
+    inline constexpr TypedProperty<double> FLAPS_NORM("surfaces/flaps/position-norm");
 }
 
 namespace Sim {
