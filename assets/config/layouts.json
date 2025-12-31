@@ -26,8 +26,8 @@
                     "invert": true
                     },
                     "yaw": {
-                        "positive": "A",
-                        "negative": "E"
+                        "positive": "E",
+                        "negative": "A"
                     },
                     "roll": {
                         "positive": "D",

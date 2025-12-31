@@ -5,6 +5,7 @@
 #include "graphics/mesh.hpp"
 #include "graphics/mesh_builder.hpp"
 #include "graphics/lighting.hpp"
+#include "graphics/glad.h"
 #include "graphics/renderers/terrain/terrain_mask_blend.hpp"
 #include "graphics/renderers/terrain/terrain_tile_io.hpp"
 #include "utils/config_loader.hpp"
@@ -1707,7 +1708,9 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
             rs->setBool("uUseUniformColor", true);
             rs->setVec3("uColor", m_runwayColor);
         }
+        glDisable(GL_DEPTH_TEST);
         m_runwayMesh->draw();
+        glEnable(GL_DEPTH_TEST);
     }
 }
 
