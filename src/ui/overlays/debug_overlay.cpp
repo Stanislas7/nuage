@@ -9,18 +9,19 @@
 namespace nuage {
 
 namespace {
-constexpr float kPanelWidth = 384.0f;
-constexpr float kPanelHeight = 264.0f;
+constexpr float kPanelWidth = 460.0f;
 constexpr float kPanelRadius = 18.0f;
 constexpr float kPanelMargin = 28.0f;
 constexpr float kRowHeight = 38.0f;
 constexpr float kHeaderHeight = 52.0f;
+constexpr int kRowCount = 14;
+constexpr float kPanelHeight = kHeaderHeight + kRowHeight * kRowCount + 60.0f;
 constexpr float kPaddingX = 20.0f;
 constexpr float kHeaderTextY = 14.0f;
 constexpr float kDividerY = 40.0f;
 constexpr float kButtonSize = 24.0f;
 constexpr float kButtonGap = 10.0f;
-constexpr float kValueOffset = 176.0f;
+constexpr float kValueOffset = 220.0f;
 
 const Vec3 kPanelColor = Vec3(0.08f, 0.1f, 0.14f);
 const Vec3 kPanelOutline = Vec3(0.28f, 0.32f, 0.38f);
@@ -32,6 +33,13 @@ const Vec3 kTextSub = Vec3(0.72f, 0.76f, 0.82f);
 
 constexpr float kFogStep = 500.0f;
 constexpr float kNoiseStep = 0.05f;
+constexpr float kMacroScaleStep = 0.0001f;
+constexpr float kMacroStrengthStep = 0.02f;
+constexpr float kTintStrengthStep = 0.02f;
+constexpr float kMicroScaleStep = 0.02f;
+constexpr float kMicroStrengthStep = 0.02f;
+constexpr float kWaterScaleStep = 0.02f;
+constexpr float kWaterStrengthStep = 0.02f;
 } // namespace
 
 void DebugOverlay::update(bool active, UIManager& ui) {
@@ -102,6 +110,46 @@ void DebugOverlay::draw(bool active, UIManager& ui) {
     std::snprintf(noiseBuffer, sizeof(noiseBuffer), "%.2f", terrain->visuals().noiseStrength);
     drawRow("Noise Strength", noiseBuffer, row++);
 
+    const auto& tex = terrain->textureSettings();
+
+    char macroScaleBuffer[32];
+    std::snprintf(macroScaleBuffer, sizeof(macroScaleBuffer), "%.4f", tex.macroScale);
+    drawRow("Tex Macro Scale", macroScaleBuffer, row++);
+
+    char macroStrengthBuffer[32];
+    std::snprintf(macroStrengthBuffer, sizeof(macroStrengthBuffer), "%.2f", tex.macroStrength);
+    drawRow("Tex Macro Strength", macroStrengthBuffer, row++);
+
+    char grassTintBuffer[32];
+    std::snprintf(grassTintBuffer, sizeof(grassTintBuffer), "%.2f", tex.grassTintStrength);
+    drawRow("Grass Tint", grassTintBuffer, row++);
+
+    char forestTintBuffer[32];
+    std::snprintf(forestTintBuffer, sizeof(forestTintBuffer), "%.2f", tex.forestTintStrength);
+    drawRow("Forest Tint", forestTintBuffer, row++);
+
+    char urbanTintBuffer[32];
+    std::snprintf(urbanTintBuffer, sizeof(urbanTintBuffer), "%.2f", tex.urbanTintStrength);
+    drawRow("Urban Tint", urbanTintBuffer, row++);
+
+    char microScaleBuffer[32];
+    std::snprintf(microScaleBuffer, sizeof(microScaleBuffer), "%.2f", tex.microScale);
+    drawRow("Tex Micro Scale", microScaleBuffer, row++);
+
+    char microStrengthBuffer[32];
+    std::snprintf(microStrengthBuffer, sizeof(microStrengthBuffer), "%.2f", tex.microStrength);
+    drawRow("Tex Micro Strength", microStrengthBuffer, row++);
+
+    char waterScaleBuffer[32];
+    std::snprintf(waterScaleBuffer, sizeof(waterScaleBuffer), "%.2f", tex.waterDetailScale);
+    drawRow("Water Detail Scale", waterScaleBuffer, row++);
+
+    char waterStrengthBuffer[32];
+    std::snprintf(waterStrengthBuffer, sizeof(waterStrengthBuffer), "%.2f", tex.waterDetailStrength);
+    drawRow("Water Detail Strength", waterStrengthBuffer, row++);
+
+    drawRow("Trees", terrain->treesEnabled() ? "On" : "Off", row++);
+
 }
 
 void DebugOverlay::reset() {
@@ -131,6 +179,26 @@ void DebugOverlay::buildUi(UIManager& ui) {
     m_fogPlus = makeButton("+");
     m_noiseMinus = makeButton("-");
     m_noisePlus = makeButton("+");
+    m_macroScaleMinus = makeButton("-");
+    m_macroScalePlus = makeButton("+");
+    m_macroStrengthMinus = makeButton("-");
+    m_macroStrengthPlus = makeButton("+");
+    m_grassTintMinus = makeButton("-");
+    m_grassTintPlus = makeButton("+");
+    m_forestTintMinus = makeButton("-");
+    m_forestTintPlus = makeButton("+");
+    m_urbanTintMinus = makeButton("-");
+    m_urbanTintPlus = makeButton("+");
+    m_microScaleMinus = makeButton("-");
+    m_microScalePlus = makeButton("+");
+    m_microStrengthMinus = makeButton("-");
+    m_microStrengthPlus = makeButton("+");
+    m_waterScaleMinus = makeButton("-");
+    m_waterScalePlus = makeButton("+");
+    m_waterStrengthMinus = makeButton("-");
+    m_waterStrengthPlus = makeButton("+");
+    m_treesMinus = makeButton("-");
+    m_treesPlus = makeButton("+");
 
     App* app = ui.app();
 
@@ -219,6 +287,164 @@ void DebugOverlay::buildUi(UIManager& ui) {
             terrain->clampVisuals();
         });
     }
+    if (m_macroScaleMinus) {
+        m_macroScaleMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.macroScale = std::clamp(tex.macroScale - kMacroScaleStep, 0.0001f, 0.01f);
+        });
+    }
+    if (m_macroScalePlus) {
+        m_macroScalePlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.macroScale = std::clamp(tex.macroScale + kMacroScaleStep, 0.0001f, 0.01f);
+        });
+    }
+    if (m_macroStrengthMinus) {
+        m_macroStrengthMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.macroStrength = std::clamp(tex.macroStrength - kMacroStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_macroStrengthPlus) {
+        m_macroStrengthPlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.macroStrength = std::clamp(tex.macroStrength + kMacroStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_grassTintMinus) {
+        m_grassTintMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.grassTintStrength = std::clamp(tex.grassTintStrength - kTintStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_grassTintPlus) {
+        m_grassTintPlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.grassTintStrength = std::clamp(tex.grassTintStrength + kTintStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_forestTintMinus) {
+        m_forestTintMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.forestTintStrength = std::clamp(tex.forestTintStrength - kTintStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_forestTintPlus) {
+        m_forestTintPlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.forestTintStrength = std::clamp(tex.forestTintStrength + kTintStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_urbanTintMinus) {
+        m_urbanTintMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.urbanTintStrength = std::clamp(tex.urbanTintStrength - kTintStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_urbanTintPlus) {
+        m_urbanTintPlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.urbanTintStrength = std::clamp(tex.urbanTintStrength + kTintStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_microScaleMinus) {
+        m_microScaleMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.microScale = std::clamp(tex.microScale - kMicroScaleStep, 0.01f, 2.0f);
+        });
+    }
+    if (m_microScalePlus) {
+        m_microScalePlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.microScale = std::clamp(tex.microScale + kMicroScaleStep, 0.01f, 2.0f);
+        });
+    }
+    if (m_microStrengthMinus) {
+        m_microStrengthMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.microStrength = std::clamp(tex.microStrength - kMicroStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_microStrengthPlus) {
+        m_microStrengthPlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.microStrength = std::clamp(tex.microStrength + kMicroStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_waterScaleMinus) {
+        m_waterScaleMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.waterDetailScale = std::clamp(tex.waterDetailScale - kWaterScaleStep, 0.01f, 1.0f);
+        });
+    }
+    if (m_waterScalePlus) {
+        m_waterScalePlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.waterDetailScale = std::clamp(tex.waterDetailScale + kWaterScaleStep, 0.01f, 1.0f);
+        });
+    }
+    if (m_waterStrengthMinus) {
+        m_waterStrengthMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.waterDetailStrength = std::clamp(tex.waterDetailStrength - kWaterStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_waterStrengthPlus) {
+        m_waterStrengthPlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            auto& tex = terrain->textureSettings();
+            tex.waterDetailStrength = std::clamp(tex.waterDetailStrength + kWaterStrengthStep, 0.0f, 1.0f);
+        });
+    }
+    if (m_treesMinus) {
+        m_treesMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            terrain->setTreesEnabled(false);
+        });
+    }
+    if (m_treesPlus) {
+        m_treesPlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            terrain->setTreesEnabled(true);
+        });
+    }
 
     m_initialized = true;
     setButtonsVisible(false);
@@ -250,6 +476,16 @@ void DebugOverlay::layout(UIManager& ui) {
     positionRowButtons(m_loadsMinus, m_loadsPlus, 1);
     positionRowButtons(m_fogMinus, m_fogPlus, 2);
     positionRowButtons(m_noiseMinus, m_noisePlus, 3);
+    positionRowButtons(m_macroScaleMinus, m_macroScalePlus, 4);
+    positionRowButtons(m_macroStrengthMinus, m_macroStrengthPlus, 5);
+    positionRowButtons(m_grassTintMinus, m_grassTintPlus, 6);
+    positionRowButtons(m_forestTintMinus, m_forestTintPlus, 7);
+    positionRowButtons(m_urbanTintMinus, m_urbanTintPlus, 8);
+    positionRowButtons(m_microScaleMinus, m_microScalePlus, 9);
+    positionRowButtons(m_microStrengthMinus, m_microStrengthPlus, 10);
+    positionRowButtons(m_waterScaleMinus, m_waterScalePlus, 11);
+    positionRowButtons(m_waterStrengthMinus, m_waterStrengthPlus, 12);
+    positionRowButtons(m_treesMinus, m_treesPlus, 13);
 }
 
 void DebugOverlay::setButtonsVisible(bool visible) {
@@ -261,6 +497,26 @@ void DebugOverlay::setButtonsVisible(bool visible) {
     if (m_fogPlus) m_fogPlus->setVisible(visible).setEnabled(visible);
     if (m_noiseMinus) m_noiseMinus->setVisible(visible).setEnabled(visible);
     if (m_noisePlus) m_noisePlus->setVisible(visible).setEnabled(visible);
+    if (m_macroScaleMinus) m_macroScaleMinus->setVisible(visible).setEnabled(visible);
+    if (m_macroScalePlus) m_macroScalePlus->setVisible(visible).setEnabled(visible);
+    if (m_macroStrengthMinus) m_macroStrengthMinus->setVisible(visible).setEnabled(visible);
+    if (m_macroStrengthPlus) m_macroStrengthPlus->setVisible(visible).setEnabled(visible);
+    if (m_grassTintMinus) m_grassTintMinus->setVisible(visible).setEnabled(visible);
+    if (m_grassTintPlus) m_grassTintPlus->setVisible(visible).setEnabled(visible);
+    if (m_forestTintMinus) m_forestTintMinus->setVisible(visible).setEnabled(visible);
+    if (m_forestTintPlus) m_forestTintPlus->setVisible(visible).setEnabled(visible);
+    if (m_urbanTintMinus) m_urbanTintMinus->setVisible(visible).setEnabled(visible);
+    if (m_urbanTintPlus) m_urbanTintPlus->setVisible(visible).setEnabled(visible);
+    if (m_microScaleMinus) m_microScaleMinus->setVisible(visible).setEnabled(visible);
+    if (m_microScalePlus) m_microScalePlus->setVisible(visible).setEnabled(visible);
+    if (m_microStrengthMinus) m_microStrengthMinus->setVisible(visible).setEnabled(visible);
+    if (m_microStrengthPlus) m_microStrengthPlus->setVisible(visible).setEnabled(visible);
+    if (m_waterScaleMinus) m_waterScaleMinus->setVisible(visible).setEnabled(visible);
+    if (m_waterScalePlus) m_waterScalePlus->setVisible(visible).setEnabled(visible);
+    if (m_waterStrengthMinus) m_waterStrengthMinus->setVisible(visible).setEnabled(visible);
+    if (m_waterStrengthPlus) m_waterStrengthPlus->setVisible(visible).setEnabled(visible);
+    if (m_treesMinus) m_treesMinus->setVisible(visible).setEnabled(visible);
+    if (m_treesPlus) m_treesPlus->setVisible(visible).setEnabled(visible);
 }
 
 } // namespace nuage

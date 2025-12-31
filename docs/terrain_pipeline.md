@@ -10,25 +10,31 @@ and the tradeoffs. The pipeline is intentionally simple and offline-first.
 
 ## Big picture
 **Offline:** `terrainc` compiles inputs into a tile pack on disk.  
-**Runtime:** the engine streams a small tile window (3x3 or 5x5) and renders it.
+**Runtime:** the engine streams a small tile window and renders indexed meshes with 2-level LOD + skirts.
 
 ```
 DEM + OSM (offline) -> terrainc -> tiles/ + manifest.json -> runtime streamer
 ```
 
 ## Features (current)
-- DEM-driven terrain mesh tiles.
-- OSM water + landuse masks (debug coloring only).
+- DEM-driven terrain mesh tiles (indexed grid).
+- 2-level LOD for compiled tiles (hard swap).
+- Skirts on tile borders to hide LOD seams.
+- OSM water + landuse masks (used for texture blending and tree placement).
 - Terrain shading pass: low-frequency color variation, altitude tint, slope darkening, and distance haze.
+- Runtime landclass texturing with macro/micro variation and tint pairs.
+- Procedural water detail (noise modulates water color).
 - Small, fixed working set (radius tiles).
 - No runtime GIS or reprojection.
 - Deterministic results with explicit bounds and parameters.
+- Optional procedural trees (simple trunk + cone canopy).
 
 ## Non-features (v1)
 - No runtime GeoTIFF/VRT/OSM parsing.
 - No quadtree/LOD or pyramids.
 - No imagery required or used.
-- No full material system (debug colors only).
+- No full material system (single-pass blend with fixed textures).
+- No textured water surface (water is shaded color + noise only).
 
 ## Tile product (contract)
 Output folder:
@@ -46,6 +52,8 @@ Binary format:
 - Magic: `NTM1`
 - uint32 floatCount
 - float[] (pos.xyz, normal.xyz, color.rgb) per vertex (tri list)
+
+Runtime note: tiles are converted to indexed grids on load for lower vertex bandwidth.
 
 ### `tile_X_Y.mask` (optional)
 - Raw 8-bit raster of size `maskResolution x maskResolution`
@@ -69,12 +77,20 @@ Key fields:
 - Uses a fixed radius (default 1 => 3x3 tiles).
 - Loads at most a small number of tiles per frame.
 - Tiles are created once per lifetime; evicted tiles free GPU memory.
+- Compiled tiles use a 2-level LOD swap and border skirts (configurable).
+- LOD1 is only used when a tile and its 4-neighbors are also in LOD1 to avoid seams.
 
 Visible radius is configured in `assets/config/terrain.json`:
 ```
 "compiledVisibleRadius": 2
 ```
 Radius N renders a `(2N+1) x (2N+1)` tile window (e.g., 2 => 5x5).
+
+LOD and skirts:
+```
+"compiledLod1Distance": 3000.0,
+"compiledSkirtDepth": 180.0
+```
 
 ## Terrain visuals (runtime)
 The terrain renderer applies a cheap shader pass to reduce the "paint bucket" look:
@@ -108,6 +124,64 @@ Optional config (defaults are safe):
 Optional compiler smoothing (mask edges):
 ```
 --mask-smooth 1
+```
+
+## Terrain textures (runtime)
+Textures are blended using masks (water/urban/forest/grass) plus slope-based rock and procedural dirt.
+Extra controls help push a more "sim" look without ortho:
+- **Macro variation:** large-scale patchiness to avoid flat repeats.
+- **Micro variation:** high-frequency contrast to reduce blur.
+- **Grass/forest/urban tint pairs:** mix between lush/dry and cool/warm looks.
+- **Water detail:** procedural noise to break up flat water color.
+
+Example config:
+```
+"terrainTextures": {
+  "enabled": true,
+  "grass": "../textures/terrain/sparse_grass_diff_2k.jpg",
+  "forest": "../textures/terrain/forest_ground_04_diff_2k.png",
+  "rock": "../textures/terrain/rock_05_diff_2k.png",
+  "dirt": "../textures/terrain/dirt_diff_2k.jpg",
+  "urban": "../textures/terrain/asphalt_02_diff_2k.png",
+  "texScale": 0.04,
+  "detailScale": 0.18,
+  "detailStrength": 0.26,
+  "macroScale": 0.0008,
+  "macroStrength": 0.32,
+  "grassTintA": [0.78, 0.98, 0.65],
+  "grassTintB": [0.5, 0.7, 0.45],
+  "grassTintStrength": 0.45,
+  "forestTintA": [0.62, 0.78, 0.55],
+  "forestTintB": [0.45, 0.6, 0.4],
+  "forestTintStrength": 0.25,
+  "urbanTintA": [0.95, 0.95, 0.96],
+  "urbanTintB": [0.7, 0.72, 0.75],
+  "urbanTintStrength": 0.25,
+  "microScale": 0.3,
+  "microStrength": 0.18,
+  "waterDetailScale": 0.12,
+  "waterDetailStrength": 0.3,
+  "waterColor": [0.14, 0.32, 0.55]
+}
+```
+
+## Trees (runtime, optional)
+Trees are generated per compiled tile at runtime (simple trunk + cone canopy). They
+use the existing mask weights: avoid water + urban, favor forest. No recompile needed.
+
+Config:
+```
+"terrainTrees": {
+  "enabled": true,
+  "densityPerSqKm": 80.0,
+  "minHeight": 4.0,
+  "maxHeight": 10.0,
+  "minRadius": 0.8,
+  "maxRadius": 2.2,
+  "maxSlope": 0.7,
+  "maxDistance": 5000.0,
+  "seed": 1337
+}
 ```
 
 ## How to compile (Stage 1/2)
@@ -159,3 +233,4 @@ build/terrainc \
 - No texture/imagery integration.
 - No terrain material system.
 - Heightmap input assumes local ENU projection derived from bbox.
+- LOD swap is a hard cut (no geomorphing yet).

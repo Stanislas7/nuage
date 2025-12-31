@@ -9,10 +9,9 @@ void Aircraft::init(AssetStore& assets, Atmosphere& atmosphere) {
     m_atmosphere = &atmosphere;
 }
 
-void Aircraft::fixedUpdate(float dt, const Input& input) {
-    const FlightInput& flightInput = input.flight();
+void Aircraft::fixedUpdate(float dt) {
     for (auto& ac : m_instances) {
-        ac->update(dt, flightInput);
+        ac->update(dt);
     }
 }
 

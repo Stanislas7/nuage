@@ -5,6 +5,7 @@
 namespace nuage {
 
 class Button;
+class UIManager;
 
 class DebugOverlay {
 public:
@@ -32,6 +33,26 @@ private:
     Button* m_fogPlus = nullptr;
     Button* m_noiseMinus = nullptr;
     Button* m_noisePlus = nullptr;
+    Button* m_macroScaleMinus = nullptr;
+    Button* m_macroScalePlus = nullptr;
+    Button* m_macroStrengthMinus = nullptr;
+    Button* m_macroStrengthPlus = nullptr;
+    Button* m_grassTintMinus = nullptr;
+    Button* m_grassTintPlus = nullptr;
+    Button* m_forestTintMinus = nullptr;
+    Button* m_forestTintPlus = nullptr;
+    Button* m_urbanTintMinus = nullptr;
+    Button* m_urbanTintPlus = nullptr;
+    Button* m_microScaleMinus = nullptr;
+    Button* m_microScalePlus = nullptr;
+    Button* m_microStrengthMinus = nullptr;
+    Button* m_microStrengthPlus = nullptr;
+    Button* m_waterScaleMinus = nullptr;
+    Button* m_waterScalePlus = nullptr;
+    Button* m_waterStrengthMinus = nullptr;
+    Button* m_waterStrengthPlus = nullptr;
+    Button* m_treesMinus = nullptr;
+    Button* m_treesPlus = nullptr;
 };
 
 } // namespace nuage

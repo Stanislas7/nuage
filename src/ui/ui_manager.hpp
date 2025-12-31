@@ -7,6 +7,8 @@
 #include "ui/button.hpp"
 #include "graphics/shader.hpp"
 #include "math/mat4.hpp"
+#include "core/subsystem.hpp"
+#include "graphics/glad.h"
 #include <vector>
 #include <memory>
 #include <string>
@@ -14,19 +16,30 @@
 namespace nuage {
 
 class App;
+class Aircraft;
+class PauseOverlay;
+class DebugOverlay;
+class HudOverlay;
 
-class UIManager {
+class UIManager : public Subsystem {
 public:
     UIManager() = default;
     ~UIManager();
 
-    bool init(App* app);
-    void shutdown();
-    void update();
+    void setApp(App* app) { m_app = app; }
+    void setAircraft(Aircraft* aircraft) { m_aircraft = aircraft; }
+
+    // Subsystem interface
+    void init() override;
+    void update(double dt) override;
+    void shutdown() override;
+    std::string getName() const override { return "UI"; }
+    std::vector<std::string> dependencies() const override { return {"AssetStore", "Input"}; }
     
     // Drawing Lifecycle
     void begin();
     void end();
+    void render();
     void drawPersistent();
 
     // Factory methods
@@ -47,8 +60,15 @@ private:
     void buildTextVertexData(const Text& text, std::vector<float>& vertices, Vec3& pos) const;
 
     App* m_app = nullptr;
+    Aircraft* m_aircraft = nullptr;
     std::unique_ptr<Font> m_font;
     Shader* m_shader = nullptr;
+    
+    // Overlays
+    std::unique_ptr<PauseOverlay> m_pauseOverlay;
+    std::unique_ptr<DebugOverlay> m_debugOverlay;
+    std::unique_ptr<HudOverlay> m_hudOverlay;
+
     std::vector<std::unique_ptr<Text>> m_texts;
     std::vector<std::unique_ptr<Button>> m_buttons;
 

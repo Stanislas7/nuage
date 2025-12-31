@@ -21,12 +21,12 @@ public:
     explicit JsbsimSystem(JsbsimConfig config);
 
     const char* name() const override { return "JSBSimSystem"; }
-    void init(AircraftState& state, PropertyBus& bus) override;
+    void init(AircraftState& state, PropertyContext& properties) override;
     void update(float dt) override;
 
 private:
     AircraftState* m_acState = nullptr;
-    PropertyBus* m_bus = nullptr;
+    PropertyContext* m_properties = nullptr;
     JsbsimConfig m_config;
     std::unique_ptr<JSBSim::FGFDMExec> m_fdm;
     bool m_initialized = false;

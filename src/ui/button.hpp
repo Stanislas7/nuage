@@ -7,7 +7,6 @@
 namespace nuage {
 
 class Font;
-class App;
 
 /**
  * @brief A clickable UI button with text and hover states.
@@ -16,7 +15,7 @@ class Button : public UIElement {
 public:
     using ClickCallback = std::function<void()>;
 
-    Button(const std::string& text, Font* font, App* app);
+    Button(const std::string& text, Font* font);
 
     void onClick(ClickCallback callback) { m_callback = std::move(callback); }
     
@@ -52,7 +51,6 @@ public:
 private:
     std::string m_text;
     Font* m_font = nullptr;
-    App* m_app = nullptr;
     Vec3 m_size = {200, 50, 0};
     Vec3 m_hoverColor = {0.8f, 0.8f, 0.8f};
     float m_cornerRadius = 8.0f;

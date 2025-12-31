@@ -1,139 +1,36 @@
-# Terrain Pipeline Redesign Plan (TerraGear-like)
+# Terrain Coordinates and Runway Flattening Plan
 
-Goal: offline compilation into runtime-friendly tiles, DEM-first, OSM-next.
-Runtime is a pure consumer with strict performance budgets. No runtime GIS.
+Focus first on the coordinate system so runway work has a stable foundation.
 
-Defaults (v1)
-- tileSizeMeters: 2000
-- gridResolution: 129 (cells) => 130x130 verts
-- visibleRadiusTiles: 1 (3x3)
-- maxLoadsPerSecond: 2
-- budgets: <= 9 visible tiles, <= 300k tris total, <= 12 draw calls
+## Phase 1: Coordinate System (Now)
+- [ ] **Define world origin policy**
+  - Pick per-compiled-region origin (lat, lon, alt) and store in manifest.
+  - Keep geodetic metadata for inputs and outputs.
+- [ ] **Manifest schema update**
+  - Add `originLatLonAlt` (and optionally `projection` or `enuBasis`) to `manifest.json`.
+  - Document how runtime converts from geodetic to local ENU.
+- [ ] **Compiler data flow**
+  - Convert DEM sample grid + OSM/airport inputs into local ENU relative to origin.
+  - Keep height units in meters; ensure axes and handedness are explicit.
+- [ ] **Runtime integration**
+  - Load origin from manifest and keep all terrain meshes in local ENU.
+  - Provide a helper to convert lat/lon/alt to local ENU for gameplay placement.
+- [ ] **Validation**
+  - Spot-check a few known Bay Area landmarks for expected ENU positions.
+  - Verify precision stability near runway scale (meters, not kilometers).
 
-Non-goals (v1)
-- No runtime GeoTIFF/VRT/OSM parsing or reprojection
-- No quadtree/LOD pyramids
-- No full terrain material system (debug shading allowed)
-- No preview activation coupling
+## Phase 2: Runway Flattening (Next)
+- [ ] **Runway input format**
+  - Ingest OurAirports CSV: endpoints, width, surface, heading.
+  - Construct a rectangular runway polygon in local ENU.
+- [ ] **Flattening algorithm**
+  - Sample terrain at runway endpoints; fit a plane with zero cross-slope.
+  - Apply a blend ring to ease into surrounding terrain.
+- [ ] **Tile integration**
+  - Apply flattening during compilation before mesh bake.
+  - Optionally export a debug mask to visualize flatten areas.
 
-## Stage 0 (2-hour milestone): Runtime-only synthetic tiles
-Purpose: guarantee visible progress without file formats or disk I/O.
-
-Inputs
-- Synthetic height function with deterministic seed
-- Bounds in local ENU (meters)
-
-Outputs
-- In-memory tiles generated on demand
-- Debug view: tile borders + tile IDs
-
-Runtime changes (only)
-- Implement tile selection for a fixed 3x3 working set around camera
-- Generate tile meshes procedurally in memory on first touch
-- Async mesh creation + GPU upload; no blocking I/O
-- Enforce invariant: tile meshes are created once per tile lifetime
-- Logging: tiles loaded/unloaded, tiles in memory, tris, draw calls
-
-Compiler changes
-- None required
-
-Acceptance tests (done when...)
-- 60 FPS stable while moving across multiple tiles
-- Tile rebuilds per minute = 0 in steady flight (no re-creation without eviction)
-- No blocking disk I/O on main thread
-- Debug overlay shows correct tile IDs and borders
-
-Top risks + de-risk
-- Risk: per-frame rebuilds => add assert and counter for rebuilds
-- Risk: stalls on mesh generation => use async tasks and frame budget limits
-
-## Stage 1: Offline compiler writes tilepack (DEM ingestion)
-Purpose: replace synthetic generator with real data on disk, keep runtime same.
-
-Inputs
-- GeoTIFF DEMs within bounds (USGS 3DEP or similar)
-- Bounds in LLA
-- tileSizeMeters, gridResolution
-
-Outputs
-- Tile pack on disk (manifest.json + tiles/*.mesh + tiles/*.meta.json)
-
-Compiler changes
-- Load DEM, reproject to local tangent plane, resample to grid
-- Generate mesh tiles + per-tile metadata
-- Write manifest.json with origin + bounds
-
-Runtime changes
-- Add tilepack loader (manifest + tile files)
-- Keep tile selection, streaming, and budgets unchanged
-
-Acceptance tests
-- Visual terrain matches DEM region
-- Same FPS and budgets as Stage 0
-- Logging shows disk loads capped at maxLoadsPerSecond
-
-Top risks + de-risk
-- Risk: seam cracks => enforce shared edge sampling
-- Risk: reprojection pitfalls => lock a single local CRS per pack
-
-## Stage 2: OSM integration (water + landuse masks)
-Purpose: add minimal landclass mask tiles for debug shading.
-
-Inputs
-- OSM PBF extract matching DEM bounds
-
-Outputs
-- Optional per-tile mask (8-bit landclass codes)
-
-Compiler changes
-- Rasterize water and landuse into tile-aligned masks
-- Update manifest availableLayers to include "mask"
-
-Runtime changes
-- Optional debug shader: color by mask code
-
-Acceptance tests
-- Water bodies visible in debug shading
-- No FPS regression or additional per-frame work
-
-Top risks + de-risk
-- Risk: OSM parsing complexity => use a single library and keep mask resolution low
-
-## Stage 2.5: Terrain visuals (shader-only)
-Purpose: improve terrain legibility without textures or heavier data.
-
-Runtime changes
-- Add low-frequency color variation (noise tint)
-- Add altitude-based tinting
-- Darken steep slopes to soften landuse edges
-- Add distance haze toward sky color
-
-Acceptance tests
-- Reduced "paint bucket" look on large landuse blocks
-- Landuse edges less harsh on hills
-- Distant terrain blends naturally without banding
-
-Top risks + de-risk
-- Risk: values too strong => expose tweakable shader params in config
-
-## Stage 3: Optional imagery (offline only)
-Purpose: optional texture layer, still offline compiled and streamed.
-
-Inputs
-- Imagery datasets (optional)
-
-Outputs
-- Texture tiles aligned to the same grid
-
-Compiler changes
-- Reproject + tile imagery offline
-
-Runtime changes
-- Optional texture loading if imagery exists
-
-Acceptance tests
-- Terrain still renders without imagery present
-- Performance budgets unchanged
-
-Top risks + de-risk
-- Risk: VRAM bloat => enforce per-tile texture resolution cap
+## Phase 3: Full Airport Surfaces (Later)
+- [ ] **Support taxiways/aprons**
+  - Add OSM or curated polygon inputs.
+  - Priority stack: runway > taxiway > apron > terrain.

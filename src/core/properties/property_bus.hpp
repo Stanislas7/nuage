@@ -40,18 +40,26 @@ public:
         return get<T>(prop.id, fallback);
     }
 
+    template<typename T>
+    void set(const std::string& key, const T& value) {
+        set<T>(getID(key), value);
+    }
+
+    template<typename T>
+    T get(const std::string& key, const T& fallback = T()) const {
+        return get<T>(getID(key), fallback);
+    }
+
     bool has(PropertyId id) const;
-
-    // Compatibility methods
-    void set(PropertyId id, double value);
-    double get(PropertyId id, double fallback = 0.0) const;
-
-    void set(const std::string& key, double value);
-    double get(const std::string& key, double fallback = 0.0) const;
     bool has(const std::string& key) const;
 
     void increment(PropertyId id, double delta);
     void increment(const std::string& key, double delta);
+
+    static PropertyBus& global() {
+        static PropertyBus instance;
+        return instance;
+    }
     
 private:
     std::unordered_map<PropertyId, PropertyValue> m_data;

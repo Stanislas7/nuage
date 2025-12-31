@@ -7,6 +7,7 @@
 #include "graphics/renderers/skybox.hpp"
 #include "graphics/renderers/terrain_renderer.hpp"
 #include "math/mat4.hpp"
+#include "ui/overlays/hud_overlay.hpp"
 
 namespace nuage {
 
@@ -22,9 +23,9 @@ public:
     ~FlightSession() = default;
 
     bool init();
+    void shutdown();
     void update(float dt);
     void render(float alpha);
-    void drawHUD(UIManager& ui);
 
     Aircraft& aircraft() { return m_aircraft; }
     Camera& camera() { return m_camera; }
@@ -44,12 +45,7 @@ private:
 
     Skybox m_skybox;
     TerrainRenderer m_terrain;
-
-    float m_powerPercent = -1.0f;
-    float m_altitudeFeet = -1.0f;
-    float m_airspeedKts = -1.0f;
-    float m_headingDegrees = -1.0f;
-    float m_elapsedTime = 0.0f;
+    HudOverlay m_hud;
 };
 
 } // namespace nuage

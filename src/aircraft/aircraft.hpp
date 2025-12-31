@@ -4,6 +4,7 @@
 #include "aircraft/aircraft_component.hpp"
 #include "aircraft/aircraft_state.hpp"
 #include "aircraft/aircraft_visual.hpp"
+#include "core/properties/property_context.hpp"
 #include "math/vec3.hpp"
 #include "math/quat.hpp"
 #include "math/mat4.hpp"
@@ -20,36 +21,27 @@ class Shader;
 class Texture;
 class Model;
 class Input;
-struct FlightInput;
 
 class Aircraft {
 public:
     class Instance {
     public:
         void init(const std::string& configPath, AssetStore& assets, Atmosphere& atmosphere);
-        void update(float dt, const FlightInput& input);
+        void update(float dt);
         void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
 
         PropertyBus& state() { return m_state; }
         const PropertyBus& state() const { return m_state; }
 
-        Vec3 position() const;
-        Quat orientation() const;
-        
         // Interpolated getters for rendering
         Vec3 interpolatedPosition(float alpha) const;
         Quat interpolatedOrientation(float alpha) const;
-
-        float airspeed() const;
-        Vec3 forward() const;
-        Vec3 up() const;
-        Vec3 right() const;
 
         template<typename T, typename... Args>
         T* addSystem(Args&&... args) {
             auto system = std::make_unique<T>(std::forward<Args>(args)...);
             T* ptr = system.get();
-            system->init(m_currentState, m_state);
+            system->init(m_currentState, m_properties);
             m_systems.push_back(std::move(system));
             return ptr;
         }
@@ -65,6 +57,7 @@ public:
 
     private:
         PropertyBus m_state;
+        PropertyContext m_properties;
         AircraftState m_currentState;
         AircraftState m_prevState;
         
@@ -73,7 +66,7 @@ public:
     };
 
     void init(AssetStore& assets, Atmosphere& atmosphere);
-    void fixedUpdate(float dt, const Input& input);
+    void fixedUpdate(float dt);
     void render(const Mat4& viewProjection, float alpha, const Vec3& lightDir);
     void shutdown();
 

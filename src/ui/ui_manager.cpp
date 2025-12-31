@@ -1,6 +1,12 @@
 #include "ui/ui_manager.hpp"
+#include "ui/overlays/pause_overlay.hpp"
+#include "ui/overlays/debug_overlay.hpp"
+#include "ui/overlays/hud_overlay.hpp"
 #include "core/app.hpp"
+#include "core/properties/property_bus.hpp"
+#include "core/properties/property_paths.hpp"
 #include "graphics/glad.h"
+#include "aircraft/aircraft.hpp"
 #include <GLFW/glfw3.h>
 #include <array>
 #include <algorithm>
@@ -13,11 +19,15 @@ UIManager::~UIManager() {
     shutdown();
 }
 
-bool UIManager::init(App* app) {
-    m_app = app;
+void UIManager::init() {
+    if (!m_app) return;
+
+    m_pauseOverlay = std::make_unique<PauseOverlay>();
+    m_debugOverlay = std::make_unique<DebugOverlay>();
+    m_hudOverlay = std::make_unique<HudOverlay>();
 
     int width, height;
-    glfwGetFramebufferSize(app->window(), &width, &height);
+    glfwGetFramebufferSize(m_app->window(), &width, &height);
     m_windowWidth = width;
     m_windowHeight = height;
     m_projection = Mat4::ortho(0.0f, static_cast<float>(width),
@@ -28,19 +38,20 @@ bool UIManager::init(App* app) {
     std::ifstream testFile(fontPath);
     if (!testFile.good()) {
         std::cerr << "Font file not found: " << fontPath << std::endl;
-        return false;
+        return;
     }
     testFile.close();
 
     if (!m_font->init(fontPath, 64.0f)) {
         std::cerr << "Failed to load font" << std::endl;
-        return false;
+        return;
     }
 
-    m_shader = app->assets().getShader("ui");
+    auto assets = m_app->subsystems().getRequired<AssetStore>();
+    m_shader = assets->getShader("ui");
     if (!m_shader) {
         std::cerr << "UI shader not found in AssetStore" << std::endl;
-        return false;
+        return;
     }
 
     glGenVertexArrays(1, &m_vao);
@@ -63,8 +74,6 @@ bool UIManager::init(App* app) {
     glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
-
-    return true;
 }
 
 void UIManager::shutdown() {
@@ -72,6 +81,10 @@ void UIManager::shutdown() {
     m_buttons.clear();
     m_font.reset();
     m_shader = nullptr;
+
+    m_pauseOverlay.reset();
+    m_debugOverlay.reset();
+    m_hudOverlay.reset();
 
     if (m_vao) glDeleteVertexArrays(1, &m_vao);
     if (m_vbo) glDeleteBuffers(1, &m_vbo);
@@ -82,7 +95,15 @@ void UIManager::shutdown() {
     m_whiteTexture = 0;
 }
 
-void UIManager::update() {
+void UIManager::update(double dt) {
+    if (!m_app) return;
+
+    bool paused = PropertyBus::global().get(Properties::Sim::PAUSED, false);
+    bool debugVisible = PropertyBus::global().get(Properties::Sim::DEBUG_VISIBLE, false);
+    
+    if (m_pauseOverlay) m_pauseOverlay->update(paused, *this);
+    if (m_debugOverlay) m_debugOverlay->update(debugVisible, *this);
+
     int width, height;
     glfwGetFramebufferSize(m_app->window(), &width, &height);
 
@@ -116,6 +137,26 @@ void UIManager::update() {
     }
 }
 
+void UIManager::render() {
+    begin();
+
+    // draw Simulation hud (if aircraft is present)
+    if (m_aircraft && m_hudOverlay) {
+        m_hudOverlay->draw(*this, *m_aircraft);
+    }
+
+    // draw overlays
+    bool paused = PropertyBus::global().get(Properties::Sim::PAUSED, false);
+    bool debugVisible = PropertyBus::global().get(Properties::Sim::DEBUG_VISIBLE, false);
+
+    if (m_pauseOverlay) m_pauseOverlay->draw(paused, *this);
+    if (m_debugOverlay) m_debugOverlay->draw(debugVisible, *this);
+
+    drawPersistent();
+
+    end();
+}
+
 void UIManager::begin() {
     if (!m_shader || !m_font) return;
 
@@ -136,7 +177,7 @@ void UIManager::end() {
 }
 
 void UIManager::drawPersistent() {
-    // 1. Draw Buttons
+    // draw buttons
     for (const auto& btn : m_buttons) {
         if (!btn->visible) continue;
         Vec3 fillColor = btn->isHovered() ? btn->getHoverColor() : btn->color;
@@ -172,7 +213,7 @@ void UIManager::drawPersistent() {
                             btn->getCornerRadius(), fillColor, 1.0f, btn->anchor);
         }
 
-        Text tempText(btn->getText(), m_font.get(), m_app);
+        Text tempText(btn->getText(), m_font.get());
         tempText.scaleVal(btn->scale);
         Vec3 textSize = tempText.getSize();
         Vec3 bPos = btn->getAnchoredPosition(m_windowWidth, m_windowHeight);
@@ -182,7 +223,7 @@ void UIManager::drawPersistent() {
         drawText(btn->getText(), tx, ty, Anchor::TopLeft, btn->scale, Vec3(1, 1, 1), 1.0f);
     }
 
-    // 2. Draw Texts
+    // draw texts
     for (const auto& text : m_texts) {
         if (!text || !text->visible) continue;
         if (text->getContent().empty()) continue;
@@ -193,6 +234,7 @@ void UIManager::drawPersistent() {
 }
 
 void UIManager::drawRect(float x, float y, float w, float h, const Vec3& color, float alpha, Anchor anchor) {
+    if (!m_shader) return;
     float rx = x;
     float ry = y;
 
@@ -227,6 +269,7 @@ void UIManager::drawRect(float x, float y, float w, float h, const Vec3& color, 
 }
 
 void UIManager::drawRoundedRect(float x, float y, float w, float h, float radius, const Vec3& color, float alpha, Anchor anchor) {
+    if (!m_shader) return;
     float rx = x;
     float ry = y;
 
@@ -269,7 +312,7 @@ void UIManager::drawText(const std::string& content, float x, float y, Anchor an
                          float scale, const Vec3& color, float alpha) {
     if (content.empty() || !m_font || !m_shader) return;
 
-    Text text(content, m_font.get(), m_app);
+    Text text(content, m_font.get());
     text.pos(x, y).scaleVal(scale).anchorMode(anchor);
 
     Vec3 pos = text.getAnchoredPosition(m_windowWidth, m_windowHeight);
@@ -292,12 +335,12 @@ void UIManager::drawText(const std::string& content, float x, float y, Anchor an
 }
 
 Text& UIManager::text(const std::string& content) {
-    m_texts.push_back(std::make_unique<Text>(content, m_font.get(), m_app));
+    m_texts.push_back(std::make_unique<Text>(content, m_font.get()));
     return *m_texts.back();
 }
 
 Button& UIManager::button(const std::string& text) {
-    m_buttons.push_back(std::make_unique<Button>(text, m_font.get(), m_app));
+    m_buttons.push_back(std::make_unique<Button>(text, m_font.get()));
     return *m_buttons.back();
 }
 

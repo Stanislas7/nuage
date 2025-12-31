@@ -1,4 +1,5 @@
 #include "graphics/asset_store.hpp"
+#include "utils/config_loader.hpp"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -21,6 +22,42 @@ namespace {
         return buffer.str();
     }
 
+}
+
+void AssetStore::init() {
+    constexpr const char* kAssetConfigPath = "assets/config/assets.json";
+    auto configOpt = loadJsonConfig(kAssetConfigPath);
+    if (!configOpt || !configOpt->contains("shaders") || !(*configOpt)["shaders"].is_array()) {
+        std::cerr << "Missing or invalid asset config: " << kAssetConfigPath << std::endl;
+        throw std::runtime_error("AssetStore requires a valid assets/config/assets.json");
+    }
+
+    bool loadedAny = false;
+    for (const auto& entry : (*configOpt)["shaders"]) {
+        if (!entry.is_object()) continue;
+        std::string name = entry.value("name", "");
+        std::string vert = entry.value("vertex", "");
+        std::string frag = entry.value("fragment", "");
+        if (name.empty() || vert.empty() || frag.empty()) {
+            std::cerr << "Invalid shader entry in " << kAssetConfigPath << std::endl;
+            continue;
+        }
+        if (!loadShader(name, vert, frag)) {
+            std::cerr << "Failed to load shader: " << name << std::endl;
+        } else {
+            loadedAny = true;
+        }
+    }
+
+    if (!loadedAny) {
+        throw std::runtime_error("AssetStore did not load any shaders from assets/config/assets.json");
+    }
+}
+
+void AssetStore::update(double /*dt*/) {}
+
+void AssetStore::shutdown() {
+    unloadAll();
 }
 
 bool AssetStore::loadShader(const std::string& name,
@@ -229,9 +266,9 @@ Model* AssetStore::getModel(const std::string& name) {
     return it != m_models.end() ? it->second.get() : nullptr;
 }
 
-bool AssetStore::loadTexture(const std::string& name, const std::string& path) {
+bool AssetStore::loadTexture(const std::string& name, const std::string& path, bool repeat) {
     auto texture = std::make_unique<Texture>();
-    if (!texture->loadFromFile(path)) {
+    if (!texture->loadFromFile(path, true, repeat)) {
         return false;
     }
     m_textures[name] = std::move(texture);

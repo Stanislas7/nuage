@@ -3,35 +3,29 @@
 #define GL_SILENCE_DEPRECATION
 #include <OpenGL/gl3.h>
 #include "math/vec2.hpp"
+#include "core/subsystem.hpp"
+#include "input/input_bindings.hpp"
 #include <GLFW/glfw3.h>
 #include <string>
 #include <vector>
 
 namespace nuage {
 
-struct FlightInput {
-    float pitch = 0.0f;      // -1 to 1
-    float roll = 0.0f;       // -1 to 1
-    float yaw = 0.0f;        // -1 to 1
-    float throttle = 0.0f;   // 0 to 1
-    bool toggleGear = false;
-    bool toggleFlaps = false;
-    bool brake = false;
-};
-
 class App;
 
-class Input {
+class Input : public Subsystem {
 public:
-    void init(GLFWwindow* window);
-    void update(float dt);
+    void setWindow(GLFWwindow* window);
 
-    const FlightInput& flight() const { return m_flight; }
+    // Subsystem interface
+    void init() override;
+    void update(double dt) override;
+    void shutdown() override {}
+    std::string getName() const override { return "Input"; }
 
     bool isKeyDown(int key) const;
     bool isKeyPressed(int key) const;
     bool isButtonPressed(const std::string& name) const;
-    bool quitRequested() const { return m_quitRequested; }
 
     Vec2 mousePosition() const { return m_mousePos; }
     Vec2 mouseDelta() const { return m_mouseDelta; }
@@ -47,14 +41,12 @@ public:
 private:
     void pollKeyboard();
     void pollMouse();
-    void mapToControls(float dt);
+    void mapToControls(double dt);
 
     GLFWwindow* m_window = nullptr;
-    FlightInput m_flight;
 
     bool m_keys[512] = {};
     bool m_prevKeys[512] = {};
-    bool m_quitRequested = false;
     float m_throttleAccum = 0.3f;
 
     Vec2 m_mousePos{0, 0};
@@ -63,6 +55,8 @@ private:
 
     bool m_mouseButtons[8] = {};
     bool m_prevMouseButtons[8] = {};
+
+    InputBindings m_bindings;
 };
 
 }

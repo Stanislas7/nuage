@@ -46,3 +46,15 @@ assets/heights.png
 assets/scenery/
 assets/terrain/compiled/
 assets/terrain/sources/
+
+# Raw geodata (large inputs)
+assets/*.osm.pbf
+assets/**/*.osm.pbf
+assets/*.osm
+assets/**/*.osm
+assets/*.tif
+assets/**/*.tif
+assets/*.tiff
+assets/**/*.tiff
+assets/*.vrt
+assets/**/*.vrt
