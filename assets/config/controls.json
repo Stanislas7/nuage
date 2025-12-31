@@ -10,6 +10,7 @@
         "flaps_down": "O",
         "flaps_up": "P",
         "brake": "B",
+        "parking_brake": "V",
         "debug_menu": "F1",
         "quit": "Escape"
     }

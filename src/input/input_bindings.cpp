@@ -262,6 +262,7 @@ void InputBindings::applyDefaults() {
     m_buttons["throttle_up"] = {GLFW_KEY_SPACE};
     m_buttons["throttle_down"] = {GLFW_KEY_LEFT_SHIFT};
     m_buttons["brake"] = {GLFW_KEY_B};
+    m_buttons["parking_brake"] = {GLFW_KEY_V};
     m_buttons["quit"] = {GLFW_KEY_ESCAPE};
 }
 

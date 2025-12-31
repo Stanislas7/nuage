@@ -79,9 +79,15 @@ void Input::mapToControls(double dt) {
 
     PropertyBus::global().set(Properties::Controls::FLAPS, static_cast<double>(m_flapCommand));
 
+    if (isButtonPressed("parking_brake")) {
+        m_parkingBrakeEngaged = !m_parkingBrakeEngaged;
+    }
+    PropertyBus::global().set(Properties::Controls::PARKING_BRAKE, m_parkingBrakeEngaged ? 1.0 : 0.0);
+
     bool braking = isKeyListDown(m_bindings.button("brake"));
-    PropertyBus::global().set(Properties::Controls::BRAKE_LEFT, braking ? 1.0 : 0.0);
-    PropertyBus::global().set(Properties::Controls::BRAKE_RIGHT, braking ? 1.0 : 0.0);
+    double brakeCommand = (braking || m_parkingBrakeEngaged) ? 1.0 : 0.0;
+    PropertyBus::global().set(Properties::Controls::BRAKE_LEFT, brakeCommand);
+    PropertyBus::global().set(Properties::Controls::BRAKE_RIGHT, brakeCommand);
 
     if (isKeyPressed(GLFW_KEY_SPACE)) {
         bool current = PropertyBus::global().get(Properties::Sim::PAUSED, false);

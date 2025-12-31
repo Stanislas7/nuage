@@ -100,6 +100,7 @@ void Aircraft::Instance::update(float dt) {
     double flaps = global.get(Properties::Controls::FLAPS, 0.0);
     double brakeLeft = global.get(Properties::Controls::BRAKE_LEFT, 0.0);
     double brakeRight = global.get(Properties::Controls::BRAKE_RIGHT, 0.0);
+    double parkingBrake = global.get(Properties::Controls::PARKING_BRAKE, 0.0);
 
     local.set(Properties::Controls::ELEVATOR, elevator);
     local.set(Properties::Controls::AILERON, aileron);
@@ -108,6 +109,7 @@ void Aircraft::Instance::update(float dt) {
     local.set(Properties::Controls::FLAPS, flaps);
     local.set(Properties::Controls::BRAKE_LEFT, brakeLeft);
     local.set(Properties::Controls::BRAKE_RIGHT, brakeRight);
+    local.set(Properties::Controls::PARKING_BRAKE, parkingBrake);
 
     for (auto& system : m_systems) {
         system->update(dt);

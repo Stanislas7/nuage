@@ -15,6 +15,7 @@ namespace Controls {
     inline constexpr TypedProperty<double> FLAPS("controls/flight/flaps");
     inline constexpr TypedProperty<double> BRAKE_LEFT("controls/gear/brake-left");
     inline constexpr TypedProperty<double> BRAKE_RIGHT("controls/gear/brake-right");
+    inline constexpr TypedProperty<double> PARKING_BRAKE("controls/gear/parking-brake");
 }
 
 namespace Atmosphere {

@@ -49,6 +49,7 @@ private:
     bool m_prevKeys[512] = {};
     float m_throttleAccum = 0.3f;
     float m_flapCommand = 0.0f;
+    bool m_parkingBrakeEngaged = false;
 
     Vec2 m_mousePos{0, 0};
     Vec2 m_prevMousePos{0, 0};

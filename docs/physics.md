@@ -17,6 +17,8 @@ When an aircraft JSON contains a `jsbsim` block, the aircraft is driven by `Jsbs
 ### Input mapping
 Nuage keeps the key binding definitions under `assets/config/controls.json` and supports alternative physical layouts via `assets/config/layouts.json` when keys are remapped (`src/input/input.cpp`). The `Input` system normalizes named keycaps (e.g., `ArrowUp`, `KeypadAdd`) into GLFW scan codes and writes the combined pitch/roll/yaw/throttle commands onto the property bus so any system that cares about current controls can read them.
 
+Parking brakes are modeled as a latched toggle on the bus (`controls/gear/parking-brake`). When engaged, Nuage forces the left/right brake commands to full until released, so JSBSim sees braking even when the brake pedal key is not held.
+
 ### HUD throttle indicator
 The HUD renders a `PWR: xx%` indicator sourced from `input/throttle` so you can always see the throttle command currently being fed into JSBSim without reverse-engineering JSBSim's internal throttle plateaus. This is simply a text widget that reads the throttle property from the bus and converts it to percentage.
 
