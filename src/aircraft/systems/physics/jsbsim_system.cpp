@@ -218,12 +218,18 @@ void JsbsimSystem::syncInputs() {
     double rudder = local.get(Properties::Controls::RUDDER);
     double throttle = local.get(Properties::Controls::THROTTLE);
     double flaps = local.get(Properties::Controls::FLAPS, 0.0);
+    double brakeLeft = local.get(Properties::Controls::BRAKE_LEFT, 0.0);
+    double brakeRight = local.get(Properties::Controls::BRAKE_RIGHT, 0.0);
 
     m_fdm->SetPropertyValue("fcs/elevator-cmd-norm", clampInput(elevator));
     m_fdm->SetPropertyValue("fcs/aileron-cmd-norm", clampInput(-aileron));
     m_fdm->SetPropertyValue("fcs/rudder-cmd-norm", clampInput(rudder));
     m_fdm->SetPropertyValue("fcs/throttle-cmd-norm", clampInput(throttle));
     m_fdm->SetPropertyValue("fcs/flap-cmd-norm", std::clamp(flaps, 0.0, 1.0));
+    m_fdm->SetPropertyValue("fcs/left-brake-cmd-norm", std::clamp(brakeLeft, 0.0, 1.0));
+    m_fdm->SetPropertyValue("fcs/right-brake-cmd-norm", std::clamp(brakeRight, 0.0, 1.0));
+    m_fdm->SetPropertyValue("fcs/center-brake-cmd-norm",
+        std::clamp(std::max(brakeLeft, brakeRight), 0.0, 1.0));
 
     Vec3 wind = local.get(Properties::Atmosphere::WIND_PREFIX);
     double windNorth = wind.z * kMToFt;
