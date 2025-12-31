@@ -1,9 +1,10 @@
 #include "graphics/camera.hpp"
 #include "aircraft/aircraft.hpp"
+#include "graphics/renderers/terrain_renderer.hpp"
 #include "input/input.hpp"
 #include <cmath>
 #include <iostream>
-#include <GLFW/glfw3.h> // For cursor constants
+#include <GLFW/glfw3.h> 
 
 namespace nuage {
 
@@ -113,6 +114,29 @@ void Camera::toggleOrbitMode() {
         m_mode = CameraMode::Orbit;
         m_input->setCursorMode(GLFW_CURSOR_DISABLED);
         m_input->centerCursor();
+    }
+}
+
+void Camera::clampToGround(const TerrainRenderer& terrain, float clearanceMeters) {
+    float groundY = 0.0f;
+    if (!terrain.sampleSurfaceHeight(m_position.x, m_position.z, groundY)) {
+        return;
+    }
+    float minY = groundY + std::max(0.0f, clearanceMeters);
+    if (m_position.y < minY) {
+        m_position.y = minY;
+        if (m_mode == CameraMode::Orbit) {
+            Vec3 offset = m_position - m_lookAt;
+            float horiz = std::sqrt(offset.x * offset.x + offset.z * offset.z);
+            float desired = std::sqrt(std::max(0.0f, m_orbitDistance * m_orbitDistance - offset.y * offset.y));
+            if (horiz > 1e-4f && desired > 0.0f) {
+                float scale = desired / horiz;
+                offset.x *= scale;
+                offset.z *= scale;
+                m_position = m_lookAt + offset;
+            }
+        }
+        buildMatrices();
     }
 }
 
