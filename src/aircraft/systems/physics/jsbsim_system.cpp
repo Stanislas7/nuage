@@ -206,6 +206,7 @@ void JsbsimSystem::ensureInitialized(float dt) {
     m_fdm->SetPropertyValue("propulsion/engine/set-running", 1.0);
     m_fdm->SetPropertyValue("propulsion/engine[0]/set-running", 1.0);
     m_fdm->SetPropertyValue("fcs/mixture-cmd-norm", 1.0);
+    m_fdm->SetPropertyValue("fcs/mixture-cmd-norm[0]", 1.0);
     m_fdm->SetPropertyValue("propulsion/engine[0]/mixture-cmd-norm", 1.0);
     m_fdm->SetPropertyValue("fcs/left-brake-cmd-norm", 0.0);
     m_fdm->SetPropertyValue("fcs/right-brake-cmd-norm", 0.0);
@@ -228,17 +229,26 @@ void JsbsimSystem::syncInputs() {
     m_fdm->SetPropertyValue("propulsion/engine/set-running", 1.0);
     m_fdm->SetPropertyValue("propulsion/engine[0]/set-running", 1.0);
     m_fdm->SetPropertyValue("fcs/mixture-cmd-norm", 1.0);
+    m_fdm->SetPropertyValue("fcs/mixture-cmd-norm[0]", 1.0);
     m_fdm->SetPropertyValue("propulsion/engine[0]/mixture-cmd-norm", 1.0);
 
     m_fdm->SetPropertyValue("fcs/elevator-cmd-norm", clampInput(elevator));
     m_fdm->SetPropertyValue("fcs/aileron-cmd-norm", clampInput(-aileron));
     m_fdm->SetPropertyValue("fcs/rudder-cmd-norm", clampInput(rudder));
     m_fdm->SetPropertyValue("fcs/throttle-cmd-norm", clampInput(throttle));
+    m_fdm->SetPropertyValue("fcs/throttle-cmd-norm[0]", clampInput(throttle));
     m_fdm->SetPropertyValue("fcs/flap-cmd-norm", std::clamp(flaps, 0.0, 1.0));
     m_fdm->SetPropertyValue("fcs/left-brake-cmd-norm", std::clamp(brakeLeft, 0.0, 1.0));
     m_fdm->SetPropertyValue("fcs/right-brake-cmd-norm", std::clamp(brakeRight, 0.0, 1.0));
     m_fdm->SetPropertyValue("fcs/center-brake-cmd-norm",
         std::clamp(std::max(brakeLeft, brakeRight), 0.0, 1.0));
+
+    // Keep the piston engine restartable after full-stop landings.
+    m_fdm->SetPropertyValue("propulsion/magneto_cmd", 3.0);
+    double engineRpm = m_fdm->GetPropertyValue("propulsion/engine[0]/engine-rpm");
+    bool throttleRequested = clampInput(throttle) > 0.05;
+    bool needsRestart = throttleRequested && engineRpm < 500.0;
+    m_fdm->SetPropertyValue("propulsion/starter_cmd", needsRestart ? 1.0 : 0.0);
 
     Vec3 wind = local.get(Properties::Atmosphere::WIND_PREFIX);
     double windNorth = wind.z * kMToFt;
