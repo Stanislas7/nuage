@@ -15,7 +15,7 @@
         "path": "assets/models/c172p/c172p.obj",
         "color": [0.8, 0.8, 0.8],
         "scale": 1.0,
-        "rotation": [-3.0, 90.0, 0.0],
+        "rotation": [-3.0, 90.0, 1.5],
         "offset": [0.0, -0.065, 0.0]
     }
 }

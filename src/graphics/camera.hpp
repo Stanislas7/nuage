@@ -73,6 +73,7 @@ private:
     float m_orbitSpeed = 2.0f;
     float m_orbitYaw = 0.0f;
     float m_orbitPitch = 0.0f;
+    bool m_hasTargetLock = false;
 
     float m_fov = 60.0f * 3.14159f / 180.0f;
     float m_aspect = 16.0f / 9.0f;

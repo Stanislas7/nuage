@@ -10,6 +10,10 @@ namespace nuage {
 
 void Camera::init(Input& input) {
     m_input = &input;
+    m_mode = CameraMode::Chase;
+    m_orbitYaw = 0.0f;
+    m_orbitPitch = 0.0f;
+    m_input->setCursorMode(GLFW_CURSOR_NORMAL);
 }
 
 void Camera::update(float dt, Aircraft::Instance* target, float alpha) {
@@ -20,7 +24,25 @@ void Camera::update(float dt, Aircraft::Instance* target, float alpha) {
 
     switch (m_mode) {
         case CameraMode::Chase:
-            updateChaseCamera(dt, m_target, alpha);
+            if (m_target && !m_hasTargetLock) {
+                Vec3 targetPos = m_target->interpolatedPosition(alpha);
+                Vec3 targetForward = m_target->interpolatedOrientation(alpha).rotate(Vec3(0, 0, 1));
+                float forwardLen = std::sqrt(targetForward.x * targetForward.x +
+                                            targetForward.y * targetForward.y +
+                                            targetForward.z * targetForward.z);
+                if (forwardLen < 0.001f) {
+                    targetForward = Vec3(0, 0, 1);
+                } else {
+                    targetForward = targetForward * (1.0f / forwardLen);
+                }
+                m_smoothedForward = targetForward;
+                m_smoothedLookAt = targetPos;
+                m_position = targetPos - targetForward * m_followDistance + Vec3(0, m_followHeight, 0);
+                m_lookAt = targetPos;
+                m_hasTargetLock = true;
+            } else {
+                updateChaseCamera(dt, m_target, alpha);
+            }
             break;
         case CameraMode::Orbit:
             updateOrbitCamera(dt, m_target, alpha);
