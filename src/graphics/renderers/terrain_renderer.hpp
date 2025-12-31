@@ -143,8 +143,6 @@ private:
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
     Shader* m_texturedShader = nullptr;
-    Texture* m_texture = nullptr;
-    bool m_textured = false;
     TerrainTextureSettings m_textureSettings;
     Texture* m_texGrass = nullptr;
     Texture* m_texForest = nullptr;
@@ -196,10 +194,6 @@ private:
     float m_compiledLod1Distance = 0.0f;
     float m_compiledLod1DistanceSq = 0.0f;
     float m_compiledSkirtDepth = 0.0f;
-    float m_compiledMinX = 0.0f;
-    float m_compiledMinZ = 0.0f;
-    float m_compiledMaxX = 0.0f;
-    float m_compiledMaxZ = 0.0f;
     GeoOrigin m_compiledOrigin;
     bool m_compiledOriginValid = false;
     int m_compiledMaskResolution = 0;
