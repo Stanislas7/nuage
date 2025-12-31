@@ -7,8 +7,8 @@
         "longitudeDeg": -82.5418
     },
     "spawn": {
-        "position": [23385.166, 1151.662, -12668.249],
-        "airspeed": 60.0
+        "position": [23385.166, 651.662, -12668.249],
+        "airspeed": 0.0
     },
     "model": {
         "name": "c172p_mesh",

@@ -923,6 +923,23 @@ void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::strin
     if (!m_runwaysEnabled) {
         return;
     }
+    bool snapToTerrain = runwaysConfig.value("snapToTerrain", true);
+    auto sampleTerrainHeight = [&](float x, float z, float& out) -> bool {
+        if (m_procedural) {
+            out = proceduralHeight(x, z);
+            return true;
+        }
+        if (!m_compiledTiles.empty()) {
+            int tx = static_cast<int>(std::floor(x / m_compiledTileSizeMeters));
+            int ty = static_cast<int>(std::floor(z / m_compiledTileSizeMeters));
+            TerrainSample sample;
+            if (sampleCompiledSurface(tx, ty, x, z, true, sample)) {
+                out = sample.height;
+                return true;
+            }
+        }
+        return false;
+    };
     float runwayTexScaleU = runwaysConfig.value("textureScaleU", 5.0f);
     float runwayTexScaleV = runwaysConfig.value("textureScaleV", 30.0f);
 
@@ -992,6 +1009,15 @@ void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::strin
 
             Vec3 lePos(le[0].get<float>(), le[1].get<float>(), le[2].get<float>());
             Vec3 hePos(he[0].get<float>(), he[1].get<float>(), he[2].get<float>());
+            if (snapToTerrain) {
+                float groundY = 0.0f;
+                if (sampleTerrainHeight(lePos.x, lePos.z, groundY)) {
+                    lePos.y = groundY;
+                }
+                if (sampleTerrainHeight(hePos.x, hePos.z, groundY)) {
+                    hePos.y = groundY;
+                }
+            }
 
             float dx = hePos.x - lePos.x;
             float dz = hePos.z - lePos.z;
