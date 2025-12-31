@@ -21,8 +21,7 @@ namespace nuage {
 namespace {
 constexpr double kFtToM = 0.3048;
 constexpr double kMToFt = 1.0 / kFtToM;
-constexpr double kEarthRadiusM = 6378137.0; // WGS84 semi-major
-constexpr double kDegToRad = 3.141592653589793 / 180.0;
+constexpr double kRadToDeg = 180.0 / 3.141592653589793;
 constexpr double kWgs84SemiMajorFt = 6378137.0 / kFtToM;
 constexpr double kWgs84SemiMinorFt = 6356752.3142 / kFtToM;
 
@@ -163,10 +162,6 @@ JsbsimSystem::JsbsimSystem(JsbsimConfig config)
 void JsbsimSystem::init(AircraftState& state, PropertyContext& properties) {
     m_acState = &state;
     m_properties = &properties;
-    double originLat = m_config.hasOrigin ? m_config.originLatDeg : m_config.initLatDeg;
-    double originLon = m_config.hasOrigin ? m_config.originLonDeg : m_config.initLonDeg;
-    m_originLatRad = originLat * 3.1415926535 / 180.0;
-    m_originLonRad = originLon * 3.1415926535 / 180.0;
 }
 
 void JsbsimSystem::ensureInitialized(float dt) {
@@ -180,9 +175,9 @@ void JsbsimSystem::ensureInitialized(float dt) {
     m_fdm->SetSystemsPath(SGPath("systems"));
     m_fdm->Setdt(dt);
 
-    // Initial conditions derived from current state
+    // Initial conditions derived from current state (use geodetic latitude).
     m_fdm->SetPropertyValue("ic/long-gc-deg", m_config.initLonDeg);
-    m_fdm->SetPropertyValue("ic/lat-gc-deg", m_config.initLatDeg);
+    m_fdm->SetPropertyValue("ic/lat-geod-deg", m_config.initLatDeg);
     m_fdm->SetPropertyValue("ic/h-sl-ft", m_acState->position.y * kMToFt);
     m_fdm->SetPropertyValue("ic/psi-true-deg", 0.0);
     m_fdm->SetPropertyValue("ic/theta-deg", 0.0);
@@ -207,6 +202,14 @@ void JsbsimSystem::ensureInitialized(float dt) {
         m_hasGroundCallback = true;
     }
 
+    // Ensure the engine is running and ready for throttle input (useful after landing).
+    m_fdm->SetPropertyValue("propulsion/engine/set-running", 1.0);
+    m_fdm->SetPropertyValue("propulsion/engine[0]/set-running", 1.0);
+    m_fdm->SetPropertyValue("fcs/mixture-cmd-norm", 1.0);
+    m_fdm->SetPropertyValue("propulsion/engine[0]/mixture-cmd-norm", 1.0);
+    m_fdm->SetPropertyValue("fcs/left-brake-cmd-norm", 0.0);
+    m_fdm->SetPropertyValue("fcs/right-brake-cmd-norm", 0.0);
+
     m_fdm->RunIC();
     m_initialized = true;
 }
@@ -220,6 +223,12 @@ void JsbsimSystem::syncInputs() {
     double flaps = local.get(Properties::Controls::FLAPS, 0.0);
     double brakeLeft = local.get(Properties::Controls::BRAKE_LEFT, 0.0);
     double brakeRight = local.get(Properties::Controls::BRAKE_RIGHT, 0.0);
+
+    // Keep the engine alive and mixture rich so throttle always makes power after landings.
+    m_fdm->SetPropertyValue("propulsion/engine/set-running", 1.0);
+    m_fdm->SetPropertyValue("propulsion/engine[0]/set-running", 1.0);
+    m_fdm->SetPropertyValue("fcs/mixture-cmd-norm", 1.0);
+    m_fdm->SetPropertyValue("propulsion/engine[0]/mixture-cmd-norm", 1.0);
 
     m_fdm->SetPropertyValue("fcs/elevator-cmd-norm", clampInput(elevator));
     m_fdm->SetPropertyValue("fcs/aileron-cmd-norm", clampInput(-aileron));
@@ -288,22 +297,19 @@ void JsbsimSystem::syncOutputs() {
     }
     m_acState->orientation = quatFromMatrix(b2w);
 
-    double lat = m_fdm->GetPropertyValue("position/lat-gc-rad");
-    double lon = m_fdm->GetPropertyValue("position/long-gc-rad");
+    double latGeodRad = m_fdm->GetPropertyValue("position/lat-geod-rad");
+    double lonRad = m_fdm->GetPropertyValue("position/long-gc-rad");
     double altFt = m_fdm->GetPropertyValue("position/h-sl-ft");
 
-    double dLat = lat - m_originLatRad;
-    double dLon = lon - m_originLonRad;
-
-    double north = dLat * kEarthRadiusM;
-    double east = dLon * kEarthRadiusM * std::cos(m_originLatRad);
+    double latDeg = latGeodRad * kRadToDeg;
+    double lonDeg = lonRad * kRadToDeg;
     double alt = altFt * kFtToM;
 
-    m_acState->position = Vec3(
-        static_cast<float>(east),
-        static_cast<float>(alt),
-        static_cast<float>(north)
-    );
+    GeoOrigin origin;
+    origin.latDeg = m_config.hasOrigin ? m_config.originLatDeg : m_config.initLatDeg;
+    origin.lonDeg = m_config.hasOrigin ? m_config.originLonDeg : m_config.initLonDeg;
+    origin.altMeters = m_config.originAltMeters;
+    m_acState->position = llaToEnu(origin, latDeg, lonDeg, alt);
 
     double airspeedFps = m_fdm->GetPropertyValue("velocities/vtrue-fps");
     m_acState->airspeed = airspeedFps * kFtToM;
@@ -312,8 +318,8 @@ void JsbsimSystem::syncOutputs() {
     PropertyBus& local = m_properties->local();
     local.set(Properties::Velocities::AIRSPEED_KT, airspeedFps * 0.592484); // fps to knots
     local.set(Properties::Position::ALTITUDE_FT, altFt);
-    local.set(Properties::Position::LATITUDE_DEG, lat * 180.0 / 3.1415926535);
-    local.set(Properties::Position::LONGITUDE_DEG, lon * 180.0 / 3.1415926535);
+    local.set(Properties::Position::LATITUDE_DEG, latDeg);
+    local.set(Properties::Position::LONGITUDE_DEG, lonDeg);
     
     local.set(Properties::Orientation::PITCH_DEG, m_fdm->GetPropertyValue("attitude/theta-deg"));
     local.set(Properties::Orientation::ROLL_DEG, m_fdm->GetPropertyValue("attitude/phi-deg"));

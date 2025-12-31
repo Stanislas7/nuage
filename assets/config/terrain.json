@@ -4,7 +4,7 @@
   "compiledMaxLoadsPerFrame": 2,
   "compiledLod1Distance": 3000.0,
   "compiledSkirtDepth": 180.0,
-  "compiledDebugLog": true,
+  "compiledDebugLog": false,
   "terrainTrees": {
     "enabled": false,
     "densityPerSqKm": 800.0,

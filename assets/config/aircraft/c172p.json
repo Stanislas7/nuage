@@ -3,18 +3,18 @@
     "jsbsim": {
         "enabled": true,
         "model": "c172p",
-        "latitudeDeg": 37.6499,
-        "longitudeDeg": -97.4330
+        "latitudeDeg": 35.4361,
+        "longitudeDeg": -82.5418
     },
     "spawn": {
-        "position": [-16827.0, 600.0, 44338.0],
-        "airspeed": 70.0
+        "position": [0.0, 1500.0, -500.0],
+        "airspeed": 60.0
     },
     "model": {
         "name": "c172p_mesh",
         "path": "assets/models/c172p/c172p.obj",
         "color": [0.8, 0.8, 0.8],
-        "scale": 2.0,
+        "scale": 1.0,
         "rotation": [-3.0, 90.0, 0.0],
         "offset": [0.0, -0.065, 0.0]
     }

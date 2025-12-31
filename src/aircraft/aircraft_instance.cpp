@@ -30,6 +30,23 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     m_properties.bind(PropertyBus::global(), m_state);
 
     const auto& json = *jsonOpt;
+    Vec3 initialPos(0, 100, 0);
+    double initialAirspeed = 0.0;
+    if (json.contains(ConfigKeys::SPAWN)) {
+        const auto& spawn = json[ConfigKeys::SPAWN];
+        if (spawn.contains(ConfigKeys::POSITION)) {
+            from_json(spawn[ConfigKeys::POSITION], initialPos);
+        }
+        initialAirspeed = spawn.value(ConfigKeys::AIRSPEED, 0.0);
+    }
+    // If terrain is available, snap the spawn altitude to the terrain height to avoid hovering.
+    if (terrain) {
+        float groundY = 0.0f;
+        if (terrain->sampleSurfaceHeight(initialPos.x, initialPos.z, groundY)) {
+            initialPos.y = groundY + 1.0f; // small clearance for wheels
+        }
+    }
+
     JsbsimConfig jsbsimConfig;
     if (json.contains(ConfigKeys::JSBSIM)) {
         const auto& jsb = json[ConfigKeys::JSBSIM];
@@ -47,7 +64,7 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         double spawnLat = terrainOrigin->latDeg;
         double spawnLon = terrainOrigin->lonDeg;
         double spawnAlt = terrainOrigin->altMeters;
-        enuToLla(*terrainOrigin, m_currentState.position, spawnLat, spawnLon, spawnAlt);
+        enuToLla(*terrainOrigin, initialPos, spawnLat, spawnLon, spawnAlt);
         jsbsimConfig.initLatDeg = spawnLat;
         jsbsimConfig.initLonDeg = spawnLon;
         // JSBSim takes altitude in feet; we set in ensureInitialized, but keep meters here.
@@ -62,16 +79,6 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     addSystem<EnvironmentSystem>(atmosphere);
     addSystem<JsbsimSystem>(jsbsimConfig);
 
-    Vec3 initialPos(0, 100, 0);
-    double initialAirspeed = 0.0;
-    if (json.contains(ConfigKeys::SPAWN)) {
-        const auto& spawn = json[ConfigKeys::SPAWN];
-        if (spawn.contains(ConfigKeys::POSITION)) {
-            from_json(spawn[ConfigKeys::POSITION], initialPos);
-        }
-        initialAirspeed = spawn.value(ConfigKeys::AIRSPEED, 0.0);
-    }
-    
     m_currentState.position = initialPos;
     m_currentState.airspeed = initialAirspeed;
     m_currentState.orientation = Quat::identity();
@@ -83,7 +90,6 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
 void Aircraft::Instance::update(float dt) {
     m_prevState = m_currentState;
 
-    // Read controls from global property tree
     PropertyBus& global = m_properties.global();
     PropertyBus& local = m_properties.local();
 

@@ -39,8 +39,6 @@ private:
     JsbsimConfig m_config;
     std::unique_ptr<JSBSim::FGFDMExec> m_fdm;
     bool m_initialized = false;
-    double m_originLatRad = 0.0;
-    double m_originLonRad = 0.0;
     bool m_hasGroundCallback = false;
 
     void ensureInitialized(float dt);
