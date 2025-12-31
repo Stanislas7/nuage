@@ -29,6 +29,9 @@ bool App::init(const AppConfig& config) {
     m_input->setWindow(m_window);
     m_subsystems.add(m_input);
 
+    m_audio = std::make_shared<AudioSubsystem>();
+    m_subsystems.add(m_audio);
+
     m_ui = std::make_shared<UIManager>();
     m_ui->setApp(this);
     m_subsystems.add(m_ui);

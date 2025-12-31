@@ -5,6 +5,7 @@
 #include "ui/ui_manager.hpp"
 #include "ui/overlays/pause_overlay.hpp"
 #include "ui/overlays/debug_overlay.hpp"
+#include "audio/audio_subsystem.hpp"
 #include "core/session/flight_config.hpp"
 #include "core/session/flight_session.hpp"
 #include "core/subsystem_manager.hpp"
@@ -75,6 +76,7 @@ private:
     std::shared_ptr<Input> m_input;
     std::shared_ptr<UIManager> m_ui;
     std::shared_ptr<AssetStore> m_assets;
+    std::shared_ptr<AudioSubsystem> m_audio;
     // Active Flight Session
     std::unique_ptr<FlightSession> m_session;
 

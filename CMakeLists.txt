@@ -8,6 +8,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
+if(APPLE)
+    enable_language(OBJCXX)
+endif()
+
 # JSBSim options (keep the dependency lean)
 set(BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(BUILD_PYTHON_MODULE OFF CACHE BOOL "" FORCE)
@@ -19,6 +23,8 @@ add_subdirectory(external/jsbsim EXCLUDE_FROM_ALL)
 
 file(GLOB_RECURSE SOURCES
     "src/core/*.cpp"
+    "src/audio/*.cpp"
+    "src/audio/*.mm"
     "src/environment/*.cpp"
     "src/input/*.cpp"
     "src/scenery/*.cpp"
@@ -103,6 +109,14 @@ target_link_libraries(nuage
     OpenGL::GL
     libJSBSim
 )
+
+if(APPLE)
+    target_link_libraries(nuage "-framework AVFoundation" "-framework Foundation")
+    set_source_files_properties(
+        ${CMAKE_SOURCE_DIR}/src/audio/audio_subsystem.mm
+        PROPERTIES COMPILE_FLAGS "-fobjc-arc"
+    )
+endif()
 
 # Avoid building JSBSim utilities/binaries on every build.
 if (TARGET JSBSim)
