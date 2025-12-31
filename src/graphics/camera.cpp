@@ -118,6 +118,13 @@ void Camera::updateOrbitCamera(float dt, Aircraft::Instance* target, float alpha
     m_orbitPitch -= mouseDelta.y * m_orbitSpeed * dt;
     m_orbitPitch = std::max(-1.5f, std::min(1.5f, m_orbitPitch));
 
+    if (m_input->isKeyDown(GLFW_KEY_J)) {
+        addOrbitZoom(-dt * 20.0f);
+    }
+    if (m_input->isKeyDown(GLFW_KEY_K)) {
+        addOrbitZoom(dt * 20.0f);
+    }
+
     Vec3 targetPos = target->interpolatedPosition(alpha);
 
     float x = m_orbitDistance * std::cos(m_orbitPitch) * std::sin(m_orbitYaw);
@@ -137,6 +144,12 @@ void Camera::toggleOrbitMode() {
         m_input->setCursorMode(GLFW_CURSOR_DISABLED);
         m_input->centerCursor();
     }
+}
+
+void Camera::addOrbitZoom(float delta) {
+    constexpr float kMinOrbitDistance = 12.0f;
+    constexpr float kMaxOrbitDistance = 120.0f;
+    m_orbitDistance = std::clamp(m_orbitDistance + delta, kMinOrbitDistance, kMaxOrbitDistance);
 }
 
 void Camera::clampToGround(const TerrainRenderer& terrain, float clearanceMeters) {

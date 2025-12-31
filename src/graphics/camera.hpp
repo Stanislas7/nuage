@@ -36,6 +36,7 @@ public:
 
     void setOrbitDistance(float distance) { m_orbitDistance = distance; }
     void setOrbitSpeed(float speed) { m_orbitSpeed = speed; }
+    void addOrbitZoom(float delta);
     void toggleOrbitMode();
     void clampToGround(const TerrainRenderer& terrain, float clearanceMeters);
 
