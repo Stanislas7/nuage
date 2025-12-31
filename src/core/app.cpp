@@ -105,6 +105,7 @@ void App::run() {
                 m_session->update(m_deltaTime);
                 float alpha = m_physicsAccumulator / FIXED_DT;
                 m_session->camera().update(m_deltaTime, m_session->aircraft().player(), alpha);
+                m_session->camera().clampToGround(m_session->terrain(), 1.5f);
             }
         }
 
@@ -193,6 +194,7 @@ void App::updatePhysics() {
     m_physicsAccumulator += m_deltaTime;
     while (m_physicsAccumulator >= FIXED_DT) {
         m_session->aircraft().fixedUpdate(FIXED_DT);
+        m_session->aircraft().applyGroundCollision(m_session->terrain());
         m_physicsAccumulator -= FIXED_DT;
     }
 }

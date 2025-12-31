@@ -7,6 +7,8 @@
     "buttons": {
         "throttle_up": ["ArrowUp", "PageUp", "KeypadAdd"],
         "throttle_down": ["ArrowDown", "PageDown", "KeypadSubtract"],
+        "flaps_down": "O",
+        "flaps_up": "P",
         "brake": "B",
         "debug_menu": "F1",
         "quit": "Escape"

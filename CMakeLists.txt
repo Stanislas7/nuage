@@ -46,6 +46,16 @@ target_include_directories(terrainc PRIVATE
     ${CMAKE_SOURCE_DIR}/src/utils
 )
 
+add_executable(ourairports_import
+    tools/ourairports_import.cpp
+)
+target_include_directories(ourairports_import PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/math
+    ${CMAKE_SOURCE_DIR}/src/utils
+)
+
 # Copy assets to the build directory
 set(JSBSIM_MODELS c172p)
 

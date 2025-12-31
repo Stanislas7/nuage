@@ -15,6 +15,12 @@ void Aircraft::fixedUpdate(float dt) {
     }
 }
 
+void Aircraft::applyGroundCollision(const TerrainRenderer& terrain) {
+    for (auto& ac : m_instances) {
+        ac->applyGroundCollision(terrain);
+    }
+}
+
 void Aircraft::render(const Mat4& viewProjection, float alpha, const Vec3& lightDir) {
     for (auto& ac : m_instances) {
         ac->render(viewProjection, alpha, lightDir);
@@ -25,11 +31,13 @@ void Aircraft::shutdown() {
     destroyAll();
 }
 
-Aircraft::Instance* Aircraft::spawnPlayer(const std::string& configPath) {
+Aircraft::Instance* Aircraft::spawnPlayer(const std::string& configPath,
+                                          const GeoOrigin* terrainOrigin,
+                                          const TerrainRenderer* terrain) {
     if (!m_assets || !m_atmosphere) return nullptr;
 
     auto aircraft = std::make_unique<Aircraft::Instance>();
-    aircraft->init(configPath, *m_assets, *m_atmosphere);
+    aircraft->init(configPath, *m_assets, *m_atmosphere, terrainOrigin, terrain);
     
     m_player = aircraft.get();
     m_instances.push_back(std::move(aircraft));

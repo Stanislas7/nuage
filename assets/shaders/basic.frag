@@ -34,6 +34,14 @@ uniform sampler2D uTerrainTexForest;
 uniform sampler2D uTerrainTexRock;
 uniform sampler2D uTerrainTexDirt;
 uniform sampler2D uTerrainTexUrban;
+uniform sampler2D uTerrainTexGrassNormal;
+uniform sampler2D uTerrainTexDirtNormal;
+uniform sampler2D uTerrainTexRockNormal;
+uniform sampler2D uTerrainTexUrbanNormal;
+uniform sampler2D uTerrainTexGrassRough;
+uniform sampler2D uTerrainTexDirtRough;
+uniform sampler2D uTerrainTexRockRough;
+uniform sampler2D uTerrainTexUrbanRough;
 uniform float uTerrainTexScale = 0.02;
 uniform float uTerrainDetailScale = 0.08;
 uniform float uTerrainDetailStrength = 0.35;
@@ -42,6 +50,11 @@ uniform float uTerrainRockSlopeEnd = 0.7;
 uniform float uTerrainRockStrength = 0.7;
 uniform float uTerrainMacroScale = 0.0012;
 uniform float uTerrainMacroStrength = 0.25;
+uniform float uTerrainFarmlandStrength = 0.5;
+uniform float uTerrainFarmlandStripeScale = 0.004;
+uniform float uTerrainFarmlandStripeContrast = 0.6;
+uniform float uTerrainScrubStrength = 0.25;
+uniform float uTerrainScrubNoiseScale = 0.0016;
 uniform vec3 uTerrainGrassTintA = vec3(0.75, 0.95, 0.65);
 uniform vec3 uTerrainGrassTintB = vec3(0.55, 0.7, 0.45);
 uniform float uTerrainGrassTintStrength = 0.35;
@@ -56,6 +69,10 @@ uniform float uTerrainMicroStrength = 0.18;
 uniform float uTerrainWaterDetailScale = 0.08;
 uniform float uTerrainWaterDetailStrength = 0.25;
 uniform vec3 uTerrainWaterColor = vec3(0.14, 0.32, 0.55);
+uniform bool uTerrainHasMaskTex = false;
+uniform sampler2D uTerrainMaskTex;
+uniform vec2 uTerrainMaskOrigin;
+uniform vec2 uTerrainMaskInvSize;
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -87,6 +104,7 @@ vec2 rotate90(vec2 uv, float pick) {
 
 void main() {
     vec3 normal = normalize(vNormal);
+    float roughMix = 0.5;
     float slope = 1.0 - dot(normal, vec3(0.0, 1.0, 0.0));
     vec3 lightDir = normalize(uLightDir);
     float diffuse = max(dot(normal, lightDir), 0.0);
@@ -111,18 +129,44 @@ void main() {
                             rotBlend);
         vec3 rockTex = texture(uTerrainTexRock, uvDetail).rgb;
         vec3 dirtTex = texture(uTerrainTexDirt, uvDetail).rgb;
+        vec3 gravelTex = texture(uTerrainTexRock, uvDetail * 1.7).rgb;
+        vec3 grassTexB = mix(grassTex, gravelTex, 0.35);
+        vec3 grassNormal = normalize(texture(uTerrainTexGrassNormal, uvDetail).xyz * 2.0 - 1.0);
+        vec3 dirtNormal = normalize(texture(uTerrainTexDirtNormal, uvDetail).xyz * 2.0 - 1.0);
+        vec3 rockNormal = normalize(texture(uTerrainTexRockNormal, uvDetail).xyz * 2.0 - 1.0);
+        vec3 urbanNormal = normalize(texture(uTerrainTexUrbanNormal, uvDetail).xyz * 2.0 - 1.0);
+        float grassR = texture(uTerrainTexGrassRough, uvDetail).r;
+        float dirtR = texture(uTerrainTexDirtRough, uvDetail).r;
+        float rockR = texture(uTerrainTexRockRough, uvDetail).r;
+        float urbanR = texture(uTerrainTexUrbanRough, uvDetail).r;
 
         float wWater = 0.0;
         float wUrban = 0.0;
         float wForest = 0.0;
+        float wFarmland = 0.0;
+        float wRockClass = 0.0;
         if (uTerrainUseMasks) {
-            wWater = clamp(vColor.r, 0.0, 1.0);
-            wUrban = clamp(vColor.g, 0.0, 1.0);
-            wForest = clamp(vColor.b, 0.0, 1.0);
+            if (uTerrainHasMaskTex) {
+                vec2 maskUv = (vWorldPos.xz - uTerrainMaskOrigin) * uTerrainMaskInvSize;
+                float cls = texture(uTerrainMaskTex, maskUv).r * 255.0;
+                int clsId = int(floor(cls + 0.5));
+                wWater = clsId == 1 ? 1.0 : 0.0;
+                wUrban = clsId == 2 ? 1.0 : 0.0;
+                wForest = clsId == 3 ? 1.0 : 0.0;
+                wFarmland = clsId == 5 ? 1.0 : 0.0;
+                wRockClass = clsId == 6 ? 1.0 : 0.0;
+            } else {
+                wWater = clamp(vColor.r, 0.0, 1.0);
+                wUrban = clamp(vColor.g, 0.0, 1.0);
+                wForest = clamp(vColor.b, 0.0, 1.0);
+            }
         }
-        float wGrass = clamp(1.0 - (wWater + wUrban + wForest), 0.0, 1.0);
-        float landSum = max(wGrass + wUrban + wForest, 0.0001);
-        vec3 landColor = (grassTex * wGrass + urbanTex * wUrban + forestTex * wForest) / landSum;
+        // Leave some grass even in farmland-heavy tiles to avoid flat monotony.
+        float wGrass = clamp(1.0 - (wWater + wUrban + wForest + (wFarmland * 0.6)), 0.0, 1.0);
+        float landSum = max(wGrass + wUrban + wForest + wFarmland, 0.0001);
+        vec3 grassMixed = mix(grassTex, grassTexB, 0.2 + 0.25 * macro);
+        vec3 farmlandBase = mix(grassMixed, dirtTex, 0.6);
+        vec3 landColor = (grassMixed * wGrass + urbanTex * wUrban + forestTex * wForest + farmlandBase * wFarmland) / landSum;
         baseColor = mix(landColor, uTerrainWaterColor, wWater);
 
         float macroGain = mix(1.0 - uTerrainMacroStrength, 1.0 + uTerrainMacroStrength, macro);
@@ -148,7 +192,41 @@ void main() {
 
         float rockMask = smoothstep(uTerrainRockSlopeStart, uTerrainRockSlopeEnd, slope)
             * uTerrainRockStrength;
+        rockMask = max(rockMask, wRockClass * 0.9);
         baseColor = mix(baseColor, rockTex, rockMask);
+
+        vec3 blendNormal = vec3(0.0, 0.0, 1.0);
+        roughMix = 0.0;
+        float totalWeight = wGrass + wForest + wUrban + wFarmland + rockMask + 0.0001;
+        blendNormal += grassNormal * (wGrass / totalWeight);
+        blendNormal += dirtNormal * (wFarmland / totalWeight);
+        blendNormal += urbanNormal * (wUrban / totalWeight);
+        blendNormal += rockNormal * (rockMask / totalWeight);
+        roughMix += grassR * (wGrass / totalWeight);
+        roughMix += dirtR * (wFarmland / totalWeight);
+        roughMix += urbanR * (wUrban / totalWeight);
+        roughMix += rockR * (rockMask / totalWeight);
+        blendNormal = normalize(blendNormal);
+        normal = normalize(mat3(1.0) * blendNormal);
+
+        float farmlandNoise = noise(vWorldPos.xz * uTerrainFarmlandStripeScale * 0.5);
+        float farmlandPatch = noise(vWorldPos.xz * uTerrainMacroScale * 0.75);
+        float tileSize = 1.0 / max(uTerrainMaskInvSize.x, 0.0001);
+        vec2 tileId = floor((vWorldPos.xz - uTerrainMaskOrigin) * uTerrainMaskInvSize + vec2(0.0001));
+        float tileHash = hash(tileId);
+        float stripeAngle = tileHash * 6.2831853;
+        vec2 stripeDir = normalize(vec2(cos(stripeAngle), sin(stripeAngle)) + vec2(0.2, 0.4));
+        float stripe = sin(dot(vWorldPos.xz, stripeDir) * (uTerrainFarmlandStripeScale * 1200.0));
+        float stripeMask = smoothstep(-uTerrainFarmlandStripeContrast, uTerrainFarmlandStripeContrast, stripe);
+        float farmlandMask = wFarmland * uTerrainFarmlandStrength;
+        float farmlandMix = clamp(farmlandMask * (0.55 + 0.25 * farmlandNoise) * (0.5 + 0.5 * farmlandPatch) * stripeMask, 0.0, 1.0);
+        vec3 farmlandColor = mix(grassTex, dirtTex, 0.65 + 0.15 * tileHash);
+        baseColor = mix(baseColor, farmlandColor, farmlandMix);
+
+        float scrubNoise = noise(vWorldPos.xz * uTerrainScrubNoiseScale + vec2(13.1, 7.2));
+        float scrubMask = (1.0 - wWater) * (1.0 - wUrban) * (1.0 - wFarmland);
+        scrubMask *= smoothstep(0.12, 0.5, slope) * scrubNoise * uTerrainScrubStrength * 1.2;
+        baseColor = mix(baseColor, mix(baseColor, dirtTex, 0.5 + 0.2 * tileHash), clamp(scrubMask, 0.0, 1.0));
 
         float waterNoise = noise(vWorldPos.xz * uTerrainWaterDetailScale);
         float waterGain = mix(1.0 - uTerrainWaterDetailStrength, 1.0 + uTerrainWaterDetailStrength, waterNoise);
@@ -172,6 +250,9 @@ void main() {
 
     vec3 litColor = baseColor * lighting;
     if (uTerrainShading) {
+        // Apply simple roughness-driven contrast; roughMix already blended.
+        litColor = mix(litColor, litColor * (0.9 + 0.2 * roughMix), 0.4);
+
         float d = distance(uCameraPos, vWorldPos);
         float distT = clamp((d - uTerrainDistanceDesatStart)
             / max(uTerrainDistanceDesatEnd - uTerrainDistanceDesatStart, 1.0), 0.0, 1.0);

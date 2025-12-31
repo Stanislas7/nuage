@@ -257,6 +257,8 @@ void InputBindings::applyDefaults() {
     m_axes["pitch"] = {{GLFW_KEY_W}, {GLFW_KEY_S}};
     m_axes["roll"] = {{GLFW_KEY_D}, {GLFW_KEY_A}};
     m_axes["yaw"] = {{GLFW_KEY_E}, {GLFW_KEY_Q}};
+    m_buttons["flaps_down"] = {GLFW_KEY_RIGHT_BRACKET};
+    m_buttons["flaps_up"] = {GLFW_KEY_LEFT_BRACKET};
     m_buttons["throttle_up"] = {GLFW_KEY_SPACE};
     m_buttons["throttle_down"] = {GLFW_KEY_LEFT_SHIFT};
     m_buttons["brake"] = {GLFW_KEY_B};

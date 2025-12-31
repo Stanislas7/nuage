@@ -67,6 +67,18 @@ void Input::mapToControls(double dt) {
     
     PropertyBus::global().set(Properties::Controls::THROTTLE, static_cast<double>(m_throttleAccum));
 
+    bool flapDownPressed = isButtonPressed("flaps_down");
+    bool flapUpPressed = isButtonPressed("flaps_up");
+    constexpr float kFlapStep = 1.0f / 3.0f;
+    if (flapDownPressed && !flapUpPressed) {
+        m_flapCommand = std::min(1.0f, m_flapCommand + kFlapStep);
+    }
+    if (flapUpPressed && !flapDownPressed) {
+        m_flapCommand = std::max(0.0f, m_flapCommand - kFlapStep);
+    }
+
+    PropertyBus::global().set(Properties::Controls::FLAPS, static_cast<double>(m_flapCommand));
+
     bool braking = isKeyListDown(m_bindings.button("brake"));
     PropertyBus::global().set(Properties::Controls::BRAKE_LEFT, braking ? 1.0 : 0.0);
     PropertyBus::global().set(Properties::Controls::BRAKE_RIGHT, braking ? 1.0 : 0.0);

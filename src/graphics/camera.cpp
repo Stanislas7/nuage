@@ -1,14 +1,19 @@
 #include "graphics/camera.hpp"
 #include "aircraft/aircraft.hpp"
+#include "graphics/renderers/terrain_renderer.hpp"
 #include "input/input.hpp"
 #include <cmath>
 #include <iostream>
-#include <GLFW/glfw3.h> // For cursor constants
+#include <GLFW/glfw3.h> 
 
 namespace nuage {
 
 void Camera::init(Input& input) {
     m_input = &input;
+    m_mode = CameraMode::Chase;
+    m_orbitYaw = 0.0f;
+    m_orbitPitch = 0.0f;
+    m_input->setCursorMode(GLFW_CURSOR_NORMAL);
 }
 
 void Camera::update(float dt, Aircraft::Instance* target, float alpha) {
@@ -19,7 +24,25 @@ void Camera::update(float dt, Aircraft::Instance* target, float alpha) {
 
     switch (m_mode) {
         case CameraMode::Chase:
-            updateChaseCamera(dt, m_target, alpha);
+            if (m_target && !m_hasTargetLock) {
+                Vec3 targetPos = m_target->interpolatedPosition(alpha);
+                Vec3 targetForward = m_target->interpolatedOrientation(alpha).rotate(Vec3(0, 0, 1));
+                float forwardLen = std::sqrt(targetForward.x * targetForward.x +
+                                            targetForward.y * targetForward.y +
+                                            targetForward.z * targetForward.z);
+                if (forwardLen < 0.001f) {
+                    targetForward = Vec3(0, 0, 1);
+                } else {
+                    targetForward = targetForward * (1.0f / forwardLen);
+                }
+                m_smoothedForward = targetForward;
+                m_smoothedLookAt = targetPos;
+                m_position = targetPos - targetForward * m_followDistance + Vec3(0, m_followHeight, 0);
+                m_lookAt = targetPos;
+                m_hasTargetLock = true;
+            } else {
+                updateChaseCamera(dt, m_target, alpha);
+            }
             break;
         case CameraMode::Orbit:
             updateOrbitCamera(dt, m_target, alpha);
@@ -95,6 +118,13 @@ void Camera::updateOrbitCamera(float dt, Aircraft::Instance* target, float alpha
     m_orbitPitch -= mouseDelta.y * m_orbitSpeed * dt;
     m_orbitPitch = std::max(-1.5f, std::min(1.5f, m_orbitPitch));
 
+    if (m_input->isKeyDown(GLFW_KEY_J)) {
+        addOrbitZoom(-dt * 20.0f);
+    }
+    if (m_input->isKeyDown(GLFW_KEY_K)) {
+        addOrbitZoom(dt * 20.0f);
+    }
+
     Vec3 targetPos = target->interpolatedPosition(alpha);
 
     float x = m_orbitDistance * std::cos(m_orbitPitch) * std::sin(m_orbitYaw);
@@ -113,6 +143,35 @@ void Camera::toggleOrbitMode() {
         m_mode = CameraMode::Orbit;
         m_input->setCursorMode(GLFW_CURSOR_DISABLED);
         m_input->centerCursor();
+    }
+}
+
+void Camera::addOrbitZoom(float delta) {
+    constexpr float kMinOrbitDistance = 12.0f;
+    constexpr float kMaxOrbitDistance = 120.0f;
+    m_orbitDistance = std::clamp(m_orbitDistance + delta, kMinOrbitDistance, kMaxOrbitDistance);
+}
+
+void Camera::clampToGround(const TerrainRenderer& terrain, float clearanceMeters) {
+    float groundY = 0.0f;
+    if (!terrain.sampleSurfaceHeight(m_position.x, m_position.z, groundY)) {
+        return;
+    }
+    float minY = groundY + std::max(0.0f, clearanceMeters);
+    if (m_position.y < minY) {
+        m_position.y = minY;
+        if (m_mode == CameraMode::Orbit) {
+            Vec3 offset = m_position - m_lookAt;
+            float horiz = std::sqrt(offset.x * offset.x + offset.z * offset.z);
+            float desired = std::sqrt(std::max(0.0f, m_orbitDistance * m_orbitDistance - offset.y * offset.y));
+            if (horiz > 1e-4f && desired > 0.0f) {
+                float scale = desired / horiz;
+                offset.x *= scale;
+                offset.z *= scale;
+                m_position = m_lookAt + offset;
+            }
+        }
+        buildMatrices();
     }
 }
 

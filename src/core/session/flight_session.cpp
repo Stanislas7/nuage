@@ -29,7 +29,12 @@ bool FlightSession::init() {
     m_terrain.setup(m_config.terrainPath, *assets);
 
     if (!m_config.aircraftPath.empty()) {
-        m_aircraft.spawnPlayer(m_config.aircraftPath);
+        if (m_terrain.hasCompiledOrigin()) {
+            GeoOrigin origin = m_terrain.compiledOrigin();
+            m_aircraft.spawnPlayer(m_config.aircraftPath, &origin, &m_terrain);
+        } else {
+            m_aircraft.spawnPlayer(m_config.aircraftPath, nullptr, &m_terrain);
+        }
     }
 
     return true;
