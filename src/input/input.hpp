@@ -47,7 +47,7 @@ private:
 
     bool m_keys[512] = {};
     bool m_prevKeys[512] = {};
-    float m_throttleAccum = 0.3f;
+    float m_throttleAccum = 0.0f;
     float m_flapCommand = 0.0f;
     bool m_parkingBrakeEngaged = false;
 

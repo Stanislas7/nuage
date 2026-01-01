@@ -13,6 +13,7 @@ namespace Controls {
     inline constexpr TypedProperty<double> RUDDER("controls/flight/rudder");
     inline constexpr TypedProperty<double> THROTTLE("controls/engines/current/throttle");
     inline constexpr TypedProperty<double> FLAPS("controls/flight/flaps");
+    inline constexpr TypedProperty<double> ROLL_TRIM("controls/flight/roll-trim");
     inline constexpr TypedProperty<double> BRAKE_LEFT("controls/gear/brake-left");
     inline constexpr TypedProperty<double> BRAKE_RIGHT("controls/gear/brake-right");
     inline constexpr TypedProperty<double> PARKING_BRAKE("controls/gear/parking-brake");
@@ -50,6 +51,10 @@ namespace Sim {
     inline constexpr TypedProperty<bool> QUIT_REQUESTED("sim/quit-requested");
     inline constexpr TypedProperty<double> TIME("sim/time");
     inline constexpr TypedProperty<bool> DEBUG_VISIBLE("sim/debug-visible");
+}
+
+namespace Audio {
+    inline constexpr TypedProperty<bool> MUTED("audio/muted");
 }
 
 } // namespace Properties

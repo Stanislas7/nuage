@@ -80,10 +80,11 @@ void AudioSubsystem::update(double dt) {
     if (!m_ready || !m_impl || !m_impl->player) return;
 
     bool paused = PropertyBus::global().get(Properties::Sim::PAUSED, false);
+    bool muted = PropertyBus::global().get(Properties::Audio::MUTED, false);
     double throttle = PropertyBus::global().get(Properties::Controls::THROTTLE, 0.0);
     float clamped = std::clamp(static_cast<float>(throttle), 0.0f, 1.0f);
 
-    float targetGain = paused ? 0.0f : (m_minGain + (m_maxGain - m_minGain) * clamped);
+    float targetGain = (paused || muted) ? 0.0f : (m_minGain + (m_maxGain - m_minGain) * clamped);
     float smoothing = std::clamp(static_cast<float>(dt) * m_gainResponse, 0.0f, 1.0f);
     m_gain += (targetGain - m_gain) * smoothing;
 

@@ -1,5 +1,7 @@
 #include "ui/overlays/debug_overlay.hpp"
 #include "core/app.hpp"
+#include "core/properties/property_bus.hpp"
+#include "core/properties/property_paths.hpp"
 #include "core/session/flight_session.hpp"
 #include "graphics/renderers/terrain_renderer.hpp"
 #include "ui/button.hpp"
@@ -14,7 +16,7 @@ constexpr float kPanelRadius = 18.0f;
 constexpr float kPanelMargin = 28.0f;
 constexpr float kRowHeight = 38.0f;
 constexpr float kHeaderHeight = 52.0f;
-constexpr int kRowCount = 14;
+constexpr int kRowCount = 16;
 constexpr float kPanelHeight = kHeaderHeight + kRowHeight * kRowCount + 60.0f;
 constexpr float kPaddingX = 20.0f;
 constexpr float kHeaderTextY = 14.0f;
@@ -40,6 +42,7 @@ constexpr float kMicroScaleStep = 0.02f;
 constexpr float kMicroStrengthStep = 0.02f;
 constexpr float kWaterScaleStep = 0.02f;
 constexpr float kWaterStrengthStep = 0.02f;
+constexpr float kRollTrimStep = 0.02f;
 } // namespace
 
 void DebugOverlay::update(bool active, UIManager& ui) {
@@ -149,6 +152,11 @@ void DebugOverlay::draw(bool active, UIManager& ui) {
     drawRow("Water Detail Strength", waterStrengthBuffer, row++);
 
     drawRow("Trees", terrain->treesEnabled() ? "On" : "Off", row++);
+    double rollTrim = PropertyBus::global().get(Properties::Controls::ROLL_TRIM, 0.0);
+    char rollTrimBuffer[32];
+    std::snprintf(rollTrimBuffer, sizeof(rollTrimBuffer), "%.2f", rollTrim);
+    drawRow("Roll Trim", rollTrimBuffer, row++);
+    drawRow("Sound", PropertyBus::global().get(Properties::Audio::MUTED, false) ? "Off" : "On", row++);
 
 }
 
@@ -199,6 +207,10 @@ void DebugOverlay::buildUi(UIManager& ui) {
     m_waterStrengthPlus = makeButton("+");
     m_treesMinus = makeButton("-");
     m_treesPlus = makeButton("+");
+    m_audioMinus = makeButton("-");
+    m_audioPlus = makeButton("+");
+    m_rollTrimMinus = makeButton("-");
+    m_rollTrimPlus = makeButton("+");
 
     App* app = ui.app();
 
@@ -445,6 +457,30 @@ void DebugOverlay::buildUi(UIManager& ui) {
             terrain->setTreesEnabled(true);
         });
     }
+    if (m_rollTrimMinus) {
+        m_rollTrimMinus->onClick([]() {
+            double trim = PropertyBus::global().get(Properties::Controls::ROLL_TRIM, 0.0);
+            trim = std::clamp(trim - kRollTrimStep, -1.0, 1.0);
+            PropertyBus::global().set(Properties::Controls::ROLL_TRIM, trim);
+        });
+    }
+    if (m_rollTrimPlus) {
+        m_rollTrimPlus->onClick([]() {
+            double trim = PropertyBus::global().get(Properties::Controls::ROLL_TRIM, 0.0);
+            trim = std::clamp(trim + kRollTrimStep, -1.0, 1.0);
+            PropertyBus::global().set(Properties::Controls::ROLL_TRIM, trim);
+        });
+    }
+    if (m_audioMinus) {
+        m_audioMinus->onClick([]() {
+            PropertyBus::global().set(Properties::Audio::MUTED, true);
+        });
+    }
+    if (m_audioPlus) {
+        m_audioPlus->onClick([]() {
+            PropertyBus::global().set(Properties::Audio::MUTED, false);
+        });
+    }
 
     m_initialized = true;
     setButtonsVisible(false);
@@ -486,6 +522,8 @@ void DebugOverlay::layout(UIManager& ui) {
     positionRowButtons(m_waterScaleMinus, m_waterScalePlus, 11);
     positionRowButtons(m_waterStrengthMinus, m_waterStrengthPlus, 12);
     positionRowButtons(m_treesMinus, m_treesPlus, 13);
+    positionRowButtons(m_rollTrimMinus, m_rollTrimPlus, 14);
+    positionRowButtons(m_audioMinus, m_audioPlus, 15);
 }
 
 void DebugOverlay::setButtonsVisible(bool visible) {
@@ -517,6 +555,10 @@ void DebugOverlay::setButtonsVisible(bool visible) {
     if (m_waterStrengthPlus) m_waterStrengthPlus->setVisible(visible).setEnabled(visible);
     if (m_treesMinus) m_treesMinus->setVisible(visible).setEnabled(visible);
     if (m_treesPlus) m_treesPlus->setVisible(visible).setEnabled(visible);
+    if (m_audioMinus) m_audioMinus->setVisible(visible).setEnabled(visible);
+    if (m_audioPlus) m_audioPlus->setVisible(visible).setEnabled(visible);
+    if (m_rollTrimMinus) m_rollTrimMinus->setVisible(visible).setEnabled(visible);
+    if (m_rollTrimPlus) m_rollTrimPlus->setVisible(visible).setEnabled(visible);
 }
 
 } // namespace nuage

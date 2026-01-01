@@ -162,6 +162,8 @@ JsbsimSystem::JsbsimSystem(JsbsimConfig config)
 void JsbsimSystem::init(AircraftState& state, PropertyContext& properties) {
     m_acState = &state;
     m_properties = &properties;
+    m_properties->global().set(Properties::Controls::ROLL_TRIM, m_config.rollTrim);
+    m_properties->local().set(Properties::Controls::ROLL_TRIM, m_config.rollTrim);
 }
 
 void JsbsimSystem::ensureInitialized(float dt) {
@@ -224,6 +226,7 @@ void JsbsimSystem::syncInputs() {
     double flaps = local.get(Properties::Controls::FLAPS, 0.0);
     double brakeLeft = local.get(Properties::Controls::BRAKE_LEFT, 0.0);
     double brakeRight = local.get(Properties::Controls::BRAKE_RIGHT, 0.0);
+    double rollTrim = local.get(Properties::Controls::ROLL_TRIM, 0.0);
 
     // Keep the engine alive and mixture rich so throttle always makes power after landings.
     m_fdm->SetPropertyValue("propulsion/engine/set-running", 1.0);
@@ -238,6 +241,7 @@ void JsbsimSystem::syncInputs() {
     m_fdm->SetPropertyValue("fcs/throttle-cmd-norm", clampInput(throttle));
     m_fdm->SetPropertyValue("fcs/throttle-cmd-norm[0]", clampInput(throttle));
     m_fdm->SetPropertyValue("fcs/flap-cmd-norm", std::clamp(flaps, 0.0, 1.0));
+    m_fdm->SetPropertyValue("fcs/roll-trim-cmd-norm", clampInput(rollTrim));
     m_fdm->SetPropertyValue("fcs/left-brake-cmd-norm", std::clamp(brakeLeft, 0.0, 1.0));
     m_fdm->SetPropertyValue("fcs/right-brake-cmd-norm", std::clamp(brakeRight, 0.0, 1.0));
     m_fdm->SetPropertyValue("fcs/center-brake-cmd-norm",

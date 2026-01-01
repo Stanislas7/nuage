@@ -53,6 +53,10 @@ private:
     Button* m_waterStrengthPlus = nullptr;
     Button* m_treesMinus = nullptr;
     Button* m_treesPlus = nullptr;
+    Button* m_audioMinus = nullptr;
+    Button* m_audioPlus = nullptr;
+    Button* m_rollTrimMinus = nullptr;
+    Button* m_rollTrimPlus = nullptr;
 };
 
 } // namespace nuage

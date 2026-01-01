@@ -4,6 +4,7 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
+#include <cstdio>
 
 namespace nuage {
 
@@ -34,7 +35,7 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
     const Vec3 kGaugeFill = Vec3(0.06f, 0.78f, 0.28f);
     const Vec3 kGaugeSubText = Vec3(1.0f, 1.0f, 1.0f);
 
-    // 1. Throttle Gauge
+    // Throttle Gauge
     ui.drawRoundedRect(kGaugeX, kGaugeY, kGaugeWidth, kGaugeHeight, kGaugeRadius,
                        kGaugeOutline, 0.85f, Anchor::BottomLeft);
     ui.drawRoundedRect(kGaugeX + kInset, kGaugeY + kInset,
@@ -54,7 +55,7 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
     ui.drawText(percentText, kGaugeX, -(kGaugeY + kGaugeHeight + 8.0f),
                 Anchor::BottomLeft, 0.55f, kGaugeSubText, 0.9f);
 
-    // 2. Compass
+    // Compass
     constexpr float kCompassX = kHudLeftX;
     constexpr float kCompassY = kHudLeftX;
     constexpr float kCompassRadius = kCompassSize * 0.5f;
@@ -96,9 +97,9 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
                 kCompassY + kCompassRadius - centerOffsetY,
                 Anchor::Center, 0.75f, kCompassValue, 0.98f);
 
-    // 3. Info Box (Alt/Speed)
+    // Info Box (Alt/Speed)
     constexpr float kInfoBoxPadding = 16.0f;
-    constexpr float kInfoBoxHeight = 96.0f;
+    constexpr float kInfoBoxHeight = 142.0f;
     constexpr float kInfoBoxRadius = 10.0f;
     const Vec3 kInfoBoxBack = Vec3(0.18f, 0.2f, 0.23f);
     const Vec3 kInfoText = Vec3(0.95f, 0.96f, 0.98f);

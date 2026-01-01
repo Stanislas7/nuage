@@ -22,6 +22,7 @@ namespace ConfigKeys {
     inline constexpr char JSBSIM_ROOT[] = "rootPath";
     inline constexpr char JSBSIM_LAT[] = "latitudeDeg";
     inline constexpr char JSBSIM_LON[] = "longitudeDeg";
+    inline constexpr char JSBSIM_ROLL_TRIM[] = "rollTrim";
 
     // Spawn 
     inline constexpr char POSITION[] = "position";

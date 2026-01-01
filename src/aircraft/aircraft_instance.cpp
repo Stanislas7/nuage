@@ -54,6 +54,7 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         jsbsimConfig.rootPath = jsb.value(ConfigKeys::JSBSIM_ROOT, jsbsimConfig.rootPath);
         jsbsimConfig.initLatDeg = jsb.value(ConfigKeys::JSBSIM_LAT, jsbsimConfig.initLatDeg);
         jsbsimConfig.initLonDeg = jsb.value(ConfigKeys::JSBSIM_LON, jsbsimConfig.initLonDeg);
+        jsbsimConfig.rollTrim = jsb.value(ConfigKeys::JSBSIM_ROLL_TRIM, jsbsimConfig.rollTrim);
     }
     if (terrainOrigin) {
         jsbsimConfig.originLatDeg = terrainOrigin->latDeg;
@@ -98,6 +99,7 @@ void Aircraft::Instance::update(float dt) {
     double rudder = global.get(Properties::Controls::RUDDER, 0.0);
     double throttle = global.get(Properties::Controls::THROTTLE, 0.0);
     double flaps = global.get(Properties::Controls::FLAPS, 0.0);
+    double rollTrim = global.get(Properties::Controls::ROLL_TRIM, 0.0);
     double brakeLeft = global.get(Properties::Controls::BRAKE_LEFT, 0.0);
     double brakeRight = global.get(Properties::Controls::BRAKE_RIGHT, 0.0);
     double parkingBrake = global.get(Properties::Controls::PARKING_BRAKE, 0.0);
@@ -107,6 +109,7 @@ void Aircraft::Instance::update(float dt) {
     local.set(Properties::Controls::RUDDER, rudder);
     local.set(Properties::Controls::THROTTLE, throttle);
     local.set(Properties::Controls::FLAPS, flaps);
+    local.set(Properties::Controls::ROLL_TRIM, rollTrim);
     local.set(Properties::Controls::BRAKE_LEFT, brakeLeft);
     local.set(Properties::Controls::BRAKE_RIGHT, brakeRight);
     local.set(Properties::Controls::PARKING_BRAKE, parkingBrake);

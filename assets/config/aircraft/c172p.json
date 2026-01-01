@@ -4,7 +4,8 @@
         "enabled": true,
         "model": "c172p",
         "latitudeDeg": 35.4361,
-        "longitudeDeg": -82.5418
+        "longitudeDeg": -82.5418,
+        "rollTrim": 0.12
     },
     "spawn": {
         "position": [23385.166, 651.662, -12668.249],

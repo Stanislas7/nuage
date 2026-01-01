@@ -20,6 +20,7 @@ struct JsbsimConfig {
     double originLatDeg = 0.0;
     double originLonDeg = 0.0;
     double originAltMeters = 0.0;
+    double rollTrim = 0.0;
     bool hasOrigin = false;
     const TerrainRenderer* terrain = nullptr;
 };
