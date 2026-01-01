@@ -143,6 +143,8 @@ Extra controls help push a more "sim" look without ortho:
 - **Grass/forest/urban tint pairs:** mix between lush/dry and cool/warm looks.
 - **Water detail:** procedural noise to break up flat water color.
 
+If you compile without masks (`availableLayers: ["height"]`), the runtime falls back to a single grass texture; keep masks enabled to get full landclass blending.
+
 Example config:
 ```
 "terrainTextures": {
@@ -223,10 +225,13 @@ build/terrainc \
 ## Data prep quickstart (DEM + OSM + runways)
 1. Grab a DEM GeoTIFF for your bbox (USGS/ESA/etc) and convert to 16-bit PNG: `gdal_translate -of PNG -ot UInt16 input.tif assets/terrain/sources/height.png`.
 2. Download an OSM PBF covering the same bbox (e.g., Geofabrik) and clip it: `osmium extract -b xmin,ymin,xmax,ymax region.osm.pbf -o assets/terrain/sources/region.osm.pbf`.
-3. Generate runways in ENU using the OurAirports CSVs:  
-   `build/ourairports_import --airports assets/data/airports.csv --runways assets/data/runways.csv --out assets/terrain/sources/runways_region.json --min-lat <ymin> --min-lon <xmin> --max-lat <ymax> --max-lon <xmax>`
-4. Compile everything: `build/terrainc --heightmap assets/terrain/sources/height.png --height-min <m> --height-max <m> --tile-size 2000 --grid 257 --osm assets/terrain/sources/region.osm.pbf --mask-res 256 --xmin <xmin> --ymin <ymin> --xmax <xmax> --ymax <ymax> --runways-json assets/terrain/sources/runways_region.json --out assets/terrain/compiled`.
-5. Point `assets/config/terrain.json` at the new manifest/runways JSON and run the sim.
+3. First compile terrain (height + masks only) to produce a manifest with the correct ENU origin/bounds:  
+   `build/terrainc --heightmap assets/terrain/sources/height.png --height-min <m> --height-max <m> --tile-size 2000 --grid 257 --osm assets/terrain/sources/region.osm.pbf --mask-res 256 --mask-smooth 1 --xmin <xmin> --ymin <ymin> --xmax <xmax> --ymax <ymax> --out assets/terrain/compiled`
+4. Generate runways in ENU using the manifest so they’re clipped to your tiles:  
+   `build/ourairports_import --airports assets/data/airports.csv --runways assets/data/runways.csv --manifest assets/terrain/compiled/manifest.json --out assets/terrain/sources/runways_region.json --min-lat <ymin> --min-lon <xmin> --max-lat <ymax> --max-lon <xmax>`
+5. Re-run `terrainc` with the runways JSON to rebuild tiles with flattened runways (clear the output dir first if needed):  
+   `rm -rf assets/terrain/compiled && build/terrainc --heightmap assets/terrain/sources/height.png --height-min <m> --height-max <m> --tile-size 2000 --grid 257 --osm assets/terrain/sources/region.osm.pbf --mask-res 256 --mask-smooth 1 --xmin <xmin> --ymin <ymin> --xmax <xmax> --ymax <ymax> --runways-json assets/terrain/sources/runways_region.json --out assets/terrain/compiled`
+6. Point `assets/config/terrain.json` at the new manifest/runways JSON and run the sim.
 
 ### Optional: richer OSM masks (future)
 Add more filters when exporting OSM to drive better landclass/decals later:
@@ -252,6 +257,7 @@ Add more filters when exporting OSM to drive better landclass/decals later:
 - **Blocky masks**: `maskResolution` is low; raise to 256 or add smoothing.
 - **Long compile times**: large bbox + many polygons; shrink bbox or optimize.
 - **DEM won't load**: convert GeoTIFF to 16-bit PNG (stb_image limitation).
+- **AGL higher than MSL near the ocean**: JSBSim reports ellipsoid altitude; if your DEM is orthometric and includes negative bathymetry, apply a local geoid offset or clamp water to 0 m before compiling.
 
 ## Known limitations (current)
 - No texture/imagery integration.

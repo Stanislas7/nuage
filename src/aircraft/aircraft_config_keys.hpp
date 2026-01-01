@@ -27,6 +27,7 @@ namespace ConfigKeys {
     // Spawn 
     inline constexpr char POSITION[] = "position";
     inline constexpr char AIRSPEED[] = "airspeed";
+    inline constexpr char HEADING_DEG[] = "headingDeg";
 
 } // namespace ConfigKeys
 } // namespace nuage

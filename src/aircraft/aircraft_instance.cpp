@@ -32,12 +32,14 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     const auto& json = *jsonOpt;
     Vec3 initialPos(0, 100, 0);
     double initialAirspeed = 0.0;
+    double initialHeadingDeg = 0.0;
     if (json.contains(ConfigKeys::SPAWN)) {
         const auto& spawn = json[ConfigKeys::SPAWN];
         if (spawn.contains(ConfigKeys::POSITION)) {
             from_json(spawn[ConfigKeys::POSITION], initialPos);
         }
         initialAirspeed = spawn.value(ConfigKeys::AIRSPEED, 0.0);
+        initialHeadingDeg = spawn.value(ConfigKeys::HEADING_DEG, initialHeadingDeg);
     }
     // If terrain is available, snap the spawn altitude to the terrain height to avoid hovering.
     if (terrain) {
@@ -56,6 +58,7 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         jsbsimConfig.initLonDeg = jsb.value(ConfigKeys::JSBSIM_LON, jsbsimConfig.initLonDeg);
         jsbsimConfig.rollTrim = jsb.value(ConfigKeys::JSBSIM_ROLL_TRIM, jsbsimConfig.rollTrim);
     }
+    jsbsimConfig.initHeadingDeg = initialHeadingDeg;
     if (terrainOrigin) {
         jsbsimConfig.originLatDeg = terrainOrigin->latDeg;
         jsbsimConfig.originLonDeg = terrainOrigin->lonDeg;

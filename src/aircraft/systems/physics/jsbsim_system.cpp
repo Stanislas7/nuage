@@ -181,7 +181,7 @@ void JsbsimSystem::ensureInitialized(float dt) {
     m_fdm->SetPropertyValue("ic/long-gc-deg", m_config.initLonDeg);
     m_fdm->SetPropertyValue("ic/lat-geod-deg", m_config.initLatDeg);
     m_fdm->SetPropertyValue("ic/h-sl-ft", m_acState->position.y * kMToFt);
-    m_fdm->SetPropertyValue("ic/psi-true-deg", 0.0);
+    m_fdm->SetPropertyValue("ic/psi-true-deg", m_config.initHeadingDeg);
     m_fdm->SetPropertyValue("ic/theta-deg", 0.0);
     m_fdm->SetPropertyValue("ic/phi-deg", 0.0);
 

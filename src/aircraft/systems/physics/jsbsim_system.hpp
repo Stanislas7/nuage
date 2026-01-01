@@ -17,6 +17,7 @@ struct JsbsimConfig {
     std::string rootPath = "assets/jsbsim";
     double initLatDeg = 0.0;
     double initLonDeg = 0.0;
+    double initHeadingDeg = 0.0;
     double originLatDeg = 0.0;
     double originLonDeg = 0.0;
     double originAltMeters = 0.0;
