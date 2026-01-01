@@ -33,8 +33,8 @@ void MainMenu::update(bool active, UIManager& ui) {
 void MainMenu::draw(bool active, UIManager& ui) {
     if (!active || !m_initialized) return;
 
-    ui.drawRect(0, 0, (float)ui.getWindowWidth(), (float)ui.getWindowHeight(), 
-                Vec3(0.05f, 0.07f, 0.1f), 0.9f);
+    ui.drawRect(0, 0, (float)ui.getWindowWidth(), (float)ui.getWindowHeight(),
+                Vec3(0.05f, 0.07f, 0.1f), 0.9f, Anchor::TopLeft, false);
 
     ui.drawText("Nuage", 0, -150, Anchor::Center, 2.5f, Vec3(1, 1, 1), 1.0f);
     ui.drawText("Alpha", 0, 240, Anchor::Center, 0.4f, Vec3(0.7f, 0.7f, 0.7f), 1.0f);

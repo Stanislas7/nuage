@@ -20,6 +20,7 @@ constexpr float kRowGap = 26.0f;
 constexpr float kRow1Offset = 28.0f;
 constexpr float kTitleOffset = -96.0f;
 constexpr float kCurrentOffset = -56.0f;
+constexpr const char* kPauseGroup = "pause";
 const Vec3 kPanelColor = Vec3(0.08f, 0.1f, 0.14f);
 const Vec3 kPanelHoverColor = Vec3(0.11f, 0.13f, 0.18f);
 const Vec3 kButtonBlue = Vec3(0.12f, 0.45f, 0.86f);
@@ -35,7 +36,7 @@ void PauseOverlay::update(bool paused, UIManager& ui) {
     layout(ui);
 
     if (m_visible != paused) {
-        setButtonsVisible(paused);
+        ui.setGroupActive(kPauseGroup, paused);
         m_visible = paused;
     }
 }
@@ -45,7 +46,7 @@ void PauseOverlay::draw(bool paused, UIManager& ui) {
 
     // Draw background tint
     ui.drawRect(0, 0, (float)ui.getWindowWidth(), (float)ui.getWindowHeight(),
-                Vec3(0.0f, 0.0f, 0.0f), 0.45f);
+                Vec3(0.0f, 0.0f, 0.0f), 0.45f, Anchor::TopLeft, false);
 
     // Draw text
     ui.drawText("PAUSED", 0, -220, Anchor::Center, 1.5f, Vec3(1, 1, 1), 1.0f);
@@ -80,7 +81,8 @@ void PauseOverlay::buildUi(UIManager& ui) {
             .outlineOnly(true)
             .outlineColor(kOutlineLight)
             .outlineThickness(2.0f)
-            .scaleVal(0.55f);
+            .scaleVal(0.55f)
+            .groupName(kPauseGroup);
 
         App* app = ui.app();
         button.onClick([app, hour]() {
@@ -105,7 +107,8 @@ void PauseOverlay::buildUi(UIManager& ui) {
         .colorR(kButtonBlue.x, kButtonBlue.y, kButtonBlue.z)
         .hoverColor(kButtonBlueHover)
         .cornerRadius(22.0f)
-        .scaleVal(0.8f);
+        .scaleVal(0.8f)
+        .groupName(kPauseGroup);
 
     App* app = ui.app();
     resume.onClick([app]() {
@@ -115,7 +118,7 @@ void PauseOverlay::buildUi(UIManager& ui) {
     m_resumeButton = &resume;
 
     m_initialized = true;
-    setButtonsVisible(false);
+    ui.setGroupActive(kPauseGroup, false);
 }
 
 void PauseOverlay::layout(UIManager& ui) {
@@ -139,11 +142,11 @@ void PauseOverlay::layout(UIManager& ui) {
 }
 
 void PauseOverlay::setButtonsVisible(bool visible) {
-    if (m_dawnButton) m_dawnButton->setVisible(visible).setEnabled(visible);
-    if (m_noonButton) m_noonButton->setVisible(visible).setEnabled(visible);
-    if (m_duskButton) m_duskButton->setVisible(visible).setEnabled(visible);
-    if (m_midnightButton) m_midnightButton->setVisible(visible).setEnabled(visible);
-    if (m_resumeButton) m_resumeButton->setVisible(visible).setEnabled(visible);
+    if (m_dawnButton) visible ? m_dawnButton->show() : m_dawnButton->hide();
+    if (m_noonButton) visible ? m_noonButton->show() : m_noonButton->hide();
+    if (m_duskButton) visible ? m_duskButton->show() : m_duskButton->hide();
+    if (m_midnightButton) visible ? m_midnightButton->show() : m_midnightButton->hide();
+    if (m_resumeButton) visible ? m_resumeButton->show() : m_resumeButton->hide();
 }
 
 } // namespace nuage

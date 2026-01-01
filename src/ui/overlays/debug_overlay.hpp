@@ -22,8 +22,11 @@ private:
     bool m_visible = false;
     int m_lastWidth = 0;
     int m_lastHeight = 0;
+    int m_lastRowCount = 0;
     float m_panelX = 0.0f;
     float m_panelY = 0.0f;
+    float m_panelHeight = 0.0f;
+    int m_rowCount = 0;
 
     Button* m_radiusMinus = nullptr;
     Button* m_radiusPlus = nullptr;

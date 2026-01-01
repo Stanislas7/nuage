@@ -13,11 +13,13 @@ Vec3 Button::getAnchoredPosition(int windowWidth, int windowHeight) const {
     float y = position.y;
 
     switch (anchor) {
-        case Anchor::TopLeft:     break;
-        case Anchor::TopRight:    x = windowWidth - position.x - m_size.x; break;
-        case Anchor::BottomLeft:  y = windowHeight - position.y - m_size.y; break;
-        case Anchor::BottomRight: x = windowWidth - position.x - m_size.x;
-                                  y = windowHeight - position.y - m_size.y; break;
+        case Anchor::TopLeft:     x = padding + position.x; y = padding + position.y; break;
+        case Anchor::TopRight:    x = windowWidth - padding - position.x - m_size.x;
+                                  y = padding + position.y; break;
+        case Anchor::BottomLeft:  x = padding + position.x;
+                                  y = windowHeight - padding - position.y - m_size.y; break;
+        case Anchor::BottomRight: x = windowWidth - padding - position.x - m_size.x;
+                                  y = windowHeight - padding - position.y - m_size.y; break;
         case Anchor::Center:      x = windowWidth / 2.0f + position.x - m_size.x / 2.0f;
                                   y = windowHeight / 2.0f + position.y - m_size.y / 2.0f; break;
     }

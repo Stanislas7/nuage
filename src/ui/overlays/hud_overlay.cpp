@@ -22,7 +22,7 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
 
     // Gauge constants
     constexpr float kHudLeftX = 20.0f;
-    constexpr float kCompassSize = 230.0f;
+    constexpr float kCompassSize = 280.0f;
     constexpr float kGaugeX = 24.0f;
     constexpr float kGaugeY = 48.0f;
     constexpr float kGaugeWidth = 56.0f;
@@ -55,51 +55,8 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
     ui.drawText(percentText, kGaugeX, -(kGaugeY + kGaugeHeight + 8.0f),
                 Anchor::BottomLeft, 0.55f, kGaugeSubText, 0.9f);
 
-    // Compass
-    constexpr float kCompassX = kHudLeftX;
-    constexpr float kCompassY = kHudLeftX;
-    constexpr float kCompassRadius = kCompassSize * 0.5f;
-    constexpr float kCompassInset = 4.0f;
-
-    const Vec3 kCompassOutline = Vec3(0.78f, 0.86f, 0.9f);
-    const Vec3 kCompassBack = Vec3(0.06f, 0.08f, 0.1f);
-    const Vec3 kCompassText = Vec3(0.92f, 0.95f, 0.98f);
-    const Vec3 kCompassValue = Vec3(0.35f, 0.92f, 0.6f);
-
-    ui.drawRoundedRect(kCompassX, kCompassY, kCompassSize, kCompassSize, kCompassRadius,
-                       kCompassOutline, 0.9f, Anchor::TopLeft);
-    ui.drawRoundedRect(kCompassX + kCompassInset, kCompassY + kCompassInset,
-                       kCompassSize - 2.0f * kCompassInset, kCompassSize - 2.0f * kCompassInset,
-                       kCompassRadius - kCompassInset, kCompassBack, 0.92f, Anchor::TopLeft);
-
-    float heading = headingDegrees;
-    constexpr float kLetterPadding = 20.0f;
-    float dialRadius = kCompassRadius - kLetterPadding;
-    float centerOffsetX = static_cast<float>(ui.getWindowWidth()) * 0.5f;
-    float centerOffsetY = static_cast<float>(ui.getWindowHeight()) * 0.5f;
-    auto placeDir = [&](const char* label, float baseDeg) {
-        float angle = (baseDeg - heading) * 3.14159265f / 180.0f;
-        float x = kCompassX + kCompassRadius + std::sin(angle) * dialRadius;
-        float y = kCompassY + kCompassRadius - std::cos(angle) * dialRadius;
-        ui.drawText(label, x - centerOffsetX, y - centerOffsetY, Anchor::Center, 0.8f, kCompassText, 0.98f);
-    };
-    placeDir("N", 0.0f);
-    placeDir("E", 90.0f);
-    placeDir("S", 180.0f);
-    placeDir("W", 270.0f);
-
-    int headVal = static_cast<int>(std::round(heading)) % 360;
-    if (headVal < 0) headVal += 360;
-    char headBuf[4];
-    snprintf(headBuf, sizeof(headBuf), "%03d", headVal);
-    ui.drawText(headBuf,
-                kCompassX + kCompassRadius - centerOffsetX,
-                kCompassY + kCompassRadius - centerOffsetY,
-                Anchor::Center, 0.75f, kCompassValue, 0.98f);
-
     // Info Box (Alt/Speed)
     constexpr float kInfoBoxPadding = 16.0f;
-    constexpr float kInfoBoxHeight = 142.0f;
     constexpr float kInfoBoxRadius = 10.0f;
     const Vec3 kInfoBoxBack = Vec3(0.18f, 0.2f, 0.23f);
     const Vec3 kInfoText = Vec3(0.95f, 0.96f, 0.98f);
@@ -119,22 +76,34 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
     int flapDegInt = static_cast<int>(std::round(flapDeg));
     int flapPercentInt = static_cast<int>(std::round(flapPercent * 100.0f));
     std::string flapText = "Flaps " + std::to_string(flapDegInt) + " deg (" + std::to_string(flapPercentInt) + "%)";
+    int headVal = static_cast<int>(std::round(headingDegrees)) % 360;
+    if (headVal < 0) headVal += 360;
+    char headBuf[32];
+    std::snprintf(headBuf, sizeof(headBuf), "Heading %03d deg", headVal);
 
-    float infoBoxX = kCompassX;
-    float infoBoxY = kCompassY + kCompassSize + kInfoBoxPadding;
+    float infoBoxX = kHudLeftX;
+    float infoBoxY = kHudLeftX + kInfoBoxPadding;
     float infoBoxW = kCompassSize;
-
-    ui.drawRoundedRect(infoBoxX, infoBoxY, infoBoxW, kInfoBoxHeight, kInfoBoxRadius,
-                       kInfoBoxBack, 0.92f, Anchor::TopLeft);
     constexpr float kInfoTextPadX = 16.0f;
     constexpr float kInfoTextPadTop = 12.0f;
+    constexpr int kInfoLineCount = 4;
     constexpr float kInfoLineGap = 26.0f;
+    constexpr float kInfoTextScale = 0.55f;
+    Vec3 lineSize = ui.measureText("Ag", kInfoTextScale);
+    float lineHeight = lineSize.y > 0.0f ? lineSize.y : 18.0f;
+    constexpr float kInfoTextPadBottom = 12.0f;
+    float infoBoxHeight = kInfoTextPadTop + lineHeight + (kInfoLineCount - 1) * kInfoLineGap + kInfoTextPadBottom;
+
+    ui.drawRoundedRect(infoBoxX, infoBoxY, infoBoxW, infoBoxHeight, kInfoBoxRadius,
+                       kInfoBoxBack, 0.92f, Anchor::TopLeft);
     ui.drawText(altText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop,
-                Anchor::TopLeft, 0.55f, kInfoText, 0.98f);
+                Anchor::TopLeft, kInfoTextScale, kInfoText, 0.98f);
     ui.drawText(speedText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap,
-                Anchor::TopLeft, 0.55f, kInfoText, 0.98f);
+                Anchor::TopLeft, kInfoTextScale, kInfoText, 0.98f);
     ui.drawText(flapText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap * 2.0f,
-                Anchor::TopLeft, 0.55f, kInfoText, 0.98f);
+                Anchor::TopLeft, kInfoTextScale, kInfoText, 0.98f);
+    ui.drawText(headBuf, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap * 3.0f,
+                Anchor::TopLeft, kInfoTextScale, kInfoText, 0.98f);
 }
 
 }

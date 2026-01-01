@@ -2,6 +2,7 @@
 
 #include "ui/anchor.hpp"
 #include "math/vec3.hpp"
+#include <string>
 
 namespace nuage {
 
@@ -13,6 +14,7 @@ struct UIElement {
     float scale = 1.0f;
     bool visible = true;
     bool enabled = true;
+    std::string group;
 
     UIElement& pos(float x, float y) { position = Vec3(x, y, 0); return *this; }
     UIElement& colorR(float r, float g, float b) { color = Vec3(r, g, b); return *this; }
@@ -21,6 +23,11 @@ struct UIElement {
     UIElement& scaleVal(float s) { scale = s; return *this; }
     UIElement& setVisible(bool v) { visible = v; return *this; }
     UIElement& setEnabled(bool e) { enabled = e; return *this; }
+    UIElement& show() { visible = true; enabled = true; return *this; }
+    UIElement& hide() { visible = false; enabled = false; return *this; }
+    UIElement& groupName(const std::string& name) { group = name; return *this; }
+    const std::string& getGroupName() const { return group; }
+    bool inGroup(const std::string& name) const { return group == name; }
 };
 
 }

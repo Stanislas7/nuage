@@ -181,46 +181,33 @@ void UIManager::drawPersistent() {
     for (const auto& btn : m_buttons) {
         if (!btn->visible) continue;
         Vec3 fillColor = btn->isHovered() ? btn->getHoverColor() : btn->color;
+        Vec3 bPos = btn->getAnchoredPosition(m_windowWidth, m_windowHeight);
         if (btn->isOutlineOnly()) {
-            drawRoundedRect(btn->position.x, btn->position.y, btn->getSize().x, btn->getSize().y,
-                            btn->getCornerRadius(), btn->getOutlineColor(), 1.0f, btn->anchor);
+            drawRoundedRect(bPos.x, bPos.y, btn->getSize().x, btn->getSize().y,
+                            btn->getCornerRadius(), btn->getOutlineColor(), 1.0f, Anchor::TopLeft, false);
 
             float thickness = std::max(0.0f, btn->getOutlineThickness());
             float innerW = std::max(0.0f, btn->getSize().x - 2.0f * thickness);
             float innerH = std::max(0.0f, btn->getSize().y - 2.0f * thickness);
             if (innerW > 0.0f && innerH > 0.0f) {
-                float xInset = 0.0f;
-                float yInset = 0.0f;
-                switch (btn->anchor) {
-                    case Anchor::TopLeft:
-                    case Anchor::TopRight:
-                    case Anchor::BottomLeft:
-                    case Anchor::BottomRight:
-                        xInset = thickness;
-                        yInset = thickness;
-                        break;
-                    case Anchor::Center:
-                    default:
-                        break;
-                }
-
-                drawRoundedRect(btn->position.x + xInset, btn->position.y + yInset, innerW, innerH,
+                float xInset = thickness;
+                float yInset = thickness;
+                drawRoundedRect(bPos.x + xInset, bPos.y + yInset, innerW, innerH,
                                 std::max(0.0f, btn->getCornerRadius() - thickness),
-                                fillColor, 1.0f, btn->anchor);
+                                fillColor, 1.0f, Anchor::TopLeft, false);
             }
         } else {
-            drawRoundedRect(btn->position.x, btn->position.y, btn->getSize().x, btn->getSize().y,
-                            btn->getCornerRadius(), fillColor, 1.0f, btn->anchor);
+            drawRoundedRect(bPos.x, bPos.y, btn->getSize().x, btn->getSize().y,
+                            btn->getCornerRadius(), fillColor, 1.0f, Anchor::TopLeft, false);
         }
 
         Text tempText(btn->getText(), m_font.get());
         tempText.scaleVal(btn->scale);
         Vec3 textSize = tempText.getSize();
-        Vec3 bPos = btn->getAnchoredPosition(m_windowWidth, m_windowHeight);
         float tx = bPos.x + (btn->getSize().x - textSize.x) / 2.0f;
         float ty = bPos.y + (btn->getSize().y - textSize.y) / 2.0f;
 
-        drawText(btn->getText(), tx, ty, Anchor::TopLeft, btn->scale, Vec3(1, 1, 1), 1.0f);
+        drawText(btn->getText(), tx, ty, Anchor::TopLeft, btn->scale, Vec3(1, 1, 1), 1.0f, false);
     }
 
     // draw texts
@@ -229,19 +216,23 @@ void UIManager::drawPersistent() {
         if (text->getContent().empty()) continue;
 
         Vec3 pos = text->getAnchoredPosition(m_windowWidth, m_windowHeight);
-        drawText(text->getContent(), pos.x, pos.y, Anchor::TopLeft, text->scale, text->color, 1.0f);
+        drawText(text->getContent(), pos.x, pos.y, Anchor::TopLeft, text->scale, text->color, 1.0f, false);
     }
 }
 
-void UIManager::drawRect(float x, float y, float w, float h, const Vec3& color, float alpha, Anchor anchor) {
+void UIManager::drawRect(float x, float y, float w, float h, const Vec3& color, float alpha,
+                         Anchor anchor, bool applyPadding) {
     if (!m_shader) return;
     float rx = x;
     float ry = y;
+    float padding = applyPadding ? m_theme.defaultPadding : 0.0f;
 
     switch (anchor) {
-        case Anchor::TopRight:    rx = m_windowWidth - x - w; break;
-        case Anchor::BottomLeft:  ry = m_windowHeight - y - h; break;
-        case Anchor::BottomRight: rx = m_windowWidth - x - w; ry = m_windowHeight - y - h; break;
+        case Anchor::TopLeft:     rx = x + padding; ry = y + padding; break;
+        case Anchor::TopRight:    rx = m_windowWidth - padding - x - w; ry = y + padding; break;
+        case Anchor::BottomLeft:  rx = x + padding; ry = m_windowHeight - padding - y - h; break;
+        case Anchor::BottomRight: rx = m_windowWidth - padding - x - w;
+                                  ry = m_windowHeight - padding - y - h; break;
         case Anchor::Center:      rx = m_windowWidth / 2.0f + x - w / 2.0f;
                                   ry = m_windowHeight / 2.0f + y - h / 2.0f; break;
         default: break;
@@ -268,15 +259,19 @@ void UIManager::drawRect(float x, float y, float w, float h, const Vec3& color, 
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
-void UIManager::drawRoundedRect(float x, float y, float w, float h, float radius, const Vec3& color, float alpha, Anchor anchor) {
+void UIManager::drawRoundedRect(float x, float y, float w, float h, float radius, const Vec3& color, float alpha,
+                                Anchor anchor, bool applyPadding) {
     if (!m_shader) return;
     float rx = x;
     float ry = y;
+    float padding = applyPadding ? m_theme.defaultPadding : 0.0f;
 
     switch (anchor) {
-        case Anchor::TopRight:    rx = m_windowWidth - x - w; break;
-        case Anchor::BottomLeft:  ry = m_windowHeight - y - h; break;
-        case Anchor::BottomRight: rx = m_windowWidth - x - w; ry = m_windowHeight - y - h; break;
+        case Anchor::TopLeft:     rx = x + padding; ry = y + padding; break;
+        case Anchor::TopRight:    rx = m_windowWidth - padding - x - w; ry = y + padding; break;
+        case Anchor::BottomLeft:  rx = x + padding; ry = m_windowHeight - padding - y - h; break;
+        case Anchor::BottomRight: rx = m_windowWidth - padding - x - w;
+                                  ry = m_windowHeight - padding - y - h; break;
         case Anchor::Center:      rx = m_windowWidth / 2.0f + x - w / 2.0f;
                                   ry = m_windowHeight / 2.0f + y - h / 2.0f; break;
         default: break;
@@ -309,11 +304,12 @@ void UIManager::drawRoundedRect(float x, float y, float w, float h, float radius
 }
 
 void UIManager::drawText(const std::string& content, float x, float y, Anchor anchor,
-                         float scale, const Vec3& color, float alpha) {
+                         float scale, const Vec3& color, float alpha, bool applyPadding) {
     if (content.empty() || !m_font || !m_shader) return;
 
     Text text(content, m_font.get());
     text.pos(x, y).scaleVal(scale).anchorMode(anchor);
+    text.paddingValue(applyPadding ? m_theme.defaultPadding : 0.0f);
 
     Vec3 pos = text.getAnchoredPosition(m_windowWidth, m_windowHeight);
     
@@ -334,14 +330,57 @@ void UIManager::drawText(const std::string& content, float x, float y, Anchor an
     glDrawArrays(GL_TRIANGLES, 0, quadCount * 6);
 }
 
+Vec3 UIManager::measureText(const std::string& content, float scale) const {
+    if (!m_font || content.empty()) return Vec3(0, 0, 0);
+    return m_font->measureText(content) * scale;
+}
+
 Text& UIManager::text(const std::string& content) {
     m_texts.push_back(std::make_unique<Text>(content, m_font.get()));
+    m_texts.back()->paddingValue(m_theme.defaultPadding);
     return *m_texts.back();
 }
 
 Button& UIManager::button(const std::string& text) {
     m_buttons.push_back(std::make_unique<Button>(text, m_font.get()));
-    return *m_buttons.back();
+    Button& button = *m_buttons.back();
+    button.paddingValue(m_theme.defaultPadding);
+    button.colorR(m_theme.buttonFill.x, m_theme.buttonFill.y, m_theme.buttonFill.z);
+    button.hoverColor(m_theme.buttonHover);
+    button.cornerRadius(m_theme.buttonCornerRadius);
+    button.scaleVal(m_theme.buttonTextScale);
+    return button;
+}
+
+void UIManager::setGroupVisible(const std::string& group, bool visible) {
+    for (auto& text : m_texts) {
+        if (text && text->inGroup(group)) {
+            text->setVisible(visible);
+        }
+    }
+    for (auto& button : m_buttons) {
+        if (button && button->inGroup(group)) {
+            button->setVisible(visible);
+        }
+    }
+}
+
+void UIManager::setGroupEnabled(const std::string& group, bool enabled) {
+    for (auto& text : m_texts) {
+        if (text && text->inGroup(group)) {
+            text->setEnabled(enabled);
+        }
+    }
+    for (auto& button : m_buttons) {
+        if (button && button->inGroup(group)) {
+            button->setEnabled(enabled);
+        }
+    }
+}
+
+void UIManager::setGroupActive(const std::string& group, bool active) {
+    setGroupVisible(group, active);
+    setGroupEnabled(group, active);
 }
 
 void UIManager::buildTextVertexData(const Text& text, std::vector<float>& vertices, Vec3& pos) const {

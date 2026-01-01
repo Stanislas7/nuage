@@ -11,13 +11,13 @@
 namespace nuage {
 
 namespace {
-constexpr float kPanelWidth = 460.0f;
+constexpr float kPanelWidth = 580.0f;
 constexpr float kPanelRadius = 18.0f;
 constexpr float kPanelMargin = 28.0f;
 constexpr float kRowHeight = 38.0f;
 constexpr float kHeaderHeight = 52.0f;
 constexpr int kRowCount = 16;
-constexpr float kPanelHeight = kHeaderHeight + kRowHeight * kRowCount + 60.0f;
+constexpr float kPanelPaddingBottom = 24.0f;
 constexpr float kPaddingX = 20.0f;
 constexpr float kHeaderTextY = 14.0f;
 constexpr float kDividerY = 40.0f;
@@ -43,6 +43,7 @@ constexpr float kMicroStrengthStep = 0.02f;
 constexpr float kWaterScaleStep = 0.02f;
 constexpr float kWaterStrengthStep = 0.02f;
 constexpr float kRollTrimStep = 0.02f;
+constexpr const char* kDebugGroup = "debug";
 } // namespace
 
 void DebugOverlay::update(bool active, UIManager& ui) {
@@ -53,7 +54,7 @@ void DebugOverlay::update(bool active, UIManager& ui) {
     layout(ui);
 
     if (m_visible != active) {
-        setButtonsVisible(active);
+        ui.setGroupActive(kDebugGroup, active);
         m_visible = active;
     }
 }
@@ -61,9 +62,9 @@ void DebugOverlay::update(bool active, UIManager& ui) {
 void DebugOverlay::draw(bool active, UIManager& ui) {
     if (!active) return;
 
-    ui.drawRoundedRect(m_panelX, m_panelY, kPanelWidth, kPanelHeight, kPanelRadius,
+    ui.drawRoundedRect(m_panelX, m_panelY, kPanelWidth, m_panelHeight, kPanelRadius,
                        kPanelColor, 0.92f, Anchor::TopLeft);
-    ui.drawRoundedRect(m_panelX, m_panelY, kPanelWidth, kPanelHeight, kPanelRadius,
+    ui.drawRoundedRect(m_panelX, m_panelY, kPanelWidth, m_panelHeight, kPanelRadius,
                        kPanelOutline, 0.4f, Anchor::TopLeft);
 
     ui.drawText("DEBUG TERRAIN", m_panelX + kPaddingX, m_panelY + kHeaderTextY,
@@ -78,6 +79,7 @@ void DebugOverlay::draw(bool active, UIManager& ui) {
     if (!terrain) {
         ui.drawText("No active terrain", m_panelX + kPaddingX, m_panelY + 60.0f,
                     Anchor::TopLeft, 0.5f, kTextSub, 0.9f);
+        m_rowCount = 1;
         return;
     }
 
@@ -157,6 +159,7 @@ void DebugOverlay::draw(bool active, UIManager& ui) {
     std::snprintf(rollTrimBuffer, sizeof(rollTrimBuffer), "%.2f", rollTrim);
     drawRow("Roll Trim", rollTrimBuffer, row++);
     drawRow("Sound", PropertyBus::global().get(Properties::Audio::MUTED, false) ? "Off" : "On", row++);
+    m_rowCount = row;
 
 }
 
@@ -175,7 +178,8 @@ void DebugOverlay::buildUi(UIManager& ui) {
             .colorR(kButtonFill.x, kButtonFill.y, kButtonFill.z)
             .hoverColor(kButtonHover)
             .cornerRadius(6.0f)
-            .scaleVal(0.7f);
+            .scaleVal(0.7f)
+            .groupName(kDebugGroup);
         return &button;
     };
 
@@ -483,19 +487,22 @@ void DebugOverlay::buildUi(UIManager& ui) {
     }
 
     m_initialized = true;
-    setButtonsVisible(false);
+    ui.setGroupActive(kDebugGroup, false);
 }
 
 void DebugOverlay::layout(UIManager& ui) {
     int width = ui.getWindowWidth();
     int height = ui.getWindowHeight();
-    if (width == m_lastWidth && height == m_lastHeight) return;
+    int rowCount = m_rowCount > 0 ? m_rowCount : kRowCount;
+    if (width == m_lastWidth && height == m_lastHeight && rowCount == m_lastRowCount) return;
 
     m_lastWidth = width;
     m_lastHeight = height;
+    m_lastRowCount = rowCount;
 
     m_panelX = static_cast<float>(width) - kPanelMargin - kPanelWidth;
     m_panelY = kPanelMargin;
+    m_panelHeight = kHeaderHeight + kRowHeight * rowCount + kPanelPaddingBottom;
 
     auto positionRowButtons = [&](Button* minus, Button* plus, int index) {
         if (!minus || !plus) return;
@@ -527,38 +534,38 @@ void DebugOverlay::layout(UIManager& ui) {
 }
 
 void DebugOverlay::setButtonsVisible(bool visible) {
-    if (m_radiusMinus) m_radiusMinus->setVisible(visible).setEnabled(visible);
-    if (m_radiusPlus) m_radiusPlus->setVisible(visible).setEnabled(visible);
-    if (m_loadsMinus) m_loadsMinus->setVisible(visible).setEnabled(visible);
-    if (m_loadsPlus) m_loadsPlus->setVisible(visible).setEnabled(visible);
-    if (m_fogMinus) m_fogMinus->setVisible(visible).setEnabled(visible);
-    if (m_fogPlus) m_fogPlus->setVisible(visible).setEnabled(visible);
-    if (m_noiseMinus) m_noiseMinus->setVisible(visible).setEnabled(visible);
-    if (m_noisePlus) m_noisePlus->setVisible(visible).setEnabled(visible);
-    if (m_macroScaleMinus) m_macroScaleMinus->setVisible(visible).setEnabled(visible);
-    if (m_macroScalePlus) m_macroScalePlus->setVisible(visible).setEnabled(visible);
-    if (m_macroStrengthMinus) m_macroStrengthMinus->setVisible(visible).setEnabled(visible);
-    if (m_macroStrengthPlus) m_macroStrengthPlus->setVisible(visible).setEnabled(visible);
-    if (m_grassTintMinus) m_grassTintMinus->setVisible(visible).setEnabled(visible);
-    if (m_grassTintPlus) m_grassTintPlus->setVisible(visible).setEnabled(visible);
-    if (m_forestTintMinus) m_forestTintMinus->setVisible(visible).setEnabled(visible);
-    if (m_forestTintPlus) m_forestTintPlus->setVisible(visible).setEnabled(visible);
-    if (m_urbanTintMinus) m_urbanTintMinus->setVisible(visible).setEnabled(visible);
-    if (m_urbanTintPlus) m_urbanTintPlus->setVisible(visible).setEnabled(visible);
-    if (m_microScaleMinus) m_microScaleMinus->setVisible(visible).setEnabled(visible);
-    if (m_microScalePlus) m_microScalePlus->setVisible(visible).setEnabled(visible);
-    if (m_microStrengthMinus) m_microStrengthMinus->setVisible(visible).setEnabled(visible);
-    if (m_microStrengthPlus) m_microStrengthPlus->setVisible(visible).setEnabled(visible);
-    if (m_waterScaleMinus) m_waterScaleMinus->setVisible(visible).setEnabled(visible);
-    if (m_waterScalePlus) m_waterScalePlus->setVisible(visible).setEnabled(visible);
-    if (m_waterStrengthMinus) m_waterStrengthMinus->setVisible(visible).setEnabled(visible);
-    if (m_waterStrengthPlus) m_waterStrengthPlus->setVisible(visible).setEnabled(visible);
-    if (m_treesMinus) m_treesMinus->setVisible(visible).setEnabled(visible);
-    if (m_treesPlus) m_treesPlus->setVisible(visible).setEnabled(visible);
-    if (m_audioMinus) m_audioMinus->setVisible(visible).setEnabled(visible);
-    if (m_audioPlus) m_audioPlus->setVisible(visible).setEnabled(visible);
-    if (m_rollTrimMinus) m_rollTrimMinus->setVisible(visible).setEnabled(visible);
-    if (m_rollTrimPlus) m_rollTrimPlus->setVisible(visible).setEnabled(visible);
+    if (m_radiusMinus) visible ? m_radiusMinus->show() : m_radiusMinus->hide();
+    if (m_radiusPlus) visible ? m_radiusPlus->show() : m_radiusPlus->hide();
+    if (m_loadsMinus) visible ? m_loadsMinus->show() : m_loadsMinus->hide();
+    if (m_loadsPlus) visible ? m_loadsPlus->show() : m_loadsPlus->hide();
+    if (m_fogMinus) visible ? m_fogMinus->show() : m_fogMinus->hide();
+    if (m_fogPlus) visible ? m_fogPlus->show() : m_fogPlus->hide();
+    if (m_noiseMinus) visible ? m_noiseMinus->show() : m_noiseMinus->hide();
+    if (m_noisePlus) visible ? m_noisePlus->show() : m_noisePlus->hide();
+    if (m_macroScaleMinus) visible ? m_macroScaleMinus->show() : m_macroScaleMinus->hide();
+    if (m_macroScalePlus) visible ? m_macroScalePlus->show() : m_macroScalePlus->hide();
+    if (m_macroStrengthMinus) visible ? m_macroStrengthMinus->show() : m_macroStrengthMinus->hide();
+    if (m_macroStrengthPlus) visible ? m_macroStrengthPlus->show() : m_macroStrengthPlus->hide();
+    if (m_grassTintMinus) visible ? m_grassTintMinus->show() : m_grassTintMinus->hide();
+    if (m_grassTintPlus) visible ? m_grassTintPlus->show() : m_grassTintPlus->hide();
+    if (m_forestTintMinus) visible ? m_forestTintMinus->show() : m_forestTintMinus->hide();
+    if (m_forestTintPlus) visible ? m_forestTintPlus->show() : m_forestTintPlus->hide();
+    if (m_urbanTintMinus) visible ? m_urbanTintMinus->show() : m_urbanTintMinus->hide();
+    if (m_urbanTintPlus) visible ? m_urbanTintPlus->show() : m_urbanTintPlus->hide();
+    if (m_microScaleMinus) visible ? m_microScaleMinus->show() : m_microScaleMinus->hide();
+    if (m_microScalePlus) visible ? m_microScalePlus->show() : m_microScalePlus->hide();
+    if (m_microStrengthMinus) visible ? m_microStrengthMinus->show() : m_microStrengthMinus->hide();
+    if (m_microStrengthPlus) visible ? m_microStrengthPlus->show() : m_microStrengthPlus->hide();
+    if (m_waterScaleMinus) visible ? m_waterScaleMinus->show() : m_waterScaleMinus->hide();
+    if (m_waterScalePlus) visible ? m_waterScalePlus->show() : m_waterScalePlus->hide();
+    if (m_waterStrengthMinus) visible ? m_waterStrengthMinus->show() : m_waterStrengthMinus->hide();
+    if (m_waterStrengthPlus) visible ? m_waterStrengthPlus->show() : m_waterStrengthPlus->hide();
+    if (m_treesMinus) visible ? m_treesMinus->show() : m_treesMinus->hide();
+    if (m_treesPlus) visible ? m_treesPlus->show() : m_treesPlus->hide();
+    if (m_audioMinus) visible ? m_audioMinus->show() : m_audioMinus->hide();
+    if (m_audioPlus) visible ? m_audioPlus->show() : m_audioPlus->hide();
+    if (m_rollTrimMinus) visible ? m_rollTrimMinus->show() : m_rollTrimMinus->hide();
+    if (m_rollTrimPlus) visible ? m_rollTrimPlus->show() : m_rollTrimPlus->hide();
 }
 
 } // namespace nuage
