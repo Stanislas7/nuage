@@ -326,12 +326,18 @@ void JsbsimSystem::syncOutputs() {
     m_acState->position = llaToEnu(origin, latDeg, lonDeg, alt);
 
     double airspeedFps = m_fdm->GetPropertyValue("velocities/vtrue-fps");
+    double groundSpeedFps = m_fdm->GetPropertyValue("velocities/vg-fps");
+    double indicatedAirspeedKts = m_fdm->GetPropertyValue("velocities/vc-kts");
+    double aglFt = m_fdm->GetPropertyValue("position/h-agl-ft");
     m_acState->airspeed = airspeedFps * kFtToM;
 
     // Publish to Property Bus
     PropertyBus& local = m_properties->local();
     local.set(Properties::Velocities::AIRSPEED_KT, airspeedFps * 0.592484); // fps to knots
+    local.set(Properties::Velocities::AIRSPEED_IAS_KT, indicatedAirspeedKts);
+    local.set(Properties::Velocities::GROUND_SPEED_KT, groundSpeedFps * 0.592484); // fps to knots
     local.set(Properties::Position::ALTITUDE_FT, altFt);
+    local.set(Properties::Position::ALTITUDE_AGL_FT, aglFt);
     local.set(Properties::Position::LATITUDE_DEG, latDeg);
     local.set(Properties::Position::LONGITUDE_DEG, lonDeg);
     

@@ -14,7 +14,10 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
 
     const auto& bus = player->state();
     float airspeedKts = static_cast<float>(bus.get(Properties::Velocities::AIRSPEED_KT, 0.0));
+    float airspeedIasKts = static_cast<float>(bus.get(Properties::Velocities::AIRSPEED_IAS_KT, 0.0));
+    float groundSpeedKts = static_cast<float>(bus.get(Properties::Velocities::GROUND_SPEED_KT, 0.0));
     float altitudeFeet = static_cast<float>(bus.get(Properties::Position::ALTITUDE_FT, 0.0));
+    float altitudeAglFeet = static_cast<float>(bus.get(Properties::Position::ALTITUDE_AGL_FT, 0.0));
     float headingDegrees = static_cast<float>(bus.get(Properties::Orientation::HEADING_DEG, 0.0));
     float powerPercent = static_cast<float>(bus.get(Properties::Controls::THROTTLE, 0.0));
     float flapPercent = std::clamp(static_cast<float>(bus.get(Properties::Surfaces::FLAPS_NORM, 0.0)), 0.0f, 1.0f);
@@ -71,8 +74,11 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
         return s;
     };
 
-    std::string altText = formatWithCommas(static_cast<int>(std::round(altitudeFeet))) + " ft";
-    std::string speedText = formatWithCommas(static_cast<int>(std::round(airspeedKts))) + " kts";
+    std::string altText = "ALT MSL " + formatWithCommas(static_cast<int>(std::round(altitudeFeet))) + " ft";
+    std::string aglText = "ALT AGL " + formatWithCommas(static_cast<int>(std::round(altitudeAglFeet))) + " ft";
+    std::string speedText = "TAS " + formatWithCommas(static_cast<int>(std::round(airspeedKts))) + " kts";
+    std::string iasGsText = "IAS " + formatWithCommas(static_cast<int>(std::round(airspeedIasKts)))
+        + " kts  GS " + formatWithCommas(static_cast<int>(std::round(groundSpeedKts))) + " kts";
     int flapDegInt = static_cast<int>(std::round(flapDeg));
     int flapPercentInt = static_cast<int>(std::round(flapPercent * 100.0f));
     std::string flapText = "Flaps " + std::to_string(flapDegInt) + " deg (" + std::to_string(flapPercentInt) + "%)";
@@ -86,7 +92,7 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
     float infoBoxW = kCompassSize;
     constexpr float kInfoTextPadX = 16.0f;
     constexpr float kInfoTextPadTop = 12.0f;
-    constexpr int kInfoLineCount = 4;
+    constexpr int kInfoLineCount = 6;
     constexpr float kInfoLineGap = 26.0f;
     constexpr float kInfoTextScale = 0.55f;
     Vec3 lineSize = ui.measureText("Ag", kInfoTextScale);
@@ -98,11 +104,15 @@ void HudOverlay::draw(UIManager& ui, Aircraft& aircraft) {
                        kInfoBoxBack, 0.92f, Anchor::TopLeft);
     ui.drawText(altText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop,
                 Anchor::TopLeft, kInfoTextScale, kInfoText, 0.98f);
-    ui.drawText(speedText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap,
+    ui.drawText(aglText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap,
                 Anchor::TopLeft, kInfoTextScale, kInfoText, 0.98f);
-    ui.drawText(flapText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap * 2.0f,
+    ui.drawText(speedText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap * 2.0f,
                 Anchor::TopLeft, kInfoTextScale, kInfoText, 0.98f);
-    ui.drawText(headBuf, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap * 3.0f,
+    ui.drawText(iasGsText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap * 3.0f,
+                Anchor::TopLeft, kInfoTextScale, kInfoText, 0.98f);
+    ui.drawText(flapText, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap * 4.0f,
+                Anchor::TopLeft, kInfoTextScale, kInfoText, 0.98f);
+    ui.drawText(headBuf, infoBoxX + kInfoTextPadX, infoBoxY + kInfoTextPadTop + kInfoLineGap * 5.0f,
                 Anchor::TopLeft, kInfoTextScale, kInfoText, 0.98f);
 }
 

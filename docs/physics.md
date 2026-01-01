@@ -12,7 +12,7 @@ When an aircraft JSON contains a `jsbsim` block, the aircraft is driven by `Jsbs
 1. **Inputs**: `Input` maps the keyboard to `FlightInput` axes (pitch, roll, yaw, throttle). The values are written to `input/*` properties before `JsbsimSystem` runs.
 2. **Environment**: `EnvironmentSystem` updates `atmosphere/*` properties (wind, density) based on `Atmosphere::getWind`/`getAirDensity` and the aircraft's current position (`src/aircraft/systems/environment/environment_system.cpp`).
 3. **JSBSim step**: `FGFDMExec::Run()` advances the FDM using the mapped inputs and wind values.
-4. **Outputs**: The JSBSim state (position, velocity, body orientation, angular velocity, airspeed) is translated back into Nuage properties (`position`, `orientation`, `velocity`, `physics/*`).
+4. **Outputs**: The JSBSim state (position, velocity, body orientation, angular velocity, airspeed, ground speed, altitude) is translated back into Nuage properties (`position`, `orientation`, `velocity`, `physics/*`).
 
 ### Input mapping
 Nuage keeps the key binding definitions under `assets/config/controls.json` and supports alternative physical layouts via `assets/config/layouts.json` when keys are remapped (`src/input/input.cpp`). The `Input` system normalizes named keycaps (e.g., `ArrowUp`, `KeypadAdd`) into GLFW scan codes and writes the combined pitch/roll/yaw/throttle commands onto the property bus so any system that cares about current controls can read them.
@@ -26,12 +26,16 @@ The HUD renders a `PWR: xx%` indicator sourced from `input/throttle` so you can 
 Nuage tracks wind/density via `Atmosphere` (`src/environment/atmosphere.cpp`), which currently implements a basic ISA density curve and uniform horizontal wind direction/speed. Those values are stored in the bus under `atmosphere/wind-*` and `atmosphere/density`, then converted into JSBSim's north/east/down convention inside `syncInputs()` before every JSBSim update (`src/aircraft/systems/physics/jsbsim_system.cpp`).
 
 ### Output mapping
-JSBSim outputs are pulled from `prop->GetVel()`, `prop->GetPQR()`, `GetTb2l()`, and the `position/*`/`velocities/*` properties. `JsbsimSystem` converts:
+JSBSim outputs are pulled from `prop->GetVel()`, `prop->GetPQR()`, `GetTb2l()`, and the `position/*`/`velocities/*` properties. `JsbsimSystem` converts and publishes:
 - NED velocities into world `velocity/x,y,z` (`nedToWorld`).
 - Body angular rates into Nuage body axes (`jsbBodyToNuage`).
 - The JSBSim body-to-local matrix into a quaternion (`quatFromMatrix`) for `orientation`.
 - Lat/lon/alt into local east/up/north coordinates using a small ECEF offset relative to the spawn location.
-- `velocities/vtrue-fps` into `physics/air_speed` in meters per second.
+- `position/h-sl-ft` into `position/altitude-ft` (MSL).
+- `position/h-agl-ft` into `position/altitude-agl-ft` (AGL, when terrain data is available).
+- `velocities/vtrue-fps` into `velocities/airspeed-kt` (true airspeed).
+- `velocities/vc-kts` into `velocities/airspeed-ias-kt` (calibrated/indicated airspeed).
+- `velocities/vg-fps` into `velocities/groundspeed-kt`.
 
 ### Coordinate conventions
 JSBSim uses body axes `X forward, Y right, Z down`. Nuage relies on `X right, Y up, Z forward`, so `JsbsimSystem` reorders axes both when pushing inputs (e.g., `fcs/aileron-cmd-norm` flips roll) and when reading outputs so the rest of the engine stays in Nuage's convention.

@@ -26,11 +26,14 @@ namespace Atmosphere {
 
 namespace Velocities {
     inline constexpr TypedProperty<double> AIRSPEED_KT("velocities/airspeed-kt");
+    inline constexpr TypedProperty<double> AIRSPEED_IAS_KT("velocities/airspeed-ias-kt");
+    inline constexpr TypedProperty<double> GROUND_SPEED_KT("velocities/groundspeed-kt");
     inline constexpr TypedProperty<double> VERTICAL_SPEED_FPS("velocities/vertical-speed-fps");
 }
 
 namespace Position {
     inline constexpr TypedProperty<double> ALTITUDE_FT("position/altitude-ft");
+    inline constexpr TypedProperty<double> ALTITUDE_AGL_FT("position/altitude-agl-ft");
     inline constexpr TypedProperty<double> LATITUDE_DEG("position/latitude-deg");
     inline constexpr TypedProperty<double> LONGITUDE_DEG("position/longitude-deg");
 }
