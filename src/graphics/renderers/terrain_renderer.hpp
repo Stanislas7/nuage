@@ -34,6 +34,8 @@ public:
         float rockStrength = 0.7f;
         float macroScale = 0.0012f;
         float macroStrength = 0.25f;
+        float megaScale = 0.00035f;
+        float megaStrength = 0.12f;
         float farmlandStrength = 0.5f;
         float farmlandStripeScale = 0.004f;
         float farmlandStripeContrast = 0.6f;

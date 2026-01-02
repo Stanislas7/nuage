@@ -24,6 +24,8 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
     m_textureSettings.rockStrength = texConfig.value("rockStrength", m_textureSettings.rockStrength);
     m_textureSettings.macroScale = texConfig.value("macroScale", m_textureSettings.macroScale);
     m_textureSettings.macroStrength = texConfig.value("macroStrength", m_textureSettings.macroStrength);
+    m_textureSettings.megaScale = texConfig.value("megaScale", m_textureSettings.megaScale);
+    m_textureSettings.megaStrength = texConfig.value("megaStrength", m_textureSettings.megaStrength);
     m_textureSettings.farmlandStrength = texConfig.value("farmlandStrength", m_textureSettings.farmlandStrength);
     m_textureSettings.farmlandStripeScale = texConfig.value("farmlandStripeScale", m_textureSettings.farmlandStripeScale);
     m_textureSettings.farmlandStripeContrast = texConfig.value("farmlandStripeContrast", m_textureSettings.farmlandStripeContrast);
@@ -134,6 +136,8 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     shader->setFloat("uTerrainRockStrength", m_textureSettings.rockStrength);
     shader->setFloat("uTerrainMacroScale", m_textureSettings.macroScale);
     shader->setFloat("uTerrainMacroStrength", m_textureSettings.macroStrength);
+    shader->setFloat("uTerrainMegaScale", m_textureSettings.megaScale);
+    shader->setFloat("uTerrainMegaStrength", m_textureSettings.megaStrength);
     shader->setFloat("uTerrainFarmlandStrength", m_textureSettings.farmlandStrength);
     shader->setFloat("uTerrainFarmlandStripeScale", m_textureSettings.farmlandStripeScale);
     shader->setFloat("uTerrainFarmlandStripeContrast", m_textureSettings.farmlandStripeContrast);

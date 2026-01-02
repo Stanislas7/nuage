@@ -50,6 +50,8 @@ uniform float uTerrainRockSlopeEnd = 0.7;
 uniform float uTerrainRockStrength = 0.7;
 uniform float uTerrainMacroScale = 0.0012;
 uniform float uTerrainMacroStrength = 0.25;
+uniform float uTerrainMegaScale = 0.00035;
+uniform float uTerrainMegaStrength = 0.12;
 uniform float uTerrainFarmlandStrength = 0.5;
 uniform float uTerrainFarmlandStripeScale = 0.004;
 uniform float uTerrainFarmlandStripeContrast = 0.6;
@@ -253,6 +255,10 @@ void main() {
         float macroGain = mix(1.0 - uTerrainMacroStrength, 1.0 + uTerrainMacroStrength, macro);
         float landWeight = clamp(wGrass + wUrban + wForest, 0.0, 1.0);
         baseColor = mix(baseColor, baseColor * macroGain, landWeight);
+
+        float mega = noise(vWorldPos.xz * uTerrainMegaScale);
+        float megaGain = mix(1.0 - uTerrainMegaStrength, 1.0 + uTerrainMegaStrength, mega);
+        baseColor = mix(baseColor, baseColor * megaGain, landWeight);
 
         float tintMix = smoothstep(0.2, 0.8, macro);
         vec3 grassTint = mix(uTerrainGrassTintA, uTerrainGrassTintB, tintMix);

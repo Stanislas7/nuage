@@ -36,7 +36,7 @@
   },
   "terrainTextures": {
     "enabled": true,
-    "grass": "../textures/terrain/Grass.png",
+    "grass": "../textures/terrain/cc0/Grass003_1K-JPG_Color.jpg",
     "forest": "../textures/terrain/forest_ground_04_diff_2k.png",
     "rock": "../textures/terrain/cc0/Rock033_1K-JPG_Color.jpg",
     "dirt": "../textures/terrain/cc0/Ground029_1K-JPG_Color.jpg",
@@ -57,6 +57,8 @@
     "rockStrength": 0.6,
     "macroScale": 0.0022,
     "macroStrength": 0.16,
+    "megaScale": 0.00035,
+    "megaStrength": 0.14,
     "farmlandStrength": 0.24,
     "farmlandStripeScale": 0.0024,
     "farmlandStripeContrast": 0.22,

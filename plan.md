@@ -53,7 +53,7 @@ This plan focuses on a compiled, data-driven terrain pipeline that approaches th
 - [ ] Add optional mesh smoothing or anti-terracing where DEM is noisy.
 
 ### 2.2 Masks + Landclass
-- [ ] Increase mask resolution output (256/512) and add optional blur/feathering.
+- [x] Increase mask resolution output (256/512) and add optional blur/feathering.
 - [ ] Separate water/urban/forest/crop/rock into distinct channels if possible.
 - [ ] Add a landclass priority order to avoid hard edges (water > rock > urban > forest > crop > grass).
 
@@ -79,7 +79,7 @@ This plan focuses on a compiled, data-driven terrain pipeline that approaches th
 ### 3.2 Blending and Variation
 - [x] Expose mask feather/jitter/noise controls to config.
 - [x] Improve landclass edge feathering in the shader.
-- [ ] Add macro variation (large scale) and micro variation (fine detail).
+- [x] Add macro variation (large scale) and micro variation (fine detail).
 - [ ] Add a slope-driven rock blend with soft transitions.
 - [ ] Add wetness/darkening near water and in lowlands.
 
