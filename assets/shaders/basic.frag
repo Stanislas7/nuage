@@ -73,6 +73,9 @@ uniform bool uTerrainHasMaskTex = false;
 uniform sampler2D uTerrainMaskTex;
 uniform vec2 uTerrainMaskOrigin;
 uniform vec2 uTerrainMaskInvSize;
+uniform float uTerrainMaskFeatherMeters = 42.0;
+uniform float uTerrainMaskJitterMeters = 18.0;
+uniform float uTerrainMaskEdgeNoise = 0.35;
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -153,11 +156,12 @@ void main() {
         float wRockClass = 0.0;
         if (uTerrainUseMasks) {
             if (uTerrainHasMaskTex) {
-                float featherMeters = 42.0;
+                float featherMeters = max(uTerrainMaskFeatherMeters, 1.0);
+                float jitterMeters = max(uTerrainMaskJitterMeters, 0.0);
                 vec2 jitter = vec2(noise(vWorldPos.xz * 0.004),
                                    noise(vWorldPos.xz * 0.004 + vec2(12.3, 5.4)));
-                jitter = (jitter - 0.5) * featherMeters * 0.6;
-                vec2 offsets[9] = vec2[](
+                jitter = (jitter - 0.5) * jitterMeters;
+                vec2 offsets[13] = vec2[](
                     vec2(0.0),
                     vec2(featherMeters, 0.0),
                     vec2(-featherMeters, 0.0),
@@ -166,10 +170,14 @@ void main() {
                     vec2(featherMeters, featherMeters),
                     vec2(-featherMeters, featherMeters),
                     vec2(featherMeters, -featherMeters),
-                    vec2(-featherMeters, -featherMeters)
+                    vec2(-featherMeters, -featherMeters),
+                    vec2(featherMeters * 0.5, 0.0),
+                    vec2(-featherMeters * 0.5, 0.0),
+                    vec2(0.0, featherMeters * 0.5),
+                    vec2(0.0, -featherMeters * 0.5)
                 );
                 float samples = 0.0;
-                for (int i = 0; i < 9; ++i) {
+                for (int i = 0; i < 13; ++i) {
                     int clsId = maskClassAt(vWorldPos.xz + offsets[i] + jitter);
                     wWater += clsId == 1 ? 1.0 : 0.0;
                     wUrban += clsId == 2 ? 1.0 : 0.0;
@@ -191,6 +199,9 @@ void main() {
         }
         // Leave some grass even in farmland-heavy tiles to avoid flat monotony.
         float wGrass = clamp(1.0 - (wWater + wUrban + wForest + (wFarmland * 0.75)), 0.0, 1.0);
+        float edgeNoise = noise(vWorldPos.xz * 0.0009 + vec2(21.3, 4.7)) - 0.5;
+        float farmlandSoft = smoothstep(0.15, 0.85, wFarmland + edgeNoise * uTerrainMaskEdgeNoise);
+        wFarmland = mix(wFarmland, farmlandSoft, 0.6);
         float landSum = max(wGrass + wUrban + wForest + wFarmland, 0.0001);
         vec3 grassMixed = mix(grassTex, grassTexB, 0.2 + 0.25 * macro);
         vec3 farmlandBase = mix(grassMixed, dirtTex, 0.6);

@@ -53,6 +53,9 @@ public:
         float waterDetailScale = 0.08f;
         float waterDetailStrength = 0.25f;
         Vec3 waterColor = Vec3(0.14f, 0.32f, 0.55f);
+        float maskFeatherMeters = 42.0f;
+        float maskJitterMeters = 18.0f;
+        float maskEdgeNoise = 0.35f;
     };
 
     struct TerrainSample {

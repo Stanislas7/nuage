@@ -36,6 +36,9 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
     m_textureSettings.microStrength = texConfig.value("microStrength", m_textureSettings.microStrength);
     m_textureSettings.waterDetailScale = texConfig.value("waterDetailScale", m_textureSettings.waterDetailScale);
     m_textureSettings.waterDetailStrength = texConfig.value("waterDetailStrength", m_textureSettings.waterDetailStrength);
+    m_textureSettings.maskFeatherMeters = texConfig.value("maskFeatherMeters", m_textureSettings.maskFeatherMeters);
+    m_textureSettings.maskJitterMeters = texConfig.value("maskJitterMeters", m_textureSettings.maskJitterMeters);
+    m_textureSettings.maskEdgeNoise = texConfig.value("maskEdgeNoise", m_textureSettings.maskEdgeNoise);
     auto loadTint = [&](const char* key, Vec3& out) {
         if (texConfig.contains(key) && texConfig[key].is_array() && texConfig[key].size() == 3) {
             out = Vec3(texConfig[key][0].get<float>(),
@@ -149,6 +152,9 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     shader->setFloat("uTerrainWaterDetailScale", m_textureSettings.waterDetailScale);
     shader->setFloat("uTerrainWaterDetailStrength", m_textureSettings.waterDetailStrength);
     shader->setVec3("uTerrainWaterColor", m_textureSettings.waterColor);
+    shader->setFloat("uTerrainMaskFeatherMeters", m_textureSettings.maskFeatherMeters);
+    shader->setFloat("uTerrainMaskJitterMeters", m_textureSettings.maskJitterMeters);
+    shader->setFloat("uTerrainMaskEdgeNoise", m_textureSettings.maskEdgeNoise);
 
     grass->bind(0);
     shader->setInt("uTerrainTexGrass", 0);

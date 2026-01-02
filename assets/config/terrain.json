@@ -57,9 +57,9 @@
     "rockStrength": 0.6,
     "macroScale": 0.0022,
     "macroStrength": 0.16,
-    "farmlandStrength": 0.35,
+    "farmlandStrength": 0.24,
     "farmlandStripeScale": 0.0024,
-    "farmlandStripeContrast": 0.3,
+    "farmlandStripeContrast": 0.22,
     "scrubStrength": 0.18,
     "scrubNoiseScale": 0.0011,
     "grassTintA": [0.72, 0.92, 0.62],
@@ -75,7 +75,10 @@
     "microStrength": 0.12,
     "waterDetailScale": 0.09,
     "waterDetailStrength": 0.12,
-    "waterColor": [0.08, 0.22, 0.38]
+    "waterColor": [0.08, 0.22, 0.38],
+    "maskFeatherMeters": 90.0,
+    "maskJitterMeters": 30.0,
+    "maskEdgeNoise": 0.45
   },
   "runways": {
     "enabled": true,
