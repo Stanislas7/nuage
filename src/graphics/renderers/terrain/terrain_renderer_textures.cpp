@@ -121,6 +121,7 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     bool enabled = m_textureSettings.enabled && grass && rock && urban;
     shader->setBool("uTerrainUseTextures", enabled);
     shader->setBool("uTerrainUseMasks", useMasks);
+    shader->setBool("uTerrainDebugMaskView", m_debugMaskView);
     if (!enabled) {
         return;
     }

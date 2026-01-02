@@ -16,7 +16,7 @@ constexpr float kPanelRadius = 18.0f;
 constexpr float kPanelMargin = 28.0f;
 constexpr float kRowHeight = 38.0f;
 constexpr float kHeaderHeight = 52.0f;
-constexpr int kRowCount = 16;
+constexpr int kRowCount = 17;
 constexpr float kPanelPaddingBottom = 24.0f;
 constexpr float kPaddingX = 20.0f;
 constexpr float kHeaderTextY = 14.0f;
@@ -158,6 +158,7 @@ void DebugOverlay::draw(bool active, UIManager& ui) {
     std::snprintf(rollTrimBuffer, sizeof(rollTrimBuffer), "%.2f", rollTrim);
     drawRow("Roll Trim", rollTrimBuffer, row++);
     drawRow("Sound", PropertyBus::global().get(Properties::Audio::MUTED, false) ? "Off" : "On", row++);
+    drawRow("Mask View", terrain->debugMaskView() ? "On" : "Off", row++);
     m_rowCount = row;
 
 }
@@ -214,6 +215,8 @@ void DebugOverlay::buildUi(UIManager& ui) {
     m_audioPlus = makeButton("+");
     m_rollTrimMinus = makeButton("-");
     m_rollTrimPlus = makeButton("+");
+    m_maskViewMinus = makeButton("-");
+    m_maskViewPlus = makeButton("+");
 
     App* app = ui.app();
 
@@ -476,6 +479,20 @@ void DebugOverlay::buildUi(UIManager& ui) {
             PropertyBus::global().set(Properties::Audio::MUTED, false);
         });
     }
+    if (m_maskViewMinus) {
+        m_maskViewMinus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            terrain->setDebugMaskView(false);
+        });
+    }
+    if (m_maskViewPlus) {
+        m_maskViewPlus->onClick([getTerrain]() {
+            TerrainRenderer* terrain = getTerrain();
+            if (!terrain) return;
+            terrain->setDebugMaskView(true);
+        });
+    }
 
     m_initialized = true;
     ui.setGroupActive(kDebugGroup, false);
@@ -522,6 +539,7 @@ void DebugOverlay::layout(UIManager& ui) {
     positionRowButtons(m_treesMinus, m_treesPlus, 13);
     positionRowButtons(m_rollTrimMinus, m_rollTrimPlus, 14);
     positionRowButtons(m_audioMinus, m_audioPlus, 15);
+    positionRowButtons(m_maskViewMinus, m_maskViewPlus, 16);
 }
 
 void DebugOverlay::setButtonsVisible(bool visible) {
@@ -557,6 +575,8 @@ void DebugOverlay::setButtonsVisible(bool visible) {
     if (m_audioPlus) visible ? m_audioPlus->show() : m_audioPlus->hide();
     if (m_rollTrimMinus) visible ? m_rollTrimMinus->show() : m_rollTrimMinus->hide();
     if (m_rollTrimPlus) visible ? m_rollTrimPlus->show() : m_rollTrimPlus->hide();
+    if (m_maskViewMinus) visible ? m_maskViewMinus->show() : m_maskViewMinus->hide();
+    if (m_maskViewPlus) visible ? m_maskViewPlus->show() : m_maskViewPlus->hide();
 }
 
 } // namespace nuage

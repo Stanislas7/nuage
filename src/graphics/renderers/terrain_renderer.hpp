@@ -87,6 +87,8 @@ public:
     void setCompiledVisibleRadius(int radius);
     void setCompiledLoadsPerFrame(int loads);
     void setTreesEnabled(bool enabled);
+    bool debugMaskView() const { return m_debugMaskView; }
+    void setDebugMaskView(bool enabled) { m_debugMaskView = enabled; }
     TerrainVisualSettings& visuals() { return m_visuals; }
     const TerrainVisualSettings& visuals() const { return m_visuals; }
     TerrainTextureSettings& textureSettings() { return m_textureSettings; }
@@ -167,6 +169,7 @@ private:
     std::vector<RunwayCollider> m_runwayColliders;
 
     bool m_compiled = false;
+    bool m_debugMaskView = false;
     AssetStore* m_assets = nullptr;
     std::unordered_map<std::string, TileResource> m_tileCache;
 

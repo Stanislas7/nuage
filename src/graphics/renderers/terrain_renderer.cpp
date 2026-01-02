@@ -39,6 +39,7 @@ void TerrainRenderer::shutdown() {
     m_texUrban = nullptr;
     m_assets = nullptr;
     m_compiled = false;
+    m_debugMaskView = false;
 }
 
 void TerrainRenderer::setCompiledVisibleRadius(int radius) {
@@ -76,6 +77,7 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_texUrban = nullptr;
     m_visuals.resetDefaults();
     m_treesEnabled = false;
+    m_debugMaskView = false;
     m_treesDensityPerSqKm = 80.0f;
     m_treesMinHeight = 4.0f;
     m_treesMaxHeight = 10.0f;

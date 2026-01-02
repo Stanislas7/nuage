@@ -130,7 +130,7 @@ This plan focuses on a compiled, data-driven terrain pipeline that approaches th
 ## Phase 7: Tooling and Iteration (ongoing)
 **Goal:** Make iteration fast and predictable.
 
-- [ ] Add debug overlays for landclass/mask visualization.
+- [x] Add debug overlays for landclass/mask visualization.
 - [ ] Add per-tile stats (mask resolution, LOD level, blend weights).
 - [ ] Add a quick screenshot script with fixed camera presets.
 - [ ] Track performance over time (tile load time, FPS).

@@ -76,6 +76,7 @@ uniform vec2 uTerrainMaskInvSize;
 uniform float uTerrainMaskFeatherMeters = 42.0;
 uniform float uTerrainMaskJitterMeters = 18.0;
 uniform float uTerrainMaskEdgeNoise = 0.35;
+uniform bool uTerrainDebugMaskView = false;
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -111,6 +112,60 @@ int maskClassAt(vec2 worldPos) {
     return int(floor(cls + 0.5));
 }
 
+void sampleMaskWeights(vec3 vtxColor, vec2 worldPos,
+                       out float wWater, out float wUrban, out float wForest,
+                       out float wFarmland, out float wRockClass) {
+    wWater = 0.0;
+    wUrban = 0.0;
+    wForest = 0.0;
+    wFarmland = 0.0;
+    wRockClass = 0.0;
+    if (!uTerrainUseMasks) {
+        return;
+    }
+    if (uTerrainHasMaskTex) {
+        float featherMeters = max(uTerrainMaskFeatherMeters, 1.0);
+        float jitterMeters = max(uTerrainMaskJitterMeters, 0.0);
+        vec2 jitter = vec2(noise(worldPos * 0.004),
+                           noise(worldPos * 0.004 + vec2(12.3, 5.4)));
+        jitter = (jitter - 0.5) * jitterMeters;
+        vec2 offsets[13] = vec2[](
+            vec2(0.0),
+            vec2(featherMeters, 0.0),
+            vec2(-featherMeters, 0.0),
+            vec2(0.0, featherMeters),
+            vec2(0.0, -featherMeters),
+            vec2(featherMeters, featherMeters),
+            vec2(-featherMeters, featherMeters),
+            vec2(featherMeters, -featherMeters),
+            vec2(-featherMeters, -featherMeters),
+            vec2(featherMeters * 0.5, 0.0),
+            vec2(-featherMeters * 0.5, 0.0),
+            vec2(0.0, featherMeters * 0.5),
+            vec2(0.0, -featherMeters * 0.5)
+        );
+        float samples = 0.0;
+        for (int i = 0; i < 13; ++i) {
+            int clsId = maskClassAt(worldPos + offsets[i] + jitter);
+            wWater += clsId == 1 ? 1.0 : 0.0;
+            wUrban += clsId == 2 ? 1.0 : 0.0;
+            wForest += clsId == 3 ? 1.0 : 0.0;
+            wFarmland += clsId == 5 ? 1.0 : 0.0;
+            wRockClass += clsId == 6 ? 1.0 : 0.0;
+            samples += 1.0;
+        }
+        wWater /= samples;
+        wUrban /= samples;
+        wForest /= samples;
+        wFarmland /= samples;
+        wRockClass /= samples;
+    } else {
+        wWater = clamp(vtxColor.r, 0.0, 1.0);
+        wUrban = clamp(vtxColor.g, 0.0, 1.0);
+        wForest = clamp(vtxColor.b, 0.0, 1.0);
+    }
+}
+
 void main() {
     vec3 normal = normalize(vNormal);
     float roughMix = 0.5;
@@ -119,6 +174,27 @@ void main() {
     float diffuse = max(dot(normal, lightDir), 0.0);
     vec3 lighting = uAmbientColor + uLightColor * diffuse;
     vec3 baseColor = uUseUniformColor ? uColor : vColor;
+    float wWater = 0.0;
+    float wUrban = 0.0;
+    float wForest = 0.0;
+    float wFarmland = 0.0;
+    float wRockClass = 0.0;
+    sampleMaskWeights(vColor, vWorldPos.xz, wWater, wUrban, wForest, wFarmland, wRockClass);
+    float wGrass = clamp(1.0 - (wWater + wUrban + wForest + (wFarmland * 0.75)), 0.0, 1.0);
+    float edgeNoise = noise(vWorldPos.xz * 0.0009 + vec2(21.3, 4.7)) - 0.5;
+    float farmlandSoft = smoothstep(0.15, 0.85, wFarmland + edgeNoise * uTerrainMaskEdgeNoise);
+    wFarmland = mix(wFarmland, farmlandSoft, 0.6);
+    if (uTerrainDebugMaskView) {
+        vec3 debugColor = vec3(0.0);
+        debugColor += wWater * vec3(0.1, 0.35, 0.8);
+        debugColor += wUrban * vec3(0.6, 0.6, 0.6);
+        debugColor += wForest * vec3(0.1, 0.5, 0.2);
+        debugColor += wFarmland * vec3(0.72, 0.62, 0.28);
+        debugColor += wRockClass * vec3(0.55, 0.5, 0.48);
+        debugColor += wGrass * vec3(0.25, 0.65, 0.28);
+        FragColor = vec4(debugColor, 1.0);
+        return;
+    }
     if (uTerrainShading && uTerrainUseTextures) {
         vec2 macroP = vWorldPos.xz * uTerrainMacroScale;
         float macro = noise(macroP);
@@ -149,59 +225,7 @@ void main() {
         float rockR = texture(uTerrainTexRockRough, uvDetail).r;
         float urbanR = texture(uTerrainTexUrbanRough, uvDetail).r;
 
-        float wWater = 0.0;
-        float wUrban = 0.0;
-        float wForest = 0.0;
-        float wFarmland = 0.0;
-        float wRockClass = 0.0;
-        if (uTerrainUseMasks) {
-            if (uTerrainHasMaskTex) {
-                float featherMeters = max(uTerrainMaskFeatherMeters, 1.0);
-                float jitterMeters = max(uTerrainMaskJitterMeters, 0.0);
-                vec2 jitter = vec2(noise(vWorldPos.xz * 0.004),
-                                   noise(vWorldPos.xz * 0.004 + vec2(12.3, 5.4)));
-                jitter = (jitter - 0.5) * jitterMeters;
-                vec2 offsets[13] = vec2[](
-                    vec2(0.0),
-                    vec2(featherMeters, 0.0),
-                    vec2(-featherMeters, 0.0),
-                    vec2(0.0, featherMeters),
-                    vec2(0.0, -featherMeters),
-                    vec2(featherMeters, featherMeters),
-                    vec2(-featherMeters, featherMeters),
-                    vec2(featherMeters, -featherMeters),
-                    vec2(-featherMeters, -featherMeters),
-                    vec2(featherMeters * 0.5, 0.0),
-                    vec2(-featherMeters * 0.5, 0.0),
-                    vec2(0.0, featherMeters * 0.5),
-                    vec2(0.0, -featherMeters * 0.5)
-                );
-                float samples = 0.0;
-                for (int i = 0; i < 13; ++i) {
-                    int clsId = maskClassAt(vWorldPos.xz + offsets[i] + jitter);
-                    wWater += clsId == 1 ? 1.0 : 0.0;
-                    wUrban += clsId == 2 ? 1.0 : 0.0;
-                    wForest += clsId == 3 ? 1.0 : 0.0;
-                    wFarmland += clsId == 5 ? 1.0 : 0.0;
-                    wRockClass += clsId == 6 ? 1.0 : 0.0;
-                    samples += 1.0;
-                }
-                wWater /= samples;
-                wUrban /= samples;
-                wForest /= samples;
-                wFarmland /= samples;
-                wRockClass /= samples;
-            } else {
-                wWater = clamp(vColor.r, 0.0, 1.0);
-                wUrban = clamp(vColor.g, 0.0, 1.0);
-                wForest = clamp(vColor.b, 0.0, 1.0);
-            }
-        }
         // Leave some grass even in farmland-heavy tiles to avoid flat monotony.
-        float wGrass = clamp(1.0 - (wWater + wUrban + wForest + (wFarmland * 0.75)), 0.0, 1.0);
-        float edgeNoise = noise(vWorldPos.xz * 0.0009 + vec2(21.3, 4.7)) - 0.5;
-        float farmlandSoft = smoothstep(0.15, 0.85, wFarmland + edgeNoise * uTerrainMaskEdgeNoise);
-        wFarmland = mix(wFarmland, farmlandSoft, 0.6);
         float landSum = max(wGrass + wUrban + wForest + wFarmland, 0.0001);
         vec3 grassMixed = mix(grassTex, grassTexB, 0.2 + 0.25 * macro);
         vec3 farmlandBase = mix(grassMixed, dirtTex, 0.6);

@@ -60,6 +60,8 @@ private:
     Button* m_audioPlus = nullptr;
     Button* m_rollTrimMinus = nullptr;
     Button* m_rollTrimPlus = nullptr;
+    Button* m_maskViewMinus = nullptr;
+    Button* m_maskViewPlus = nullptr;
 };
 
 } // namespace nuage
