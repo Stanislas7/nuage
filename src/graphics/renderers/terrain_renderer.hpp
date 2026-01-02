@@ -145,10 +145,8 @@ private:
     TerrainTextureSettings m_textureSettings;
     Texture* m_texGrass = nullptr;
     Texture* m_texGrassB = nullptr;
-    Texture* m_texGrassC = nullptr;
     Texture* m_texForest = nullptr;
     Texture* m_texRock = nullptr;
-    Texture* m_texRockB = nullptr;
     Texture* m_texDirt = nullptr;
     Texture* m_texDirtB = nullptr;
     Texture* m_texUrban = nullptr;

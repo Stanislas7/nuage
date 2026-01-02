@@ -31,10 +31,8 @@ uniform bool uTerrainUseTextures = false;
 uniform bool uTerrainUseMasks = false;
 uniform sampler2D uTerrainTexGrass;
 uniform sampler2D uTerrainTexGrassB;
-uniform sampler2D uTerrainTexGrassC;
 uniform sampler2D uTerrainTexForest;
 uniform sampler2D uTerrainTexRock;
-uniform sampler2D uTerrainTexRockB;
 uniform sampler2D uTerrainTexDirt;
 uniform sampler2D uTerrainTexDirtB;
 uniform sampler2D uTerrainTexUrban;
@@ -219,19 +217,16 @@ void main() {
         vec2 urbanUvB = rotate90(uv, rotB + 0.5);
         vec3 grassTex = texture(uTerrainTexGrass, uv).rgb;
         vec3 grassTexAlt = texture(uTerrainTexGrassB, uv * 1.35 + macroOffset * 3.5).rgb;
-        vec3 grassTexAlt2 = texture(uTerrainTexGrassC, uv * 0.85 + macroOffset * 2.2).rgb;
         vec3 forestTex = texture(uTerrainTexForest, uv).rgb;
         vec3 urbanTex = mix(texture(uTerrainTexUrban, urbanUvA).rgb,
                             texture(uTerrainTexUrban, urbanUvB).rgb,
                             rotBlend);
         vec3 rockTex = texture(uTerrainTexRock, uvDetail).rgb;
-        vec3 rockTexAlt = texture(uTerrainTexRockB, uvDetail * 0.8 + macroOffset * 1.7).rgb;
         vec3 dirtTex = texture(uTerrainTexDirt, uvDetail).rgb;
         vec3 dirtTexAlt = texture(uTerrainTexDirtB, uvDetail * 1.2 + macroOffset * 1.3).rgb;
         vec3 gravelTex = texture(uTerrainTexRock, uvDetail * 1.7).rgb;
         float grassMix = smoothstep(0.2, 0.85, macro);
         vec3 grassTexB = mix(grassTex, grassTexAlt, grassMix);
-        grassTexB = mix(grassTexB, grassTexAlt2, smoothstep(0.25, 0.75, noise(macroP + vec2(9.2, 3.7))));
         grassTexB = mix(grassTexB, gravelTex, 0.25);
         vec3 grassNormal = normalize(texture(uTerrainTexGrassNormal, uvDetail).xyz * 2.0 - 1.0);
         vec3 dirtNormal = normalize(texture(uTerrainTexDirtNormal, uvDetail).xyz * 2.0 - 1.0);
@@ -298,8 +293,7 @@ void main() {
         float rockMask = smoothstep(uTerrainRockSlopeStart, uTerrainRockSlopeEnd, slope)
             * uTerrainRockStrength;
         rockMask = max(rockMask, wRockClass * 0.9);
-        vec3 rockFinal = mix(rockTex, rockTexAlt, smoothstep(0.3, 0.9, macro));
-        baseColor = mix(baseColor, rockFinal, rockMask);
+        baseColor = mix(baseColor, rockTex, rockMask);
 
         vec3 blendNormal = vec3(0.0, 0.0, 1.0);
         roughMix = 0.0;
