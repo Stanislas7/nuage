@@ -34,9 +34,12 @@ void TerrainRenderer::shutdown() {
     m_textureSettings = TerrainTextureSettings{};
     m_texGrass = nullptr;
     m_texGrassB = nullptr;
+    m_texGrassC = nullptr;
     m_texForest = nullptr;
     m_texRock = nullptr;
+    m_texRockB = nullptr;
     m_texDirt = nullptr;
+    m_texDirtB = nullptr;
     m_texUrban = nullptr;
     m_assets = nullptr;
     m_compiled = false;
@@ -73,9 +76,12 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_textureSettings = TerrainTextureSettings{};
     m_texGrass = nullptr;
     m_texGrassB = nullptr;
+    m_texGrassC = nullptr;
     m_texForest = nullptr;
     m_texRock = nullptr;
+    m_texRockB = nullptr;
     m_texDirt = nullptr;
+    m_texDirtB = nullptr;
     m_texUrban = nullptr;
     m_visuals.resetDefaults();
     m_treesEnabled = false;
