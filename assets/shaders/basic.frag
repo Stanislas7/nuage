@@ -72,6 +72,10 @@ uniform float uTerrainMicroStrength = 0.18;
 uniform float uTerrainWaterDetailScale = 0.08;
 uniform float uTerrainWaterDetailStrength = 0.25;
 uniform vec3 uTerrainWaterColor = vec3(0.14, 0.32, 0.55);
+uniform float uTerrainShoreWidth = 0.45;
+uniform float uTerrainShoreFeather = 0.18;
+uniform float uTerrainWetStrength = 0.35;
+uniform float uTerrainFarmTexScale = 0.12;
 uniform bool uTerrainHasMaskTex = false;
 uniform sampler2D uTerrainMaskTex;
 uniform vec2 uTerrainMaskOrigin;
@@ -252,9 +256,12 @@ void main() {
         baseColor = mix(baseColor, mix(baseColor, highTint, 0.35), highBand * 0.4);
 
         // Soft shoreline band for less razor-sharp water transitions.
-        float shore = smoothstep(0.08, 0.45, wWater) * (1.0 - smoothstep(0.55, 0.95, wWater));
-        vec3 sandColor = mix(dirtTex, grassTex, 0.35);
-        baseColor = mix(baseColor, sandColor, shore * 0.55);
+        float shoreInner = smoothstep(0.08, uTerrainShoreWidth, wWater);
+        float shoreOuter = 1.0 - smoothstep(uTerrainShoreWidth, uTerrainShoreWidth + uTerrainShoreFeather, wWater);
+        float shore = shoreInner * shoreOuter;
+        vec3 sandColor = mix(dirtTex, grassTexAlt, 0.25);
+        baseColor = mix(baseColor, sandColor, shore * 0.65);
+        baseColor = mix(baseColor, baseColor * 0.8, shore * uTerrainWetStrength);
 
         float macroGain = mix(1.0 - uTerrainMacroStrength, 1.0 + uTerrainMacroStrength, macro);
         float landWeight = clamp(wGrass + wUrban + wForest, 0.0, 1.0);
@@ -311,7 +318,9 @@ void main() {
         float stripeMask = smoothstep(-uTerrainFarmlandStripeContrast, uTerrainFarmlandStripeContrast, stripe);
         float farmlandMask = wFarmland * uTerrainFarmlandStrength;
         float farmlandMix = clamp(farmlandMask * (0.45 + 0.2 * farmlandNoise) * (0.4 + 0.6 * farmlandPatch) * stripeMask, 0.0, 1.0);
-        vec3 farmlandColor = mix(grassTexB, dirtTex, 0.6 + 0.1 * tileHash);
+        vec2 farmUv = vWorldPos.xz * uTerrainFarmTexScale + macroOffset * 2.0;
+        vec3 farmTex = texture(uTerrainTexDirt, farmUv).rgb;
+        vec3 farmlandColor = mix(grassTexB, farmTex, 0.6 + 0.1 * tileHash);
         baseColor = mix(baseColor, farmlandColor, farmlandMix);
 
         float scrubNoise = noise(vWorldPos.xz * uTerrainScrubNoiseScale + vec2(13.1, 7.2));

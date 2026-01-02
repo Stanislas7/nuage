@@ -26,6 +26,7 @@ namespace {
 struct Config {
     std::string heightmapPath;
     std::string osmPath;
+    std::string landcoverPath;
     std::string outDir;
     std::string runwaysJsonPath;
     float sizeX = 0.0f;
@@ -75,7 +76,8 @@ void printUsage() {
               << "               [--runways-json <path> --runway-blend <meters>]\n"
               << "               [--origin-lat <deg>] [--origin-lon <deg>] [--origin-alt <m>]\n"
               << "               [--osm <path> --mask-res <pixels> --xmin <lon> --ymin <lat>\n"
-              << "                --xmax <lon> --ymax <lat> --mask-smooth <passes>]\n";
+              << "                --xmax <lon> --ymax <lat> --mask-smooth <passes>]\n"
+              << "               [--landcover <path>]\n";
 }
 
 bool parseArgs(int argc, char** argv, Config& cfg) {
@@ -123,6 +125,8 @@ bool parseArgs(int argc, char** argv, Config& cfg) {
             cfg.runwayBlendMeters = std::stof(v);
         } else if (arg == "--osm") {
             if (!next(cfg.osmPath)) return false;
+        } else if (arg == "--landcover") {
+            if (!next(cfg.landcoverPath)) return false;
         } else if (arg == "--mask-res") {
             std::string v;
             if (!next(v)) return false;
@@ -209,6 +213,23 @@ struct Polygon {
     int classId = 0;
 };
 
+struct GeoTransform {
+    double originX = 0.0;
+    double pixelW = 0.0;
+    double rotX = 0.0;
+    double originY = 0.0;
+    double rotY = 0.0;
+    double pixelH = 0.0;
+};
+
+struct LandcoverRaster {
+    int width = 0;
+    int height = 0;
+    std::vector<std::uint16_t> data;
+    GeoTransform geo;
+    bool valid = false;
+};
+
 bool pointInPolygon(const std::vector<nuage::Vec2>& poly, float x, float z) {
     bool inside = false;
     size_t count = poly.size();
@@ -222,6 +243,94 @@ bool pointInPolygon(const std::vector<nuage::Vec2>& poly, float x, float z) {
         }
     }
     return inside;
+}
+
+bool parseGeoTransform(const std::string& xml, GeoTransform& out) {
+    const std::string startTag = "<GeoTransform>";
+    const std::string endTag = "</GeoTransform>";
+    auto start = xml.find(startTag);
+    auto end = xml.find(endTag);
+    if (start == std::string::npos || end == std::string::npos || end <= start) {
+        return false;
+    }
+    start += startTag.size();
+    std::string content = xml.substr(start, end - start);
+    std::vector<double> values;
+    std::stringstream ss(content);
+    std::string token;
+    while (std::getline(ss, token, ',')) {
+        std::stringstream ts(token);
+        double v = 0.0;
+        if (!(ts >> v)) {
+            return false;
+        }
+        values.push_back(v);
+    }
+    if (values.size() != 6) {
+        return false;
+    }
+    out.originX = values[0];
+    out.pixelW = values[1];
+    out.rotX = values[2];
+    out.originY = values[3];
+    out.rotY = values[4];
+    out.pixelH = values[5];
+    return true;
+}
+
+bool readGeoTransformFromAux(const std::string& rasterPath, GeoTransform& out) {
+    std::filesystem::path auxPath = rasterPath + ".aux.xml";
+    std::ifstream in(auxPath);
+    if (!in.is_open()) {
+        return false;
+    }
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+    return parseGeoTransform(buffer.str(), out);
+}
+
+LandcoverRaster loadLandcoverRaster(const std::string& path) {
+    LandcoverRaster lc;
+    if (path.empty()) {
+        return lc;
+    }
+    GeoTransform gt;
+    if (!readGeoTransformFromAux(path, gt)) {
+        std::cerr << "Landcover requires a GeoTransform in " << path << ".aux.xml\n";
+        return lc;
+    }
+    if (std::abs(gt.rotX) > 1e-6 || std::abs(gt.rotY) > 1e-6) {
+        std::cerr << "Landcover rotation not supported; please use north-up rasters.\n";
+        return lc;
+    }
+    int w = 0;
+    int h = 0;
+    int ch = 0;
+    if (stbi_is_16_bit(path.c_str())) {
+        std::uint16_t* data = stbi_load_16(path.c_str(), &w, &h, &ch, 1);
+        if (!data) {
+            std::cerr << "Failed to load landcover: " << path << "\n";
+            return lc;
+        }
+        lc.data.assign(data, data + static_cast<size_t>(w * h));
+        stbi_image_free(data);
+    } else {
+        unsigned char* data = stbi_load(path.c_str(), &w, &h, &ch, 1);
+        if (!data) {
+            std::cerr << "Failed to load landcover: " << path << "\n";
+            return lc;
+        }
+        lc.data.resize(static_cast<size_t>(w * h));
+        for (int i = 0; i < w * h; ++i) {
+            lc.data[static_cast<size_t>(i)] = data[i];
+        }
+        stbi_image_free(data);
+    }
+    lc.width = w;
+    lc.height = h;
+    lc.geo = gt;
+    lc.valid = !lc.data.empty();
+    return lc;
 }
 
 int classFromTags(const nlohmann::json& tags) {
@@ -291,6 +400,11 @@ nuage::Vec2 projectLonLat(const Projection& proj, double lon, double lat) {
     float x = static_cast<float>((lon - proj.lon0) * proj.metersPerLon);
     float z = static_cast<float>((lat - proj.lat0) * proj.metersPerLat);
     return nuage::Vec2(x, z);
+}
+
+void unprojectToLonLat(const Projection& proj, float worldX, float worldZ, double& lon, double& lat) {
+    lon = static_cast<double>(worldX) / proj.metersPerLon + proj.lon0;
+    lat = static_cast<double>(worldZ) / proj.metersPerLat + proj.lat0;
 }
 
 float sampleHeightAtWorld(const Heightmap& hm, const Config& cfg, float minX, float minZ,
@@ -435,12 +549,88 @@ std::vector<Polygon> loadPolygonsFromGeoJson(const std::string& path, int defaul
     return polys;
 }
 
+int classPriority(int classId) {
+    switch (classId) {
+        case 1: return 6; // water
+        case 2: return 5; // urban
+        case 6: return 4; // rock/bare
+        case 3: return 3; // forest
+        case 5: return 2; // farmland/scrub
+        case 4: return 1; // grass
+        default: return 0;
+    }
+}
+
+int landcoverClassFromValue(std::uint16_t v) {
+    if (v == 0) return 0;
+    if (v <= 6) return static_cast<int>(v);
+    switch (v) {
+        // ESA WorldCover 10m classes.
+        case 10: return 3; // tree cover
+        case 20: return 5; // shrubland
+        case 30: return 4; // grassland
+        case 40: return 5; // cropland
+        case 50: return 2; // built-up
+        case 60: return 6; // bare/sparse
+        case 70: return 6; // snow/ice
+        case 80: return 1; // permanent water
+        case 90: return 1; // wetlands
+        case 95: return 1; // wetlands/mangroves
+        case 100: return 6; // moss/lichen
+        // NLCD (US) common classes.
+        case 11: return 1; // open water
+        case 21: case 22: case 23: case 24: return 2; // developed
+        case 31: case 32: return 6; // barren
+        case 41: case 42: case 43: return 3; // forest
+        case 52: return 5; // shrub
+        case 71: case 72: case 73: case 74: return 4; // grass/herbaceous
+        case 81: case 82: return 5; // pasture/crops
+        default: return 0;
+    }
+}
+
+int sampleLandcoverClass(const LandcoverRaster& lc, double lon, double lat) {
+    if (!lc.valid || lc.width <= 0 || lc.height <= 0) {
+        return 0;
+    }
+    double px = (lon - lc.geo.originX) / lc.geo.pixelW;
+    double py = (lat - lc.geo.originY) / lc.geo.pixelH;
+    int ix = static_cast<int>(std::floor(px + 0.5));
+    int iy = static_cast<int>(std::floor(py + 0.5));
+    if (ix < 0 || iy < 0 || ix >= lc.width || iy >= lc.height) {
+        return 0;
+    }
+    std::uint16_t v = lc.data[static_cast<size_t>(iy) * lc.width + static_cast<size_t>(ix)];
+    return landcoverClassFromValue(v);
+}
+
+void fillMaskFromLandcover(std::vector<std::uint8_t>& mask, int maskRes,
+                           float tileMinX, float tileMinZ, float tileSize,
+                           const Projection& proj, const LandcoverRaster& lc) {
+    if (!lc.valid || maskRes <= 0) {
+        return;
+    }
+    for (int z = 0; z < maskRes; ++z) {
+        for (int x = 0; x < maskRes; ++x) {
+            float fx = (static_cast<float>(x) + 0.5f) / maskRes;
+            float fz = (static_cast<float>(z) + 0.5f) / maskRes;
+            float worldX = tileMinX + fx * tileSize;
+            float worldZ = tileMinZ + fz * tileSize;
+            double lon = 0.0;
+            double lat = 0.0;
+            unprojectToLonLat(proj, worldX, worldZ, lon, lat);
+            int cls = sampleLandcoverClass(lc, lon, lat);
+            mask[z * maskRes + x] = static_cast<std::uint8_t>(cls);
+        }
+    }
+}
+
 void rasterizePolygonsToMask(std::vector<std::uint8_t>& mask, int maskRes,
                              float tileMinX, float tileMinZ, float tileSize,
-                             const std::vector<Polygon>& polys, int classPriority) {
+                             const std::vector<Polygon>& polys, int targetClass) {
     if (maskRes <= 0) return;
     for (const auto& poly : polys) {
-        if (poly.classId != classPriority) continue;
+        if (poly.classId != targetClass) continue;
         if (poly.maxX <= tileMinX || poly.minX >= tileMinX + tileSize ||
             poly.maxZ <= tileMinZ || poly.minZ >= tileMinZ + tileSize) {
             continue;
@@ -462,10 +652,8 @@ void rasterizePolygonsToMask(std::vector<std::uint8_t>& mask, int maskRes,
                 float worldZ = tileMinZ + fz * tileSize;
                 if (pointInPolygon(poly.ring, worldX, worldZ)) {
                     std::uint8_t& cell = mask[z * maskRes + x];
-                    if (classPriority == 1) {
-                        cell = 1;
-                    } else if (cell == 0) {
-                        cell = static_cast<std::uint8_t>(classPriority);
+                    if (targetClass == 1 || classPriority(targetClass) >= classPriority(cell)) {
+                        cell = static_cast<std::uint8_t>(targetClass);
                     }
                 }
             }
@@ -512,9 +700,7 @@ void rasterizePolygonsToMaskList(std::vector<std::uint8_t>& mask, int maskRes,
                 float worldZ = tileMinZ + fz * tileSize;
                 if (pointInPolygon(poly.ring, worldX, worldZ)) {
                     std::uint8_t& cell = mask[z * maskRes + x];
-                    if (poly.classId == 1) {
-                        cell = 1;
-                    } else if (cell == 0) {
+                    if (poly.classId == 1 || classPriority(poly.classId) >= classPriority(cell)) {
                         cell = static_cast<std::uint8_t>(poly.classId);
                     }
                 }
@@ -533,11 +719,21 @@ int main(int argc, char** argv) {
     }
 
     if (cfg.maskResolution > 0 && cfg.osmPath.empty()) {
-        std::cerr << "Mask resolution set but no OSM file provided.\n";
+        if (cfg.landcoverPath.empty()) {
+            std::cerr << "Mask resolution set but no OSM or landcover file provided.\n";
+            return 1;
+        }
+    }
+    if (!cfg.landcoverPath.empty() && cfg.maskResolution <= 0) {
+        std::cerr << "Landcover provided but mask resolution not set.\n";
         return 1;
     }
     if (!cfg.osmPath.empty() && !cfg.hasBbox) {
         std::cerr << "OSM provided but bbox missing; use --xmin/--ymin/--xmax/--ymax.\n";
+        return 1;
+    }
+    if (!cfg.landcoverPath.empty() && !cfg.hasBbox) {
+        std::cerr << "Landcover provided but bbox missing; use --xmin/--ymin/--xmax/--ymax.\n";
         return 1;
     }
 
@@ -554,6 +750,11 @@ int main(int argc, char** argv) {
 
     if (cfg.sizeX <= 0.0f || cfg.sizeZ <= 0.0f) {
         std::cerr << "Size must be set via --size-x/--size-z or bbox.\n";
+        return 1;
+    }
+
+    LandcoverRaster landcover = loadLandcoverRaster(cfg.landcoverPath);
+    if (!cfg.landcoverPath.empty() && !landcover.valid) {
         return 1;
     }
 
@@ -904,8 +1105,12 @@ int main(int argc, char** argv) {
             std::filesystem::path metaPath = tilesDir / ("tile_" + std::to_string(tx) + "_" + std::to_string(ty) + ".meta.json");
             writeTileMeta(metaPath, tx, ty, localMinH, localMaxH, cfg.gridResolution);
 
-            if (cfg.maskResolution > 0 && !allPolys.empty()) {
+            if (cfg.maskResolution > 0 && (landcover.valid || !allPolys.empty())) {
                 std::vector<std::uint8_t> mask(static_cast<size_t>(cfg.maskResolution * cfg.maskResolution), 0);
+                if (landcover.valid) {
+                    fillMaskFromLandcover(mask, cfg.maskResolution, tileMinX, tileMinZ,
+                                          cfg.tileSize, proj, landcover);
+                }
                 auto bucketIt = polyBuckets.find(tileKey(tx, ty));
                 if (bucketIt != polyBuckets.end()) {
                     rasterizePolygonsToMaskList(mask, cfg.maskResolution, tileMinX, tileMinZ,
@@ -946,7 +1151,7 @@ int main(int argc, char** argv) {
     manifest << "  \"gridResolution\": " << cfg.gridResolution << ",\n";
     manifest << "  \"heightScaleMeters\": 1.0,\n";
     manifest << "  \"boundsENU\": [" << minX << ", " << minZ << ", " << maxX << ", " << maxZ << "],\n";
-    if (cfg.maskResolution > 0 && !cfg.osmPath.empty()) {
+    if (cfg.maskResolution > 0 && (!cfg.osmPath.empty() || landcover.valid)) {
         manifest << "  \"maskResolution\": " << cfg.maskResolution << ",\n";
         manifest << "  \"availableLayers\": [\"height\", \"mask\"],\n";
     } else {

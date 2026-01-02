@@ -41,6 +41,10 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
     m_textureSettings.maskFeatherMeters = texConfig.value("maskFeatherMeters", m_textureSettings.maskFeatherMeters);
     m_textureSettings.maskJitterMeters = texConfig.value("maskJitterMeters", m_textureSettings.maskJitterMeters);
     m_textureSettings.maskEdgeNoise = texConfig.value("maskEdgeNoise", m_textureSettings.maskEdgeNoise);
+    m_textureSettings.shoreWidth = texConfig.value("shoreWidth", m_textureSettings.shoreWidth);
+    m_textureSettings.shoreFeather = texConfig.value("shoreFeather", m_textureSettings.shoreFeather);
+    m_textureSettings.wetStrength = texConfig.value("wetStrength", m_textureSettings.wetStrength);
+    m_textureSettings.farmTexScale = texConfig.value("farmTexScale", m_textureSettings.farmTexScale);
     auto loadTint = [&](const char* key, Vec3& out) {
         if (texConfig.contains(key) && texConfig[key].is_array() && texConfig[key].size() == 3) {
             out = Vec3(texConfig[key][0].get<float>(),
@@ -162,6 +166,10 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     shader->setFloat("uTerrainMaskFeatherMeters", m_textureSettings.maskFeatherMeters);
     shader->setFloat("uTerrainMaskJitterMeters", m_textureSettings.maskJitterMeters);
     shader->setFloat("uTerrainMaskEdgeNoise", m_textureSettings.maskEdgeNoise);
+    shader->setFloat("uTerrainShoreWidth", m_textureSettings.shoreWidth);
+    shader->setFloat("uTerrainShoreFeather", m_textureSettings.shoreFeather);
+    shader->setFloat("uTerrainWetStrength", m_textureSettings.wetStrength);
+    shader->setFloat("uTerrainFarmTexScale", m_textureSettings.farmTexScale);
 
     grass->bind(0);
     shader->setInt("uTerrainTexGrass", 0);

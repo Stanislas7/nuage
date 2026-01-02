@@ -37,7 +37,7 @@ This plan focuses on a compiled, data-driven terrain pipeline that approaches th
 - Airport/runway data (already present).
 
 - [ ] Choose a standard DEM resolution for LOD0 (e.g., 10-30m) and LOD1/2.
-- [ ] Pick a landcover source and map classes to terrain materials (forest, crop, scrub, rock, wetland).
+- [x] Pick a landcover source and map classes to terrain materials (forest, crop, scrub, rock, wetland).
 - [ ] Decide mask resolution defaults (e.g., 256 or 512) to reduce blockiness.
 - [ ] Decide tile size (e.g., 2km) and ensure consistent alignment across DEM and masks.
 - [ ] Document data sources and preprocessing steps.
@@ -58,7 +58,7 @@ This plan focuses on a compiled, data-driven terrain pipeline that approaches th
 - [ ] Add a landclass priority order to avoid hard edges (water > rock > urban > forest > crop > grass).
 
 ### 2.3 Biome Classification
-- [ ] Convert landcover classes into a small, curated biome set.
+- [x] Convert landcover classes into a small, curated biome set.
 - [ ] Bake biome IDs per tile (for texture selection and tinting).
 - [ ] Add elevation and slope modifiers for snow/rock thresholds.
 

@@ -81,7 +81,11 @@
     "waterColor": [0.08, 0.22, 0.38],
     "maskFeatherMeters": 90.0,
     "maskJitterMeters": 30.0,
-    "maskEdgeNoise": 0.45
+    "maskEdgeNoise": 0.45,
+    "shoreWidth": 0.55,
+    "shoreFeather": 0.22,
+    "wetStrength": 0.4,
+    "farmTexScale": 0.1
   },
   "runways": {
     "enabled": true,

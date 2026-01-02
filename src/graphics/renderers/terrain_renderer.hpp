@@ -58,6 +58,10 @@ public:
         float maskFeatherMeters = 42.0f;
         float maskJitterMeters = 18.0f;
         float maskEdgeNoise = 0.35f;
+        float shoreWidth = 0.45f;
+        float shoreFeather = 0.18f;
+        float wetStrength = 0.35f;
+        float farmTexScale = 0.12f;
     };
 
     struct TerrainSample {
