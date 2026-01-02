@@ -579,7 +579,6 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
     resource.y = y;
     resource.gridRes = builtGrid ? (m_compiledGridResolution + 1) : 0;
     resource.textured = false;
-    resource.procedural = false;
     resource.compiled = true;
     resource.hasGrid = builtGrid;
     if (builtGrid) {

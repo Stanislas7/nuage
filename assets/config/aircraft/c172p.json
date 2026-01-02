@@ -8,8 +8,9 @@
         "rollTrim": 0.12
     },
     "spawn": {
-        "position": [1672.816, 2.0, -300.398],
-        "airspeed": 0.0,
+        "position": [1672.816, 500.0, -300.398],
+        "snapToTerrain": false,
+        "airspeed": 65.0,
         "headingDeg": 310.0
     },
     "model": {

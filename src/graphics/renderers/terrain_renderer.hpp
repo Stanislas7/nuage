@@ -68,7 +68,6 @@ public:
     void shutdown();
     void setup(const std::string& configPath, AssetStore& assets);
     void render(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
-    bool isProcedural() const { return m_procedural; }
     bool isCompiled() const { return m_compiled; }
     bool treesEnabled() const { return m_treesEnabled; }
     bool hasCompiledOrigin() const { return m_compiledOriginValid; }
@@ -82,12 +81,8 @@ public:
     void preloadPhysicsAt(float worldX, float worldZ, int radius = 0);
     int compiledVisibleRadius() const { return m_compiledVisibleRadius; }
     int compiledLoadsPerFrame() const { return m_compiledLoadsPerFrame; }
-    int proceduralVisibleRadius() const { return m_procVisibleRadius; }
-    int proceduralLoadsPerFrame() const { return m_procLoadsPerFrame; }
     void setCompiledVisibleRadius(int radius);
     void setCompiledLoadsPerFrame(int loads);
-    void setProceduralVisibleRadius(int radius);
-    void setProceduralLoadsPerFrame(int loads);
     void setTreesEnabled(bool enabled);
     TerrainVisualSettings& visuals() { return m_visuals; }
     const TerrainVisualSettings& visuals() const { return m_visuals; }
@@ -115,21 +110,14 @@ private:
         int y = 0;
         int gridRes = 0;
         bool textured = false;
-        bool procedural = false;
         bool compiled = false;
         bool hasGrid = false;
         std::vector<float> gridVerts;
     };
 
-    void setupProcedural(const std::string& configPath);
     void setupCompiled(const std::string& configPath);
-    void renderProcedural(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
     void renderCompiled(const Mat4& viewProjection, const Vec3& sunDir, const Vec3& cameraPos);
-    TileResource* ensureProceduralTileLoaded(int x, int y, bool force = false);
     TileResource* ensureCompiledTileLoaded(int x, int y, bool force = false);
-    float proceduralHeight(float worldX, float worldZ) const;
-    Vec3 proceduralTileTint(int tileX, int tileY) const;
-    Vec3 proceduralNormal(float worldX, float worldZ) const;
     std::int64_t packedTileKey(int x, int y) const;
     void applyTextureConfig(const nlohmann::json& config, const std::string& configPath);
     void bindTerrainTextures(Shader* shader, bool useMasks) const;
@@ -175,13 +163,10 @@ private:
     };
     std::vector<RunwayCollider> m_runwayColliders;
 
-    bool m_procedural = false;
     bool m_compiled = false;
     AssetStore* m_assets = nullptr;
     std::unordered_map<std::string, TileResource> m_tileCache;
 
-    std::unordered_map<std::string, int> m_procTileCreateCounts;
-    int m_procTileRebuilds = 0;
     std::unordered_map<std::string, int> m_compiledTileCreateCounts;
     int m_compiledTileRebuilds = 0;
 
@@ -210,20 +195,6 @@ private:
     float m_treesMaxDistance = 5000.0f;
     float m_treesMaxDistanceSq = 0.0f;
     int m_treesSeed = 1337;
-
-    float m_procTileSizeMeters = 2000.0f;
-    int m_procGridResolution = 129;
-    int m_procVisibleRadius = 1;
-    int m_procLoadsPerFrame = 2;
-    float m_procHeightAmplitude = 250.0f;
-    float m_procHeightBase = 0.0f;
-    float m_procFrequency = 0.0006f;
-    float m_procFrequency2 = 0.0013f;
-    int m_procSeed = 1337;
-    float m_procBorderWidth = 0.03f;
-    bool m_procDebugBorders = true;
-    bool m_procDebugLog = true;
-    int m_procTilesLoadedThisFrame = 0;
 
     TerrainVisualSettings m_visuals;
 };

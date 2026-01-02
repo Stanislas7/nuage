@@ -84,8 +84,7 @@ void DebugOverlay::draw(bool active, UIManager& ui) {
     }
 
     const bool compiled = terrain->isCompiled();
-    const bool procedural = terrain->isProcedural();
-    const char* mode = compiled ? "Compiled" : (procedural ? "Procedural" : "None");
+    const char* mode = compiled ? "Compiled" : "None";
     float modeX = m_panelX + kPanelWidth - kPaddingX - 110.0f;
     ui.drawText(mode, modeX, m_panelY + kHeaderTextY + 2.0f,
                 Anchor::TopLeft, 0.5f, kTextSub, 0.9f);
@@ -101,8 +100,8 @@ void DebugOverlay::draw(bool active, UIManager& ui) {
         ui.drawText(value, m_panelX + kPaddingX + kValueOffset, y, Anchor::TopLeft, 0.5f, kTextSub, 0.95f);
     };
 
-    int visibleRadius = compiled ? terrain->compiledVisibleRadius() : terrain->proceduralVisibleRadius();
-    int loadsPerFrame = compiled ? terrain->compiledLoadsPerFrame() : terrain->proceduralLoadsPerFrame();
+    int visibleRadius = compiled ? terrain->compiledVisibleRadius() : 0;
+    int loadsPerFrame = compiled ? terrain->compiledLoadsPerFrame() : 0;
 
     drawRow("Visible Radius", std::to_string(visibleRadius), row++);
     drawRow("Loads / Frame", std::to_string(loadsPerFrame), row++);
@@ -230,8 +229,6 @@ void DebugOverlay::buildUi(UIManager& ui) {
             if (!terrain) return;
             if (terrain->isCompiled()) {
                 terrain->setCompiledVisibleRadius(terrain->compiledVisibleRadius() - 1);
-            } else if (terrain->isProcedural()) {
-                terrain->setProceduralVisibleRadius(terrain->proceduralVisibleRadius() - 1);
             }
         });
     }
@@ -241,8 +238,6 @@ void DebugOverlay::buildUi(UIManager& ui) {
             if (!terrain) return;
             if (terrain->isCompiled()) {
                 terrain->setCompiledVisibleRadius(terrain->compiledVisibleRadius() + 1);
-            } else if (terrain->isProcedural()) {
-                terrain->setProceduralVisibleRadius(terrain->proceduralVisibleRadius() + 1);
             }
         });
     }
@@ -252,8 +247,6 @@ void DebugOverlay::buildUi(UIManager& ui) {
             if (!terrain) return;
             if (terrain->isCompiled()) {
                 terrain->setCompiledLoadsPerFrame(terrain->compiledLoadsPerFrame() - 1);
-            } else if (terrain->isProcedural()) {
-                terrain->setProceduralLoadsPerFrame(terrain->proceduralLoadsPerFrame() - 1);
             }
         });
     }
@@ -263,8 +256,6 @@ void DebugOverlay::buildUi(UIManager& ui) {
             if (!terrain) return;
             if (terrain->isCompiled()) {
                 terrain->setCompiledLoadsPerFrame(terrain->compiledLoadsPerFrame() + 1);
-            } else if (terrain->isProcedural()) {
-                terrain->setProceduralLoadsPerFrame(terrain->proceduralLoadsPerFrame() + 1);
             }
         });
     }

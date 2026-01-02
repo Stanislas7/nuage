@@ -47,10 +47,6 @@ void TerrainRenderer::loadRunways(const nlohmann::json& config, const std::strin
     }
     bool snapToTerrain = runwaysConfig.value("snapToTerrain", true);
     auto sampleTerrainHeight = [&](float x, float z, float& out) -> bool {
-        if (m_procedural) {
-            out = proceduralHeight(x, z);
-            return true;
-        }
         if (!m_compiledTiles.empty()) {
             int tx = static_cast<int>(std::floor(x / m_compiledTileSizeMeters));
             int ty = static_cast<int>(std::floor(z / m_compiledTileSizeMeters));

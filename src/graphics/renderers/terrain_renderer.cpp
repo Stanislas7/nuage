@@ -24,12 +24,9 @@ void TerrainRenderer::init(AssetStore& assets) {
 
 void TerrainRenderer::shutdown() {
     m_tileCache.clear();
-    m_procTileCreateCounts.clear();
     m_compiledTileCreateCounts.clear();
     m_compiledTiles.clear();
-    m_procTilesLoadedThisFrame = 0;
     m_compiledTilesLoadedThisFrame = 0;
-    m_procTileRebuilds = 0;
     m_compiledTileRebuilds = 0;
     m_mesh = nullptr;
     m_shader = nullptr;
@@ -41,7 +38,6 @@ void TerrainRenderer::shutdown() {
     m_texDirt = nullptr;
     m_texUrban = nullptr;
     m_assets = nullptr;
-    m_procedural = false;
     m_compiled = false;
 }
 
@@ -53,14 +49,6 @@ void TerrainRenderer::setCompiledLoadsPerFrame(int loads) {
     m_compiledLoadsPerFrame = std::clamp(loads, 1, kMaxLoadsPerFrame);
 }
 
-void TerrainRenderer::setProceduralVisibleRadius(int radius) {
-    m_procVisibleRadius = std::clamp(radius, 0, kMaxVisibleRadius);
-}
-
-void TerrainRenderer::setProceduralLoadsPerFrame(int loads) {
-    m_procLoadsPerFrame = std::clamp(loads, 1, kMaxLoadsPerFrame);
-}
-
 void TerrainRenderer::setTreesEnabled(bool enabled) {
     if (m_treesEnabled == enabled) {
         return;
@@ -68,20 +56,15 @@ void TerrainRenderer::setTreesEnabled(bool enabled) {
     m_treesEnabled = enabled;
     if (!m_tileCache.empty()) {
         m_tileCache.clear();
-        m_procTileCreateCounts.clear();
         m_compiledTileCreateCounts.clear();
-        m_procTileRebuilds = 0;
         m_compiledTileRebuilds = 0;
     }
 }
 
 void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_assets = &assets;
-    m_procedural = false;
     m_compiled = false;
     m_tileCache.clear();
-    m_procTileCreateCounts.clear();
-    m_procTileRebuilds = 0;
     m_compiledTileCreateCounts.clear();
     m_compiledTileRebuilds = 0;
     m_mesh = nullptr;
@@ -111,19 +94,13 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     }
 
     auto terrainConfigOpt = loadJsonConfig(configPath);
-    if (terrainConfigOpt && terrainConfigOpt->value("procedural", false)) {
-        setupProcedural(configPath);
-        if (m_procedural) {
-            return;
-        }
-    }
     if (terrainConfigOpt && terrainConfigOpt->contains("compiledManifest")) {
         setupCompiled(configPath);
         if (m_compiled) {
             return;
         }
     }
-    if (terrainConfigOpt && !m_procedural && !m_compiled) {
+    if (terrainConfigOpt && !m_compiled) {
         std::cerr << "Unsupported terrain config; using flat terrain fallback.\n";
     }
 
@@ -131,10 +108,6 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
 }
 
 void TerrainRenderer::render(const Mat4& vp, const Vec3& sunDir, const Vec3& cameraPos) {
-    if (m_procedural) {
-        renderProcedural(vp, sunDir, cameraPos);
-        return;
-    }
     if (m_compiled) {
         renderCompiled(vp, sunDir, cameraPos);
         return;
@@ -157,11 +130,6 @@ bool TerrainRenderer::sampleSurface(float worldX, float worldZ, TerrainSample& o
         return true;
     }
 
-    if (m_procedural) {
-        outSample.height = proceduralHeight(worldX, worldZ);
-        outSample.normal = proceduralNormal(worldX, worldZ);
-        return true;
-    }
     if (!m_compiled) {
         return false;
     }
@@ -178,11 +146,6 @@ bool TerrainRenderer::sampleSurfaceNoLoad(float worldX, float worldZ, TerrainSam
         return true;
     }
 
-    if (m_procedural) {
-        outSample.height = proceduralHeight(worldX, worldZ);
-        outSample.normal = proceduralNormal(worldX, worldZ);
-        return true;
-    }
     if (!m_compiled) {
         return false;
     }
@@ -220,16 +183,6 @@ bool TerrainRenderer::sampleSurfaceHeightNoLoad(float worldX, float worldZ, floa
 }
 
 void TerrainRenderer::preloadPhysicsAt(float worldX, float worldZ, int radius) {
-    if (m_procedural) {
-        int cx = static_cast<int>(std::floor(worldX / m_procTileSizeMeters));
-        int cy = static_cast<int>(std::floor(worldZ / m_procTileSizeMeters));
-        for (int dy = -radius; dy <= radius; ++dy) {
-            for (int dx = -radius; dx <= radius; ++dx) {
-                ensureProceduralTileLoaded(cx + dx, cy + dy, true);
-            }
-        }
-        return;
-    }
     if (!m_compiled) {
         return;
     }

@@ -33,6 +33,7 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
     Vec3 initialPos(0, 100, 0);
     double initialAirspeed = 0.0;
     double initialHeadingDeg = 0.0;
+    bool snapToTerrain = true;
     if (json.contains(ConfigKeys::SPAWN)) {
         const auto& spawn = json[ConfigKeys::SPAWN];
         if (spawn.contains(ConfigKeys::POSITION)) {
@@ -40,9 +41,10 @@ void Aircraft::Instance::init(const std::string& configPath, AssetStore& assets,
         }
         initialAirspeed = spawn.value(ConfigKeys::AIRSPEED, 0.0);
         initialHeadingDeg = spawn.value(ConfigKeys::HEADING_DEG, initialHeadingDeg);
+        snapToTerrain = spawn.value(ConfigKeys::SNAP_TO_TERRAIN, snapToTerrain);
     }
     // If terrain is available, snap the spawn altitude to the terrain height to avoid hovering.
-    if (terrain) {
+    if (terrain && snapToTerrain) {
         float groundY = 0.0f;
         if (terrain->sampleSurfaceHeight(initialPos.x, initialPos.z, groundY)) {
             initialPos.y = groundY + 1.0f; // small clearance for wheels
