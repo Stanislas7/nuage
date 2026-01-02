@@ -140,6 +140,7 @@ private:
     Shader* m_texturedShader = nullptr;
     TerrainTextureSettings m_textureSettings;
     Texture* m_texGrass = nullptr;
+    Texture* m_texGrassB = nullptr;
     Texture* m_texForest = nullptr;
     Texture* m_texRock = nullptr;
     Texture* m_texDirt = nullptr;

@@ -93,6 +93,7 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
 
     bool loadedAny = false;
     loadedAny |= loadTex("grass", m_texGrass, "terrain_grass");
+    loadTex("grassB", m_texGrassB, "terrain_grass_b");
     loadedAny |= loadTex("forest", m_texForest, "terrain_forest");
     loadedAny |= loadTex("rock", m_texRock, "terrain_rock");
     loadedAny |= loadTex("dirt", m_texDirt, "terrain_dirt");
@@ -116,6 +117,7 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     }
 
     Texture* grass = m_texGrass;
+    Texture* grassB = m_texGrassB ? m_texGrassB : grass;
     Texture* forest = m_texForest ? m_texForest : grass;
     Texture* rock = m_texRock ? m_texRock : grass;
     Texture* dirt = m_texDirt ? m_texDirt : grass;
@@ -171,6 +173,8 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     shader->setInt("uTerrainTexDirt", 3);
     urban->bind(4);
     shader->setInt("uTerrainTexUrban", 4);
+    grassB->bind(14);
+    shader->setInt("uTerrainTexGrassB", 14);
     auto bindOpt = [&](Texture* tex, int unit, const char* name) {
         if (!tex) return;
         tex->bind(unit);

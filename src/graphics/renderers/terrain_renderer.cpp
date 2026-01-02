@@ -33,6 +33,7 @@ void TerrainRenderer::shutdown() {
     m_texturedShader = nullptr;
     m_textureSettings = TerrainTextureSettings{};
     m_texGrass = nullptr;
+    m_texGrassB = nullptr;
     m_texForest = nullptr;
     m_texRock = nullptr;
     m_texDirt = nullptr;
@@ -71,6 +72,7 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_mesh = nullptr;
     m_textureSettings = TerrainTextureSettings{};
     m_texGrass = nullptr;
+    m_texGrassB = nullptr;
     m_texForest = nullptr;
     m_texRock = nullptr;
     m_texDirt = nullptr;

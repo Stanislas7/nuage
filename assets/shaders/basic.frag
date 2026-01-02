@@ -30,6 +30,7 @@ uniform float uTerrainDistanceContrastLoss = 0.25;
 uniform bool uTerrainUseTextures = false;
 uniform bool uTerrainUseMasks = false;
 uniform sampler2D uTerrainTexGrass;
+uniform sampler2D uTerrainTexGrassB;
 uniform sampler2D uTerrainTexForest;
 uniform sampler2D uTerrainTexRock;
 uniform sampler2D uTerrainTexDirt;
@@ -210,6 +211,7 @@ void main() {
         vec2 urbanUvA = rotate90(uv, rotA + 0.5);
         vec2 urbanUvB = rotate90(uv, rotB + 0.5);
         vec3 grassTex = texture(uTerrainTexGrass, uv).rgb;
+        vec3 grassTexAlt = texture(uTerrainTexGrassB, uv * 1.35 + macroOffset * 3.5).rgb;
         vec3 forestTex = texture(uTerrainTexForest, uv).rgb;
         vec3 urbanTex = mix(texture(uTerrainTexUrban, urbanUvA).rgb,
                             texture(uTerrainTexUrban, urbanUvB).rgb,
@@ -217,7 +219,9 @@ void main() {
         vec3 rockTex = texture(uTerrainTexRock, uvDetail).rgb;
         vec3 dirtTex = texture(uTerrainTexDirt, uvDetail).rgb;
         vec3 gravelTex = texture(uTerrainTexRock, uvDetail * 1.7).rgb;
-        vec3 grassTexB = mix(grassTex, gravelTex, 0.35);
+        float grassMix = smoothstep(0.2, 0.85, macro);
+        vec3 grassTexB = mix(grassTex, grassTexAlt, grassMix);
+        grassTexB = mix(grassTexB, gravelTex, 0.25);
         vec3 grassNormal = normalize(texture(uTerrainTexGrassNormal, uvDetail).xyz * 2.0 - 1.0);
         vec3 dirtNormal = normalize(texture(uTerrainTexDirtNormal, uvDetail).xyz * 2.0 - 1.0);
         vec3 rockNormal = normalize(texture(uTerrainTexRockNormal, uvDetail).xyz * 2.0 - 1.0);

@@ -37,6 +37,7 @@
   "terrainTextures": {
     "enabled": true,
     "grass": "../textures/terrain/cc0/Grass003_1K-JPG_Color.jpg",
+    "grassB": "../textures/terrain/sparse_grass_diff_2k.jpg",
     "forest": "../textures/terrain/forest_ground_04_diff_2k.png",
     "rock": "../textures/terrain/cc0/Rock033_1K-JPG_Color.jpg",
     "dirt": "../textures/terrain/cc0/Ground029_1K-JPG_Color.jpg",
