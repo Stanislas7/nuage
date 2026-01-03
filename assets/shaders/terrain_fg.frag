@@ -62,23 +62,6 @@ int sampleLandclass(vec2 worldPos) {
     return int(floor(cls + 0.5));
 }
 
-int selectTextureIndex(int landclass, float picker) {
-    vec4 lut = texelFetch(uLandclassLut, ivec2(landclass, 0), 0);
-    int count = int(floor(lut.r * 255.0 + 0.5));
-    int idx0 = int(floor(lut.g * 255.0 + 0.5));
-    int idx1 = int(floor(lut.b * 255.0 + 0.5));
-    int idx2 = int(floor(lut.a * 255.0 + 0.5));
-    count = clamp(count, 1, 3);
-    if (count == 1) {
-        return idx0;
-    }
-    int slot = int(floor(picker * float(count)));
-    slot = clamp(slot, 0, count - 1);
-    if (slot == 1) return idx1;
-    if (slot == 2) return idx2;
-    return idx0;
-}
-
 void main() {
     vec3 normal = normalize(vNormal);
     float slope = 1.0 - dot(normal, vec3(0.0, 1.0, 0.0));
@@ -87,14 +70,29 @@ void main() {
     vec3 lighting = uAmbientColor + uLightColor * diffuse;
     vec3 baseColor = uUseUniformColor ? uColor : vColor;
 
+    bool isWater = false;
     if (uTerrainUseTextures) {
         int landclass = sampleLandclass(vWorldPos.xz);
+        vec4 lut = texelFetch(uLandclassLut, ivec2(landclass, 0), 0);
+        int countRaw = int(floor(lut.r * 255.0 + 0.5));
+        isWater = (countRaw & 128) != 0;
+        int count = clamp(countRaw & 127, 1, 3);
+        int idx0 = int(floor(lut.g * 255.0 + 0.5));
+        int idx1 = int(floor(lut.b * 255.0 + 0.5));
+        int idx2 = int(floor(lut.a * 255.0 + 0.5));
+
         float texScale = uLandclassTexScale[landclass];
         if (texScale <= 0.0) {
             texScale = 0.0005;
         }
-        float picker = hash(floor(vWorldPos.xz * 0.002));
-        int layer = selectTextureIndex(landclass, picker);
+        int layer = idx0;
+        if (!isWater && count > 1) {
+            float picker = hash(floor(vWorldPos.xz * 0.002));
+            int slot = int(floor(picker * float(count)));
+            slot = clamp(slot, 0, count - 1);
+            if (slot == 1) layer = idx1;
+            if (slot == 2) layer = idx2;
+        }
         vec2 uv = vWorldPos.xz * texScale;
         baseColor = texture(uTerrainTexArray, vec3(uv, float(layer))).rgb;
     }
@@ -107,12 +105,14 @@ void main() {
         float n = noise(vWorldPos.xz * uTerrainNoiseScale);
         baseColor *= (0.85 + uTerrainNoiseStrength * n);
 
-        float heightRange = max(uTerrainHeightMax - uTerrainHeightMin, 1.0);
-        float h = clamp((vWorldPos.y - uTerrainHeightMin) / heightRange, 0.0, 1.0);
-        baseColor = mix(baseColor * 1.05, baseColor * 0.8, h);
+        if (!isWater) {
+            float heightRange = max(uTerrainHeightMax - uTerrainHeightMin, 1.0);
+            float h = clamp((vWorldPos.y - uTerrainHeightMin) / heightRange, 0.0, 1.0);
+            baseColor = mix(baseColor * 1.05, baseColor * 0.8, h);
 
-        float rock = smoothstep(uTerrainSlopeStart, uTerrainSlopeEnd, slope);
-        baseColor = mix(baseColor, baseColor * (1.0 - uTerrainSlopeDarken), rock);
+            float rock = smoothstep(uTerrainSlopeStart, uTerrainSlopeEnd, slope);
+            baseColor = mix(baseColor, baseColor * (1.0 - uTerrainSlopeDarken), rock);
+        }
     }
 
     vec3 litColor = baseColor * lighting;

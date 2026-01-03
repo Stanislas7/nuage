@@ -555,13 +555,14 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
     int fallbackIndex = *fallbackOpt;
 
     std::vector<std::uint8_t> lutData(256 * 4, 0);
-    auto writeLut = [&](int id, int count, int idx0, int idx1, int idx2) {
+    auto writeLut = [&](int id, int count, int idx0, int idx1, int idx2, bool isWater) {
         int clampedCount = std::clamp(count, 1, 3);
+        int countFlag = (clampedCount & 0x7F) | (isWater ? 0x80 : 0x00);
         auto clampIndex = [&](int idx) {
             return static_cast<std::uint8_t>(std::clamp(idx, 0, 255));
         };
         size_t base = static_cast<size_t>(id) * 4;
-        lutData[base + 0] = static_cast<std::uint8_t>(clampedCount);
+        lutData[base + 0] = static_cast<std::uint8_t>(countFlag);
         lutData[base + 1] = clampIndex(idx0);
         lutData[base + 2] = clampIndex(idx1);
         lutData[base + 3] = clampIndex(idx2);
@@ -569,7 +570,7 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
 
     m_fgLandclassTexScale.fill(1.0f / 2000.0f);
     for (int id = 0; id < 256; ++id) {
-        writeLut(id, 1, fallbackIndex, fallbackIndex, fallbackIndex);
+        writeLut(id, 1, fallbackIndex, fallbackIndex, fallbackIndex, false);
     }
 
     for (const auto& entry : lib.landclassEntries()) {
@@ -598,10 +599,14 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
         if (indices.empty()) {
             indices.push_back(fallbackIndex);
         }
+        bool isWater = (m_fgLandclassFlags[static_cast<size_t>(entry.id)] & 0x1) != 0;
+        if (isWater && indices.size() > 1) {
+            indices.resize(1);
+        }
         int idx0 = indices[0];
         int idx1 = indices.size() > 1 ? indices[1] : indices[0];
         int idx2 = indices.size() > 2 ? indices[2] : indices[0];
-        writeLut(entry.id, static_cast<int>(indices.size()), idx0, idx1, idx2);
+        writeLut(entry.id, static_cast<int>(indices.size()), idx0, idx1, idx2, isWater);
 
         float sizeMeters = mat.xsize > 0.0f ? mat.xsize : mat.ysize;
         if (sizeMeters <= 0.0f) {
