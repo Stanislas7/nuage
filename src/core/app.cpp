@@ -42,7 +42,7 @@ bool App::init(const AppConfig& config) {
 
     FlightConfig flight;
     flight.aircraftPath = "assets/config/aircraft/c172p.json";
-    flight.terrainPath = "assets/config/terrain.json";
+    flight.terrainPath = "assets/config/terrain_flightgear.json";
     if (!startFlight(flight)) {
         std::cerr << "Failed to start flight session" << std::endl;
         return false;

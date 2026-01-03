@@ -19,6 +19,11 @@
             "name": "ui",
             "vertex": "assets/shaders/ui.vert",
             "fragment": "assets/shaders/ui.frag"
+        },
+        {
+            "name": "terrain_fg",
+            "vertex": "assets/shaders/terrain_fg.vert",
+            "fragment": "assets/shaders/terrain_fg.frag"
         }
     ]
 }

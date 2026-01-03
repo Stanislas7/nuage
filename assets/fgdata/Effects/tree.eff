@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<PropertyList>
+  <name>Effects/tree</name>
+
+  <parameters>
+    <texture n="0">
+      <!-- texture[0]/image written by TreeBin.cxx - base colour -->
+    </texture>
+    <texture n="1">
+      <!-- texture[1]/image written by TreeBin.cxx - normal map -->
+    </texture>
+    <num_deciduous_trees>0</num_deciduous_trees>
+    <use_forest_effect>true</use_forest_effect>
+    <forest_effect_size>200.0</forest_effect_size>
+    <forest_effect_shape>1.5</forest_effect_shape>
+    <snow_level><use>/environment/snow-level-m</use></snow_level>
+    <season><use>/environment/tree-season</use></season>
+    <cseason><use>/environment/season</use></cseason>
+    <windE><use>/environment/sea/surface/wind-from-east-fps</use></windE>
+    <windN><use>/environment/sea/surface/wind-from-north-fps</use></windN>
+  </parameters>
+
+  <technique n="109">
+    <scheme>hdr-geometry</scheme>
+    <predicate>
+      <property>/sim/rendering/random-vegetation</property>
+    </predicate>
+    <pass>
+      <depth>
+        <enabled>true</enabled>
+        <function>less</function>
+        <write-mask>true</write-mask>
+      </depth>
+      <texture-unit>
+        <unit>0</unit>
+        <type>2d</type>
+        <image><use>texture[0]/image</use></image>
+        <filter>linear-mipmap-linear</filter>
+        <wrap-s>clamp-to-edge</wrap-s>
+        <wrap-t>clamp-to-edge</wrap-t>
+      </texture-unit>
+      <texture-unit>
+        <unit>1</unit>
+        <type>2d</type>
+        <image><use>texture[1]/image</use></image>
+        <filter>linear-mipmap-linear</filter>
+        <wrap-s>clamp-to-edge</wrap-s>
+        <wrap-t>clamp-to-edge</wrap-t>
+      </texture-unit>
+      <blend>0</blend>
+      <rendering-hint>opaque</rendering-hint>
+      <cull-face>off</cull-face>
+      <program>
+        <vertex-shader>Shaders/HDR/tree.vert</vertex-shader>
+        <vertex-shader>Shaders/HDR/noise.glsl</vertex-shader>
+        <vertex-shader>Shaders/HDR/logarithmic_depth.glsl</vertex-shader>
+        <fragment-shader>Shaders/HDR/tree.frag</fragment-shader>
+        <fragment-shader>Shaders/HDR/logarithmic_depth.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/gbuffer_pack.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/normal_encoding.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/color.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/dither.glsl</fragment-shader>
+        <attribute>
+          <name>instancePosition</name>
+          <index>6</index>
+        </attribute>
+      </program>
+      <uniform>
+        <name>color_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">0</value>
+      </uniform>
+      <uniform>
+        <name>normal_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">1</value>
+      </uniform>
+      <uniform>
+        <name>snow_level</name>
+        <type>float</type>
+        <value><use>snow_level</use></value>
+      </uniform>
+      <uniform>
+        <name>season</name>
+        <type>float</type>
+        <value><use>season</use></value>
+      </uniform>
+      <uniform>
+        <name>cseason</name>
+        <type>float</type>
+        <value><use>cseason</use></value>
+      </uniform>
+      <uniform>
+        <name>num_deciduous_trees</name>
+        <type>int</type>
+        <value><use>num_deciduous_trees</use></value>
+      </uniform>
+      <uniform>
+        <name>use_forest_effect</name>
+        <type>bool</type>
+        <value><use>use_forest_effect</use></value>
+      </uniform>
+      <uniform>
+        <name>forest_effect_size</name>
+        <type>float</type>
+        <value><use>forest_effect_size</use></value>
+      </uniform>
+      <uniform>
+        <name>forest_effect_shape</name>
+        <type>float</type>
+        <value><use>forest_effect_shape</use></value>
+      </uniform>
+      <uniform>
+        <name>WindE</name>
+        <type>float</type>
+        <value><use>windE</use></value>
+      </uniform>
+      <uniform>
+        <name>WindN</name>
+        <type>float</type>
+        <value><use>windN</use></value>
+      </uniform>
+    </pass>
+  </technique>
+</PropertyList>

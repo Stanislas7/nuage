@@ -19,6 +19,7 @@ constexpr int kMaxLoadsPerFrame = 8;
 void TerrainRenderer::init(AssetStore& assets) {
     m_shader = assets.getShader("basic");
     m_texturedShader = assets.getShader("textured");
+    m_fgShader = assets.getShader("terrain_fg");
     m_assets = &assets;
 }
 
@@ -31,6 +32,7 @@ void TerrainRenderer::shutdown() {
     m_mesh = nullptr;
     m_shader = nullptr;
     m_texturedShader = nullptr;
+    m_fgShader = nullptr;
     m_textureSettings = TerrainTextureSettings{};
     m_texGrass = nullptr;
     m_texGrassB = nullptr;
@@ -39,9 +41,20 @@ void TerrainRenderer::shutdown() {
     m_texDirt = nullptr;
     m_texDirtB = nullptr;
     m_texUrban = nullptr;
+    m_texWater = nullptr;
+    m_fgTextureArray.reset();
+    m_fgLandclassTexCount.fill(0);
+    m_fgLandclassTexIndex0.fill(0);
+    m_fgLandclassTexIndex1.fill(0);
+    m_fgLandclassTexIndex2.fill(0);
+    m_fgLandclassTexIndex3.fill(0);
+    m_fgLandclassTexScale.fill(0.0f);
+    m_fgLandclassFlags.fill(0);
     m_assets = nullptr;
     m_compiled = false;
     m_debugMaskView = false;
+    m_useFlightGearMaterials = false;
+    m_compiledMaskIsLandclass = false;
 }
 
 void TerrainRenderer::setCompiledVisibleRadius(int radius) {
@@ -79,9 +92,20 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_texDirt = nullptr;
     m_texDirtB = nullptr;
     m_texUrban = nullptr;
+    m_texWater = nullptr;
+    m_fgTextureArray.reset();
+    m_fgLandclassTexCount.fill(0);
+    m_fgLandclassTexIndex0.fill(0);
+    m_fgLandclassTexIndex1.fill(0);
+    m_fgLandclassTexIndex2.fill(0);
+    m_fgLandclassTexIndex3.fill(0);
+    m_fgLandclassTexScale.fill(0.0f);
+    m_fgLandclassFlags.fill(0);
     m_visuals.resetDefaults();
     m_treesEnabled = false;
     m_debugMaskView = false;
+    m_useFlightGearMaterials = false;
+    m_compiledMaskIsLandclass = false;
     m_treesDensityPerSqKm = 80.0f;
     m_treesMinHeight = 4.0f;
     m_treesMaxHeight = 10.0f;

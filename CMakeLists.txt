@@ -33,6 +33,7 @@ file(GLOB_RECURSE SOURCES
     "src/graphics/*.cpp"
     "src/graphics/*.c"
     "src/math/*.cpp"
+    "src/utils/*.cpp"
     "src/ui/*.cpp"
     "src/ui/**/*.cpp"
 )

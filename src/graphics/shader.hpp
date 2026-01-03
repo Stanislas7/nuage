@@ -25,6 +25,8 @@ public:
     void setFloat(const char* name, float value) const;
     void setBool(const char* name, bool value) const;
     void setInt(const char* name, int value) const;
+    void setIntArray(const char* name, const int* values, int count) const;
+    void setFloatArray(const char* name, const float* values, int count) const;
 
 private:
     GLuint compileShader(GLenum type, const char* src);

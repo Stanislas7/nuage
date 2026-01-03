@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PropertyList>
+  <name>Effects/runway</name>
+  <inherits-from>Effects/terrain-default</inherits-from>
+
+  <parameters>
+    <texture n="4">
+      <image>Textures/Runway/rwy-normalmap.png</image>
+      <filter>linear-mipmap-linear</filter>
+      <wrap-s>repeat</wrap-s>
+      <wrap-t>repeat</wrap-t>
+      <internal-format>normalized</internal-format>
+      <type>2d</type>
+    </texture>
+  </parameters>
+
+  <technique n="108">
+    <scheme>hdr-geometry</scheme>
+    <pass>
+      <depth>
+        <enabled>true</enabled>
+        <function>less</function>
+        <write-mask>true</write-mask>
+      </depth>
+      <texture-unit>
+        <unit>0</unit>
+        <type><use>texture[0]/type</use></type>
+        <image><use>texture[0]/image</use></image>
+        <filter><use>texture[0]/filter</use></filter>
+        <wrap-s><use>texture[0]/wrap-s</use></wrap-s>
+        <wrap-t><use>texture[0]/wrap-t</use></wrap-t>
+      </texture-unit>
+      <texture-unit>
+        <unit>1</unit>
+        <type><use>texture[4]/type</use></type>
+        <image><use>texture[4]/image</use></image>
+        <filter><use>texture[4]/filter</use></filter>
+        <wrap-s><use>texture[4]/wrap-s</use></wrap-s>
+        <wrap-t><use>texture[4]/wrap-t</use></wrap-t>
+      </texture-unit>
+      <texture-unit>
+        <unit>2</unit>
+        <type>noise</type>
+      </texture-unit>
+      <blend>0</blend>
+      <rendering-hint>opaque</rendering-hint>
+      <cull-face>back</cull-face>
+      <program>
+        <vertex-shader>Shaders/HDR/terrain_runway.vert</vertex-shader>
+        <vertex-shader>Shaders/HDR/logarithmic_depth.glsl</vertex-shader>
+        <fragment-shader>Shaders/HDR/terrain_runway.frag</fragment-shader>
+        <fragment-shader>Shaders/HDR/logarithmic_depth.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/gbuffer_pack.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/normal_encoding.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/normalmap.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/color.glsl</fragment-shader>
+      </program>
+      <uniform>
+        <name>color_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">0</value>
+      </uniform>
+      <uniform>
+        <name>normal_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">1</value>
+      </uniform>
+      <uniform>
+        <name>noise_tex</name>
+        <type>sampler-3d</type>
+        <value type="int">2</value>
+      </uniform>
+    </pass>
+  </technique>
+</PropertyList>

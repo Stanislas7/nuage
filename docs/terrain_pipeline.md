@@ -65,6 +65,7 @@ Runtime note: tiles are converted to indexed grids on load for lower vertex band
   - 4 = grass/general green
   - 5 = farmland/crop/orchard/meadow/grassland
   - 6 = rock/sand/beach/bare ground
+  - (FlightGear landclass mode) 0-255 = landclass IDs as provided by a raster
 
 ### `manifest.json`
 Key fields:
@@ -74,6 +75,7 @@ Key fields:
 - `tileSizeMeters`
 - `gridResolution`
 - `maskResolution` (if masks exist)
+- `maskType` ("landuse" for Nuage masks, "landclass" for raw landclass IDs)
 - `boundsENU`
 - `availableLayers` (["height"] or ["height","mask"])
 - `tileIndex` (list of [tx,ty] tiles present)
@@ -215,6 +217,16 @@ build/terrainc \
   --height-min -103.81412 --height-max 1335.2056 \
   --tile-size 2000 --grid 129 \
   --xmin -123.307174 --ymin 37.018272 --xmax -120.756699 --ymax 38.310244 \
+  --out assets/terrain/compiled
+```
+
+Landclass raster (raw IDs, for FlightGear mode):
+```
+build/terrainc \
+  --heightmap assets/terrain/sources/height.png \
+  --height-min <m> --height-max <m> --tile-size 2000 --grid 257 \
+  --landclass assets/terrain/sources/landclass.png --mask-res 256 \
+  --xmin <xmin> --ymin <ymin> --xmax <xmax> --ymax <ymax> \
   --out assets/terrain/compiled
 ```
 

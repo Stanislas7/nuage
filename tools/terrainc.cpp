@@ -27,6 +27,7 @@ struct Config {
     std::string heightmapPath;
     std::string osmPath;
     std::string landcoverPath;
+    std::string landclassPath;
     std::string outDir;
     std::string runwaysJsonPath;
     float sizeX = 0.0f;
@@ -80,7 +81,7 @@ void printUsage() {
               << "               [--osm <path> --mask-res <pixels> --xmin <lon> --ymin <lat>\n"
               << "                --xmax <lon> --ymax <lat> --mask-smooth <passes>\n"
               << "                --road-width-boost <scale> --road-smooth <passes>]\n"
-              << "               [--landcover <path>]\n";
+              << "               [--landcover <path>] [--landclass <path>]\n";
 }
 
 bool parseArgs(int argc, char** argv, Config& cfg) {
@@ -130,6 +131,8 @@ bool parseArgs(int argc, char** argv, Config& cfg) {
             if (!next(cfg.osmPath)) return false;
         } else if (arg == "--landcover") {
             if (!next(cfg.landcoverPath)) return false;
+        } else if (arg == "--landclass") {
+            if (!next(cfg.landclassPath)) return false;
         } else if (arg == "--mask-res") {
             std::string v;
             if (!next(v)) return false;
@@ -626,6 +629,21 @@ int sampleLandcoverClass(const LandcoverRaster& lc, double lon, double lat) {
     return landcoverClassFromValue(v);
 }
 
+int sampleLandclassValue(const LandcoverRaster& lc, double lon, double lat) {
+    if (!lc.valid || lc.width <= 0 || lc.height <= 0) {
+        return 0;
+    }
+    double px = (lon - lc.geo.originX) / lc.geo.pixelW;
+    double py = (lat - lc.geo.originY) / lc.geo.pixelH;
+    int ix = static_cast<int>(std::floor(px + 0.5));
+    int iy = static_cast<int>(std::floor(py + 0.5));
+    if (ix < 0 || iy < 0 || ix >= lc.width || iy >= lc.height) {
+        return 0;
+    }
+    std::uint16_t v = lc.data[static_cast<size_t>(iy) * lc.width + static_cast<size_t>(ix)];
+    return static_cast<int>(std::min<std::uint16_t>(v, 255));
+}
+
 void fillMaskFromLandcover(std::vector<std::uint8_t>& mask, int maskRes,
                            float tileMinX, float tileMinZ, float tileSize,
                            const Projection& proj, const LandcoverRaster& lc) {
@@ -642,6 +660,27 @@ void fillMaskFromLandcover(std::vector<std::uint8_t>& mask, int maskRes,
             double lat = 0.0;
             unprojectToLonLat(proj, worldX, worldZ, lon, lat);
             int cls = sampleLandcoverClass(lc, lon, lat);
+            mask[z * maskRes + x] = static_cast<std::uint8_t>(cls);
+        }
+    }
+}
+
+void fillMaskFromLandclass(std::vector<std::uint8_t>& mask, int maskRes,
+                           float tileMinX, float tileMinZ, float tileSize,
+                           const Projection& proj, const LandcoverRaster& lc) {
+    if (!lc.valid || maskRes <= 0) {
+        return;
+    }
+    for (int z = 0; z < maskRes; ++z) {
+        for (int x = 0; x < maskRes; ++x) {
+            float fx = (static_cast<float>(x) + 0.5f) / maskRes;
+            float fz = (static_cast<float>(z) + 0.5f) / maskRes;
+            float worldX = tileMinX + fx * tileSize;
+            float worldZ = tileMinZ + fz * tileSize;
+            double lon = 0.0;
+            double lat = 0.0;
+            unprojectToLonLat(proj, worldX, worldZ, lon, lat);
+            int cls = sampleLandclassValue(lc, lon, lat);
             mask[z * maskRes + x] = static_cast<std::uint8_t>(cls);
         }
     }
@@ -893,14 +932,17 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if (cfg.maskResolution > 0 && cfg.osmPath.empty()) {
-        if (cfg.landcoverPath.empty()) {
-            std::cerr << "Mask resolution set but no OSM or landcover file provided.\n";
-            return 1;
-        }
+    if (cfg.maskResolution > 0 && cfg.osmPath.empty()
+        && cfg.landcoverPath.empty() && cfg.landclassPath.empty()) {
+        std::cerr << "Mask resolution set but no OSM, landcover, or landclass file provided.\n";
+        return 1;
     }
     if (!cfg.landcoverPath.empty() && cfg.maskResolution <= 0) {
         std::cerr << "Landcover provided but mask resolution not set.\n";
+        return 1;
+    }
+    if (!cfg.landclassPath.empty() && cfg.maskResolution <= 0) {
+        std::cerr << "Landclass provided but mask resolution not set.\n";
         return 1;
     }
     if (!cfg.osmPath.empty() && !cfg.hasBbox) {
@@ -909,6 +951,10 @@ int main(int argc, char** argv) {
     }
     if (!cfg.landcoverPath.empty() && !cfg.hasBbox) {
         std::cerr << "Landcover provided but bbox missing; use --xmin/--ymin/--xmax/--ymax.\n";
+        return 1;
+    }
+    if (!cfg.landclassPath.empty() && !cfg.hasBbox) {
+        std::cerr << "Landclass provided but bbox missing; use --xmin/--ymin/--xmax/--ymax.\n";
         return 1;
     }
 
@@ -931,6 +977,14 @@ int main(int argc, char** argv) {
     LandcoverRaster landcover = loadLandcoverRaster(cfg.landcoverPath);
     if (!cfg.landcoverPath.empty() && !landcover.valid) {
         return 1;
+    }
+    LandcoverRaster landclass = loadLandcoverRaster(cfg.landclassPath);
+    if (!cfg.landclassPath.empty() && !landclass.valid) {
+        return 1;
+    }
+    bool useLandclass = landclass.valid;
+    if (useLandclass && (landcover.valid || !cfg.osmPath.empty())) {
+        std::cerr << "Landclass provided; ignoring landcover and OSM masks.\n";
     }
 
     Heightmap hm;
@@ -1324,27 +1378,32 @@ int main(int argc, char** argv) {
             std::filesystem::path metaPath = tilesDir / ("tile_" + std::to_string(tx) + "_" + std::to_string(ty) + ".meta.json");
             writeTileMeta(metaPath, tx, ty, localMinH, localMaxH, cfg.gridResolution);
 
-            if (cfg.maskResolution > 0 && (landcover.valid || !allPolys.empty())) {
+            if (cfg.maskResolution > 0 && (useLandclass || landcover.valid || !allPolys.empty())) {
                 std::vector<std::uint8_t> mask(static_cast<size_t>(cfg.maskResolution * cfg.maskResolution), 0);
-                if (landcover.valid) {
-                    fillMaskFromLandcover(mask, cfg.maskResolution, tileMinX, tileMinZ,
-                                          cfg.tileSize, proj, landcover);
-                }
-                auto bucketIt = polyBuckets.find(tileKey(tx, ty));
-                if (bucketIt != polyBuckets.end()) {
-                    rasterizePolygonsToMaskList(mask, cfg.maskResolution, tileMinX, tileMinZ,
-                                                cfg.tileSize, allPolys, bucketIt->second);
-                }
-                if (cfg.maskSmooth > 0) {
-                    smoothMask(mask, cfg.maskResolution, cfg.maskSmooth);
-                }
-                auto roadIt = roadBuckets.find(tileKey(tx, ty));
-                if (roadIt != roadBuckets.end()) {
-                    rasterizeRoadsToMaskList(mask, cfg.maskResolution, tileMinX, tileMinZ,
-                                             cfg.tileSize, roadLines, roadIt->second, cfg.roadWidthBoost);
-                }
-                if (cfg.roadSmooth > 0) {
-                    smoothMask(mask, cfg.maskResolution, cfg.roadSmooth);
+                if (useLandclass) {
+                    fillMaskFromLandclass(mask, cfg.maskResolution, tileMinX, tileMinZ,
+                                          cfg.tileSize, proj, landclass);
+                } else {
+                    if (landcover.valid) {
+                        fillMaskFromLandcover(mask, cfg.maskResolution, tileMinX, tileMinZ,
+                                              cfg.tileSize, proj, landcover);
+                    }
+                    auto bucketIt = polyBuckets.find(tileKey(tx, ty));
+                    if (bucketIt != polyBuckets.end()) {
+                        rasterizePolygonsToMaskList(mask, cfg.maskResolution, tileMinX, tileMinZ,
+                                                    cfg.tileSize, allPolys, bucketIt->second);
+                    }
+                    if (cfg.maskSmooth > 0) {
+                        smoothMask(mask, cfg.maskResolution, cfg.maskSmooth);
+                    }
+                    auto roadIt = roadBuckets.find(tileKey(tx, ty));
+                    if (roadIt != roadBuckets.end()) {
+                        rasterizeRoadsToMaskList(mask, cfg.maskResolution, tileMinX, tileMinZ,
+                                                 cfg.tileSize, roadLines, roadIt->second, cfg.roadWidthBoost);
+                    }
+                    if (cfg.roadSmooth > 0) {
+                        smoothMask(mask, cfg.maskResolution, cfg.roadSmooth);
+                    }
                 }
 
                 std::filesystem::path maskPath = tilesDir / ("tile_" + std::to_string(tx) + "_" + std::to_string(ty) + ".mask");
@@ -1378,8 +1437,9 @@ int main(int argc, char** argv) {
     manifest << "  \"gridResolution\": " << cfg.gridResolution << ",\n";
     manifest << "  \"heightScaleMeters\": 1.0,\n";
     manifest << "  \"boundsENU\": [" << minX << ", " << minZ << ", " << maxX << ", " << maxZ << "],\n";
-    if (cfg.maskResolution > 0 && (!cfg.osmPath.empty() || landcover.valid)) {
+    if (cfg.maskResolution > 0 && (useLandclass || !cfg.osmPath.empty() || landcover.valid)) {
         manifest << "  \"maskResolution\": " << cfg.maskResolution << ",\n";
+        manifest << "  \"maskType\": \"" << (useLandclass ? "landclass" : "landuse") << "\",\n";
         manifest << "  \"availableLayers\": [\"height\", \"mask\"],\n";
     } else {
         manifest << "  \"availableLayers\": [\"height\"],\n";

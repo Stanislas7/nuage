@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PropertyList>
+  <name>Effects/water</name>
+  <inherits-from>Effects/terrain-default</inherits-from>
+
+  <parameters>
+    <!--
+        <texture n="0">
+        <image>Textures/Water/water-reflection.png</image>
+        <type>2d</type>
+        <filter>linear-mipmap-linear</filter>
+        <wrap-s>repeat</wrap-s>
+        <wrap-t>repeat</wrap-t>
+        <internal-format>normalized</internal-format>
+        </texture>
+    -->
+    <texture n="2">
+      <image>Textures/Water/waves-ver10-nm.png</image>
+      <type>2d</type>
+      <filter>linear-mipmap-linear</filter>
+      <wrap-s>repeat</wrap-s>
+      <wrap-t>repeat</wrap-t>
+      <internal-format>normalized</internal-format>
+    </texture>
+    <texture n="3">
+      <image>Textures/Water/water_sine_nmap.png</image>
+      <type>2d</type>
+      <filter>linear-mipmap-linear</filter>
+      <wrap-s>repeat</wrap-s>
+      <wrap-t>repeat</wrap-t>
+      <internal-format>normalized</internal-format>
+    </texture>
+    <!--
+        <texture n="4">
+        <image>Textures/Water/water-reflection-grey.png</image>
+        <type>2d</type>
+        <filter>linear-mipmap-linear</filter>
+        <wrap-s>repeat</wrap-s>
+        <wrap-t>repeat</wrap-t>
+        <internal-format>normalized</internal-format>
+        </texture>
+        <texture n="5">
+        <image>Textures/Water/sea_foam.png</image>
+        <type>2d</type>
+        <filter>linear-mipmap-linear</filter>
+        <wrap-s>repeat</wrap-s>
+        <wrap-t>repeat</wrap-t>
+        <internal-format>normalized</internal-format>
+        </texture>
+    -->
+    <texture n="6">
+      <image>Textures/Water/perlin-noise-nm.png</image>
+      <type>2d</type>
+      <filter>linear-mipmap-linear</filter>
+      <wrap-s>repeat</wrap-s>
+      <wrap-t>repeat</wrap-t>
+      <internal-format>normalized</internal-format>
+    </texture>
+    <!--
+        <texture n="7">
+        <image>Textures/Globe/ocean_depth_1.png</image>
+        <type>2d</type>
+        <filter>linear-mipmap-linear</filter>
+        <wrap-s>repeat</wrap-s>
+        <wrap-t>repeat</wrap-t>
+        <internal-format>normalized</internal-format>
+        </texture>
+    -->
+    <texture n="8">
+      <image>Textures/Globe/globe_colors.jpg</image>
+      <type>2d</type>
+      <filter>linear-mipmap-linear</filter>
+      <wrap-s>repeat</wrap-s>
+      <wrap-t>repeat</wrap-t>
+      <internal-format>normalized</internal-format>
+    </texture>
+    <!--
+        <texture n="10">
+        <image>Textures/Terrain/packice-overlay.png</image>
+        <type>2d</type>
+        <filter>linear-mipmap-linear</filter>
+        <wrap-s>repeat</wrap-s>
+        <wrap-t>repeat</wrap-t>
+        <internal-format>normalized</internal-format>
+        </texture>
+    -->
+  </parameters>
+
+  <technique n="108">
+    <scheme>hdr-geometry</scheme>
+    <pass>
+      <depth>
+        <enabled>true</enabled>
+        <function>less</function>
+        <write-mask>true</write-mask>
+      </depth>
+      <blend>0</blend>
+      <cull-face>back</cull-face>
+      <rendering-hint>opaque</rendering-hint>
+      <texture-unit>
+        <unit>0</unit>
+        <image><use>texture[2]/image</use></image>
+        <type><use>texture[2]/type</use></type>
+        <filter><use>texture[2]/filter</use></filter>
+        <wrap-s><use>texture[2]/wrap-s</use></wrap-s>
+        <wrap-t><use>texture[2]/wrap-t</use></wrap-t>
+        <internal-format><use>texture[2]/internal-format</use></internal-format>
+      </texture-unit>
+      <texture-unit>
+        <unit>1</unit>
+        <image><use>texture[3]/image</use></image>
+        <type><use>texture[3]/type</use></type>
+        <filter><use>texture[3]/filter</use></filter>
+        <wrap-s><use>texture[3]/wrap-s</use></wrap-s>
+        <wrap-t><use>texture[3]/wrap-t</use></wrap-t>
+        <internal-format><use>texture[3]/internal-format</use></internal-format>
+      </texture-unit>
+      <texture-unit>
+        <unit>2</unit>
+        <image><use>texture[6]/image</use></image>
+        <type><use>texture[6]/type</use></type>
+        <filter><use>texture[6]/filter</use></filter>
+        <wrap-s><use>texture[6]/wrap-s</use></wrap-s>
+        <wrap-t><use>texture[6]/wrap-t</use></wrap-t>
+        <internal-format><use>texture[6]/internal-format</use></internal-format>
+      </texture-unit>
+      <texture-unit>
+        <unit>3</unit>
+        <image><use>texture[8]/image</use></image>
+        <type><use>texture[8]/type</use></type>
+        <filter><use>texture[8]/filter</use></filter>
+        <wrap-s><use>texture[8]/wrap-s</use></wrap-s>
+        <wrap-t><use>texture[8]/wrap-t</use></wrap-t>
+        <internal-format><use>texture[8]/internal-format</use></internal-format>
+      </texture-unit>
+      <program>
+        <vertex-shader>Shaders/HDR/water.vert</vertex-shader>
+        <vertex-shader>Shaders/HDR/logarithmic_depth.glsl</vertex-shader>
+        <fragment-shader>Shaders/HDR/water.frag</fragment-shader>
+        <fragment-shader>Shaders/HDR/logarithmic_depth.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/normal_encoding.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/normalmap.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/color.glsl</fragment-shader>
+      </program>
+      <uniform>
+        <name>water_normalmap</name>
+        <type>sampler-2d</type>
+        <value type="int">0</value>
+      </uniform>
+      <uniform>
+        <name>water_dudvmap</name>
+        <type>sampler-2d</type>
+        <value type="int">1</value>
+      </uniform>
+      <uniform>
+        <name>perlin_normalmap</name>
+        <type>sampler-2d</type>
+        <value type="int">2</value>
+      </uniform>
+      <uniform>
+        <name>water_colormap</name>
+        <type>sampler-2d</type>
+        <value type="int">3</value>
+      </uniform>
+    </pass>
+  </technique>
+
+</PropertyList>

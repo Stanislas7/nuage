@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PropertyList>
+  <name>Effects/HDR/debug-aerial-perspective</name>
+  <parameters>
+    <!-- exposure.glsl -->
+    <exposure-compensation>
+      <use>/sim/rendering/hdr/exposure-compensation</use>
+    </exposure-compensation>
+  </parameters>
+  <technique n="1">
+    <pass>
+      <program>
+        <vertex-shader>Shaders/HDR/quad_matrix.vert</vertex-shader>
+        <vertex-shader>Shaders/HDR/mvr.vert</vertex-shader>
+        <fragment-shader>Shaders/HDR/debug_aerial_perspective.frag</fragment-shader>
+        <fragment-shader>Shaders/HDR/math.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/exposure.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/mvr.frag</fragment-shader>
+      </program>
+      <!-- quad_matrix.vert -->
+      <define>
+        <name>QUAD_TEXCOORD_RAW</name>
+      </define>
+      <!-- debug_aerial_perspective.glsl -->
+      <uniform>
+        <name>aerial_perspective_tex</name>
+        <type>sampler-3d</type>
+        <value type="int">11</value>
+      </uniform>
+      <!-- exposure.glsl -->
+      <uniform>
+        <name>lum_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">14</value>
+      </uniform>
+      <uniform>
+        <name>exposure_compensation</name>
+        <type>float</type>
+        <value><use>exposure-compensation</use></value>
+      </uniform>
+    </pass>
+  </technique>
+</PropertyList>

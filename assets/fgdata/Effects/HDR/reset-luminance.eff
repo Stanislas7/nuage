@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PropertyList>
+  <name>Effects/HDR/reset-luminance</name>
+  <technique n="1">
+    <pass>
+      <program>
+        <vertex-shader>Shaders/HDR/quad_notexcoord.vert</vertex-shader>
+        <fragment-shader>Shaders/HDR/reset_luminance.frag</fragment-shader>
+      </program>
+    </pass>
+  </technique>
+</PropertyList>
+

@@ -5,6 +5,7 @@
 #include "math/vec3.hpp"
 #include "graphics/renderers/terrain/terrain_visual_settings.hpp"
 #include "utils/json.hpp"
+#include <array>
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -18,6 +19,7 @@ class AssetStore;
 class Mesh;
 class Shader;
 class Texture;
+class TextureArray;
 
 /**
  * @brief Handles terrain mesh management and rendering for a session.
@@ -55,6 +57,8 @@ public:
         float waterDetailScale = 0.08f;
         float waterDetailStrength = 0.25f;
         Vec3 waterColor = Vec3(0.14f, 0.32f, 0.55f);
+        float waterTexScale = 0.001f;
+        float waterTexStrength = 0.65f;
         float maskFeatherMeters = 42.0f;
         float maskJitterMeters = 18.0f;
         float maskEdgeNoise = 0.35f;
@@ -96,6 +100,7 @@ public:
     void setTreesEnabled(bool enabled);
     bool debugMaskView() const { return m_debugMaskView; }
     void setDebugMaskView(bool enabled) { m_debugMaskView = enabled; }
+    bool usesFlightGearMaterials() const { return m_useFlightGearMaterials; }
     TerrainVisualSettings& visuals() { return m_visuals; }
     const TerrainVisualSettings& visuals() const { return m_visuals; }
     TerrainTextureSettings& textureSettings() { return m_textureSettings; }
@@ -133,6 +138,8 @@ private:
     std::int64_t packedTileKey(int x, int y) const;
     void applyTextureConfig(const nlohmann::json& config, const std::string& configPath);
     void bindTerrainTextures(Shader* shader, bool useMasks) const;
+    void bindFlightGearMaterials(Shader* shader, bool useMasks) const;
+    void setupFlightGearMaterials(const nlohmann::json& config, const std::string& configPath);
     void loadRunways(const nlohmann::json& config, const std::string& configPath);
     bool sampleRunway(float worldX, float worldZ, TerrainSample& outSample) const;
     bool sampleCompiledSurface(int tx, int ty, float worldX, float worldZ,
@@ -143,6 +150,7 @@ private:
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
     Shader* m_texturedShader = nullptr;
+    Shader* m_fgShader = nullptr;
     TerrainTextureSettings m_textureSettings;
     Texture* m_texGrass = nullptr;
     Texture* m_texGrassB = nullptr;
@@ -151,6 +159,7 @@ private:
     Texture* m_texDirt = nullptr;
     Texture* m_texDirtB = nullptr;
     Texture* m_texUrban = nullptr;
+    Texture* m_texWater = nullptr;
     Texture* m_texGrassNormal = nullptr;
     Texture* m_texDirtNormal = nullptr;
     Texture* m_texRockNormal = nullptr;
@@ -159,6 +168,15 @@ private:
     Texture* m_texDirtRough = nullptr;
     Texture* m_texRockRough = nullptr;
     Texture* m_texUrbanRough = nullptr;
+
+    std::unique_ptr<TextureArray> m_fgTextureArray;
+    std::array<int, 256> m_fgLandclassTexCount{};
+    std::array<int, 256> m_fgLandclassTexIndex0{};
+    std::array<int, 256> m_fgLandclassTexIndex1{};
+    std::array<int, 256> m_fgLandclassTexIndex2{};
+    std::array<int, 256> m_fgLandclassTexIndex3{};
+    std::array<float, 256> m_fgLandclassTexScale{};
+    std::array<std::uint8_t, 256> m_fgLandclassFlags{};
 
     std::unique_ptr<Mesh> m_runwayMesh;
     bool m_runwaysEnabled = false;
@@ -179,6 +197,7 @@ private:
 
     bool m_compiled = false;
     bool m_debugMaskView = false;
+    bool m_useFlightGearMaterials = false;
     AssetStore* m_assets = nullptr;
     std::unordered_map<std::string, TileResource> m_tileCache;
 
@@ -197,6 +216,7 @@ private:
     GeoOrigin m_compiledOrigin;
     bool m_compiledOriginValid = false;
     int m_compiledMaskResolution = 0;
+    bool m_compiledMaskIsLandclass = false;
     std::unordered_set<std::int64_t> m_compiledTiles;
     int m_compiledTilesLoadedThisFrame = 0;
 

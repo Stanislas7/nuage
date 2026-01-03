@@ -4,7 +4,8 @@
 namespace nuage {
 
 void apply_mask_to_verts(std::vector<float>& verts, const std::vector<std::uint8_t>& mask,
-                         int maskRes, float tileSize, float tileMinX, float tileMinZ) {
+                         int maskRes, float tileSize, float tileMinX, float tileMinZ,
+                         const std::array<std::uint8_t, 256>* classFlags) {
     if (maskRes <= 0 || mask.empty()) {
         return;
     }
@@ -39,6 +40,13 @@ void apply_mask_to_verts(std::vector<float>& verts, const std::vector<std::uint8
         float forest = 0.0f;
 
         auto accumulate = [&](std::uint8_t cls, float w) {
+            if (classFlags) {
+                std::uint8_t flags = (*classFlags)[cls];
+                if (flags & 0x1) water += w;
+                if (flags & 0x2) urban += w;
+                if (flags & 0x4) forest += w;
+                return;
+            }
             switch (cls) {
                 case 1: water += w; break;
                 case 2: urban += w; break;

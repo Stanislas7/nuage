@@ -1,0 +1,232 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- World Scenery 3.0 Effect -->
+<PropertyList>
+  <name>Effects/ws30</name>
+
+  <parameters>
+    <texture n="6">
+      <image>Textures/perlin.png</image>
+      <type>2d</type>
+      <filter>nearest</filter>
+      <wrap-s>repeat</wrap-s>
+      <wrap-t>repeat</wrap-t>
+      <internal-format>normalized</internal-format>
+    </texture>
+
+    <!-- Procedural texturing parameters -->
+    <eye_alt><use>/sim/rendering/eye-altitude-m</use></eye_alt>
+    <snow_level><use>/environment/snow-level-m</use></snow_level>
+    <snow_thickness_factor><use>/environment/surface/snow-thickness-factor</use></snow_thickness_factor>
+    <dust_cover_factor><use>/environment/surface/dust-cover-factor</use></dust_cover_factor>
+    <lichen_cover_factor><use>/environment/surface/lichen-cover-factor</use></lichen_cover_factor>
+    <wetness><use>/environment/surface/wetness</use></wetness>
+    <season><use>/environment/season</use></season>
+
+    <!-- Wind related parameters -->
+    <wind_effects><use>/sim/rendering/shaders/wind-effects</use></wind_effects>
+    <windE><use>/environment/sea/surface/wind-from-east-fps</use></windE>
+    <windN><use>/environment/sea/surface/wind-from-north-fps</use></windN>
+
+    <!-- Water related uniforms -->
+    <sea-color type="vec3d">
+      <use>/environment/sea/color_r</use>
+      <use>/environment/sea/color_g</use>
+      <use>/environment/sea/color_b</use>
+    </sea-color>
+  </parameters>
+
+  <technique n="108">
+    <scheme>hdr-geometry</scheme>
+    <predicate><property>/sim/rendering/shaders/tessellation</property></predicate>
+    <pass>
+      <depth>
+        <enabled>true</enabled>
+        <function>less</function>
+        <write-mask>true</write-mask>
+      </depth>
+
+      <blend>0</blend>
+      <rendering-hint>opaque</rendering-hint>
+      <cull-face>back</cull-face>
+
+      <!-- texture unit 0 direct from VPBBuilder.cxx -->
+      <!-- texture unit 1 direct from VPBBuilder.cxx -->
+
+      <program>
+        <!-- https://gitlab.com/flightgear/fgdata/-/issues/45 -->
+        <fails-validation type="bool">true</fails-validation>
+
+        <vertex-shader>Shaders/HDR/ws30.vert</vertex-shader>
+        <tesscontrol-shader>Shaders/HDR/ws30.tesc</tesscontrol-shader>
+        <tessevaluation-shader>Shaders/HDR/ws30.tese</tessevaluation-shader>
+        <tessevaluation-shader>Shaders/HDR/logarithmic_depth.glsl</tessevaluation-shader>
+        <tessevaluation-shader>Shaders/HDR/noise.glsl</tessevaluation-shader>
+        <fragment-shader>Shaders/HDR/ws30.frag</fragment-shader>
+        <fragment-shader>Shaders/HDR/logarithmic_depth.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/math.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/color.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/noise.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/normalmap.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/gbuffer_pack.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/normal_encoding.glsl</fragment-shader>
+      </program>
+
+      <!-- Samplers -->
+      <uniform>
+        <name>landclass</name>
+        <type>sampler-2d</type>
+        <value type="int">0</value>
+      </uniform>
+      <uniform>
+        <name>textureArray</name>
+        <type>sampler-2d</type>
+        <value type="int">1</value>
+      </uniform>
+    </pass>
+  </technique>
+
+  <technique n="109">
+    <scheme>hdr-geometry</scheme>
+    <pass>
+      <depth>
+        <enabled>true</enabled>
+        <function>less</function>
+        <write-mask>true</write-mask>
+      </depth>
+
+      <blend>0</blend>
+      <rendering-hint>opaque</rendering-hint>
+      <cull-face>back</cull-face>
+
+      <!-- texture unit 0 direct from VPBBuilder.cxx -->
+      <!-- texture unit 1 direct from VPBBuilder.cxx -->
+
+      <texture-unit>
+        <unit>6</unit>
+        <image><use>texture[6]/image</use></image>
+        <filter><use>texture[6]/filter</use></filter>
+        <wrap-s><use>texture[6]/wrap-s</use></wrap-s>
+        <wrap-t><use>texture[6]/wrap-t</use></wrap-t>
+        <internal-format><use>texture[6]/internal-format</use></internal-format>
+      </texture-unit>
+
+      <!-- texture unit 7 direct from VPBBuilder.cxx -->
+      <!-- texture unit 8 direct from VPBBuilder.cxx -->
+
+      <program>
+        <vertex-shader>Shaders/HDR/ws30_old.vert</vertex-shader>
+        <vertex-shader>Shaders/HDR/logarithmic_depth.glsl</vertex-shader>
+        <fragment-shader>Shaders/HDR/ws30_old.frag</fragment-shader>
+        <fragment-shader>Shaders/HDR/ws30_util.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/ws30_water.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/logarithmic_depth.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/math.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/color.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/normalmap.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/noise.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/gbuffer_pack.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/normal_encoding.glsl</fragment-shader>
+      </program>
+
+      <!-- Samplers -->
+      <uniform>
+        <name>landclass</name>
+        <type>sampler-2d</type>
+        <value type="int">0</value>
+      </uniform>
+      <uniform>
+        <name>textureArray</name>
+        <type>sampler-2d</type>
+        <value type="int">1</value>
+      </uniform>
+      <uniform>
+        <name>perlin</name>
+        <type>sampler-2d</type>
+        <value type="int">6</value>
+      </uniform>
+      <uniform>
+        <name>coastlineTexture</name>
+        <type>sampler-2d</type>
+        <value type="int">7</value>
+      </uniform>
+
+      <uniform>
+        <name>waterTexture</name>
+        <type>sampler-2d</type>
+        <value type="int">8</value>
+      </uniform>
+
+      <!-- Procedural texturing uniforms -->
+      <uniform>
+        <name>eye_alt</name>
+        <type>float</type>
+        <value><use>eye_alt</use></value>
+      </uniform>
+      <uniform>
+        <name>snowlevel</name>
+        <type>float</type>
+        <value><use>snow_level</use></value>
+      </uniform>
+      <uniform>
+        <name>snow_thickness_factor</name>
+        <type>float</type>
+        <value><use>snow_thickness_factor</use></value>
+      </uniform>
+      <uniform>
+        <name>dust_cover_factor</name>
+        <type>float</type>
+        <value><use>dust_cover_factor</use></value>
+      </uniform>
+      <uniform>
+        <name>lichen_cover_factor</name>
+        <type>float</type>
+        <value><use>lichen_cover_factor</use></value>
+      </uniform>
+      <uniform>
+        <name>wetness</name>
+        <type>float</type>
+        <value><use>wetness</use></value>
+      </uniform>
+      <uniform>
+        <name>season</name>
+        <type>float</type>
+        <value><use>season</use></value>
+      </uniform>
+
+      <!-- Wind related uniforms -->
+      <uniform>
+        <name>WindE</name>
+        <type>float</type>
+        <value><use>windE</use></value>
+      </uniform>
+      <uniform>
+        <name>WindN</name>
+        <type>float</type>
+        <value><use>windN</use></value>
+      </uniform>
+      <uniform>
+        <name>wind_effects</name>
+        <type>int</type>
+        <value><use>wind_effects</use></value>
+      </uniform>
+
+      <!-- Water related uniforms -->
+      <uniform>
+        <name>sea_color</name>
+        <type>float-vec3</type>
+        <value><use>sea-color</use></value>
+      </uniform>
+
+      <uniform>
+        <name>swatch_size</name>
+        <type>int</type>
+        <!--
+            Testing: hardcoded placeholder to allow noise to be calculated while looking up textures
+            <value><use>xsize</use></value>
+        -->
+        <value>2000</value>
+      </uniform>
+    </pass>
+  </technique>
+
+</PropertyList>

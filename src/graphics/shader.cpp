@@ -85,6 +85,20 @@ void Shader::setInt(const char* name, int value) const {
     }
 }
 
+void Shader::setIntArray(const char* name, const int* values, int count) const {
+    GLint loc = getUniformLocation(name);
+    if (loc >= 0) {
+        glUniform1iv(loc, count, values);
+    }
+}
+
+void Shader::setFloatArray(const char* name, const float* values, int count) const {
+    GLint loc = getUniformLocation(name);
+    if (loc >= 0) {
+        glUniform1fv(loc, count, values);
+    }
+}
+
 GLuint Shader::compileShader(GLenum type, const char* src) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &src, nullptr);

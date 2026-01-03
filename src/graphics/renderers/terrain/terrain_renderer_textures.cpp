@@ -2,6 +2,7 @@
 #include "graphics/asset_store.hpp"
 #include "graphics/shader.hpp"
 #include "graphics/texture.hpp"
+#include "graphics/texture_array.hpp"
 #include <filesystem>
 #include <iostream>
 
@@ -38,6 +39,8 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
     m_textureSettings.microStrength = texConfig.value("microStrength", m_textureSettings.microStrength);
     m_textureSettings.waterDetailScale = texConfig.value("waterDetailScale", m_textureSettings.waterDetailScale);
     m_textureSettings.waterDetailStrength = texConfig.value("waterDetailStrength", m_textureSettings.waterDetailStrength);
+    m_textureSettings.waterTexScale = texConfig.value("waterTexScale", m_textureSettings.waterTexScale);
+    m_textureSettings.waterTexStrength = texConfig.value("waterTexStrength", m_textureSettings.waterTexStrength);
     m_textureSettings.maskFeatherMeters = texConfig.value("maskFeatherMeters", m_textureSettings.maskFeatherMeters);
     m_textureSettings.maskJitterMeters = texConfig.value("maskJitterMeters", m_textureSettings.maskJitterMeters);
     m_textureSettings.maskEdgeNoise = texConfig.value("maskEdgeNoise", m_textureSettings.maskEdgeNoise);
@@ -104,6 +107,7 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
     loadedAny |= loadTex("dirt", m_texDirt, "terrain_dirt");
     loadedAny |= loadTex("urban", m_texUrban, "terrain_urban");
     loadTex("dirtB", m_texDirtB, "terrain_dirt_b");
+    loadTex("water", m_texWater, "terrain_water");
     loadTex("grassNormal", m_texGrassNormal, "terrain_grass_n");
     loadTex("dirtNormal", m_texDirtNormal, "terrain_dirt_n");
     loadTex("rockNormal", m_texRockNormal, "terrain_rock_n");
@@ -130,9 +134,15 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     Texture* dirtB = m_texDirtB ? m_texDirtB : dirt;
     Texture* urban = m_texUrban ? m_texUrban : (dirt ? dirt : grass);
     bool enabled = m_textureSettings.enabled && grass && rock && urban;
+    bool hasNormals = m_texGrassNormal && m_texDirtNormal && m_texRockNormal && m_texUrbanNormal;
+    bool hasRoughness = m_texGrassRough && m_texDirtRough && m_texRockRough && m_texUrbanRough;
+    bool hasWater = m_texWater != nullptr;
     shader->setBool("uTerrainUseTextures", enabled);
     shader->setBool("uTerrainUseMasks", useMasks);
     shader->setBool("uTerrainDebugMaskView", m_debugMaskView);
+    shader->setBool("uTerrainHasNormalMaps", enabled && hasNormals);
+    shader->setBool("uTerrainHasRoughnessMaps", enabled && hasRoughness);
+    shader->setBool("uTerrainHasWaterTex", enabled && hasWater);
     if (!enabled) {
         return;
     }
@@ -166,6 +176,8 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     shader->setFloat("uTerrainWaterDetailScale", m_textureSettings.waterDetailScale);
     shader->setFloat("uTerrainWaterDetailStrength", m_textureSettings.waterDetailStrength);
     shader->setVec3("uTerrainWaterColor", m_textureSettings.waterColor);
+    shader->setFloat("uTerrainWaterTexScale", m_textureSettings.waterTexScale);
+    shader->setFloat("uTerrainWaterTexStrength", m_textureSettings.waterTexStrength);
     shader->setFloat("uTerrainMaskFeatherMeters", m_textureSettings.maskFeatherMeters);
     shader->setFloat("uTerrainMaskJitterMeters", m_textureSettings.maskJitterMeters);
     shader->setFloat("uTerrainMaskEdgeNoise", m_textureSettings.maskEdgeNoise);
@@ -202,6 +214,31 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     bindOpt(m_texDirtRough, 11, "uTerrainTexDirtRough");
     bindOpt(m_texRockRough, 12, "uTerrainTexRockRough");
     bindOpt(m_texUrbanRough, 13, "uTerrainTexUrbanRough");
+    if (hasWater) {
+        m_texWater->bind(16);
+        shader->setInt("uTerrainTexWater", 16);
+    }
+}
+
+void TerrainRenderer::bindFlightGearMaterials(Shader* shader, bool useMasks) const {
+    if (!shader) {
+        return;
+    }
+    bool enabled = m_useFlightGearMaterials && m_fgTextureArray;
+    shader->setBool("uTerrainUseTextures", enabled);
+    shader->setBool("uTerrainUseMasks", useMasks);
+    if (!enabled) {
+        return;
+    }
+
+    m_fgTextureArray->bind(0);
+    shader->setInt("uTerrainTexArray", 0);
+    shader->setIntArray("uLandclassTexCount", m_fgLandclassTexCount.data(), 256);
+    shader->setIntArray("uLandclassTexIndex0", m_fgLandclassTexIndex0.data(), 256);
+    shader->setIntArray("uLandclassTexIndex1", m_fgLandclassTexIndex1.data(), 256);
+    shader->setIntArray("uLandclassTexIndex2", m_fgLandclassTexIndex2.data(), 256);
+    shader->setIntArray("uLandclassTexIndex3", m_fgLandclassTexIndex3.data(), 256);
+    shader->setFloatArray("uLandclassTexScale", m_fgLandclassTexScale.data(), 256);
 }
 
 } // namespace nuage

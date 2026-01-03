@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<PropertyList>
+  <name>Effects/model-pbr-chute</name>
+  <inherits-from>Effects/model-pbr</inherits-from>
+
+  <parameters>
+    <chute-force>1.0</chute-force>
+    <chute-fold>0.0</chute-fold>
+    <chute-bend>0.0</chute-bend>
+    <chute-projection-z>0.0</chute-projection-z>
+  </parameters>
+
+  <!-- Overwrite the geometry technique -->
+  <technique n="109">
+    <pass>
+      <define>
+        <name>USE_CHUTE_DEFORMATION</name>
+      </define>
+      <!-- Add the chute vertex shader -->
+      <program>
+        <vertex-shader n="100">Shaders/HDR/chute.glsl</vertex-shader>
+      </program>
+      <!-- And its required uniforms -->
+      <uniform>
+        <name>chute_force</name>
+        <type>float</type>
+        <value><use>chute-force</use></value>
+      </uniform>
+      <uniform>
+        <name>chute_fold</name>
+        <type>float</type>
+        <value><use>chute-fold</use></value>
+      </uniform>
+      <uniform>
+        <name>chute_bend</name>
+        <type>float</type>
+        <value><use>chute-bend</use></value>
+      </uniform>
+      <uniform>
+        <name>chute_projection_z</name>
+        <type>float</type>
+        <value><use>chute-projection-z</use></value>
+      </uniform>
+    </pass>
+  </technique>
+
+  <!-- Overwrite the shadow technique -->
+  <technique n="119">
+    <pass>
+      <define>
+        <name>USE_CHUTE_DEFORMATION</name>
+      </define>
+      <!-- Add the chute vertex shader -->
+      <program>
+        <vertex-shader n="100">Shaders/HDR/chute.glsl</vertex-shader>
+      </program>
+      <!-- And its required uniforms -->
+      <uniform>
+        <name>chute_force</name>
+        <type>float</type>
+        <value><use>chute-force</use></value>
+      </uniform>
+      <uniform>
+        <name>chute_fold</name>
+        <type>float</type>
+        <value><use>chute-fold</use></value>
+      </uniform>
+      <uniform>
+        <name>chute_bend</name>
+        <type>float</type>
+        <value><use>chute-bend</use></value>
+      </uniform>
+      <uniform>
+        <name>chute_projection_z</name>
+        <type>float</type>
+        <value><use>chute-projection-z</use></value>
+      </uniform>
+    </pass>
+  </technique>
+</PropertyList>

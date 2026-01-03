@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PropertyList>
+  <name>Effects/HDR/postprocess</name>
+  <parameters>
+    <bloom-strength><use>/sim/rendering/hdr/bloom/strength</use></bloom-strength>
+    <debug-ev100><use>/sim/rendering/hdr/debug/display-ev100</use></debug-ev100>
+    <!-- redout.glsl -->
+    <alpha><use>/sim/rendering/redout/alpha</use></alpha>
+    <red><use>/sim/rendering/redout/red</use></red>
+    <max-distorsion-amount type="float">0.2</max-distorsion-amount>
+    <!-- night_vision.glsl -->
+    <night-vision-enabled><use>/sim/rendering/hdr/night-vision/enabled</use></night-vision-enabled>
+  </parameters>
+  <technique n="1">
+    <pass>
+      <program>
+        <vertex-shader>Shaders/HDR/quad.vert</vertex-shader>
+        <vertex-shader>Shaders/HDR/mvr.vert</vertex-shader>
+        <fragment-shader>Shaders/HDR/postprocess.frag</fragment-shader>
+        <fragment-shader>Shaders/HDR/math.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/color.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/noise.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/aces.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/bloom.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/redout.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/night_vision.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/highlights.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/mvr.frag</fragment-shader>
+      </program>
+      <!-- quad.vert, quad.geom -->
+      <define>
+        <name>QUAD_TEXCOORD_RAW</name>
+      </define>
+      <!-- postprocess.frag -->
+      <uniform>
+        <name>hdr_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">0</value>
+      </uniform>
+      <uniform>
+        <name>bloom_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">1</value>
+      </uniform>
+      <uniform>
+        <name>highlight_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">2</value>
+      </uniform>
+      <uniform>
+        <name>bloom_strength</name>
+        <type>float</type>
+        <value><use>bloom-strength</use></value>
+      </uniform>
+      <uniform>
+        <name>debug_ev100</name>
+        <type>bool</type>
+        <value><use>debug-ev100</use></value>
+      </uniform>
+      <!-- redout.glsl -->
+      <uniform>
+        <name>alpha</name>
+        <type>float</type>
+        <value><use>alpha</use></value>
+      </uniform>
+      <uniform>
+        <name>red</name>
+        <type>bool</type>
+        <value><use>red</use></value>
+      </uniform>
+      <uniform>
+        <name>max_distorsion_amount</name>
+        <type>float</type>
+        <value><use>max-distorsion-amount</use></value>
+      </uniform>
+      <!-- night_vision.glsl -->
+      <uniform>
+        <name>night_vision_enabled</name>
+        <type>bool</type>
+        <value><use>night-vision-enabled</use></value>
+      </uniform>
+    </pass>
+  </technique>
+</PropertyList>
