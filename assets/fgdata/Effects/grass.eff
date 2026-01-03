@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<PropertyList>
-  <name>Effects/grass</name>
-  <inherits-from>Effects/airfield</inherits-from>
-</PropertyList>

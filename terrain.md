@@ -15,7 +15,7 @@ Nuage uses a **compiled, real‑world terrain pipeline**. Procedural terrain gen
 
 ## What To Tweak
 - **Mask resolution** (recompile): higher `--mask-res` reduces blocky landclass tiles.
-- **Texture tuning** (runtime config): `assets/config/terrain.json` controls scales, tints, and strengths.
+- **Visual tuning** (runtime config): `assets/config/terrain_flightgear.json` controls terrain visuals and materials.
 
 ## Why This Route
 Compiled terrain keeps the system deterministic, fast, and GIS-accurate without runtime parsing. It also matches how flight sims handle non‑ortho terrain: real DEM + landclass + curated textures.
@@ -28,3 +28,5 @@ Nuage now vendors the FlightGear terrain assets into `assets/terrain/fg` and can
 This mode uses a FlightGear material/landclass lookup and a texture-array shader. It does **not** yet replicate the full FlightGear effects stack, but the loader and data layout are in place for that next step.
 
 Scenery packs are built offline under `assets/scenery/` and activated via `tools/scenery/scenery_sync.py`, which updates `assets/scenery/active/` for runtime streaming.
+
+For full pipeline details and commands, see `docs/terrain_architecture.md`.

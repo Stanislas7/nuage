@@ -2,7 +2,6 @@
 #include "graphics/asset_store.hpp"
 #include "graphics/lighting.hpp"
 #include "graphics/mesh.hpp"
-#include "graphics/mesh_builder.hpp"
 #include "graphics/shader.hpp"
 #include "utils/config_loader.hpp"
 #include <algorithm>
@@ -107,9 +106,7 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_treesSeed = 1337;
 
     if (configPath.empty()) {
-        auto terrainData = MeshBuilder::terrain(20000.0f, 40);
-        assets.loadMesh("session_terrain", terrainData);
-        m_mesh = assets.getMesh("session_terrain");
+        std::cerr << "No terrain config provided; terrain rendering disabled.\n";
         return;
     }
 
@@ -121,10 +118,8 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
         }
     }
     if (terrainConfigOpt && !m_compiled) {
-        std::cerr << "Unsupported terrain config; using flat terrain fallback.\n";
+        std::cerr << "Unsupported terrain config; terrain rendering disabled.\n";
     }
-
-    m_mesh = assets.getMesh("session_terrain");
 }
 
 void TerrainRenderer::render(const Mat4& vp, const Vec3& sunDir, const Vec3& cameraPos) {

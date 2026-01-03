@@ -1,6 +1,0 @@
-The shaders in this directory are taken from the source code of ShaderVG,
-located in simgear/canvas/ShaderVG/src/shaders.c, to make it easier to
-update them.
-
-These shaders are loaded manually using raw OpenGL calls. OpenSceneGraph and
-Effects are not involved at all.

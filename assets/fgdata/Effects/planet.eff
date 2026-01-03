@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<PropertyList>
-  <name>Effects/planet</name>
-  <parameters>
-    <use-clouds><use>/earthview/cloudsphere-flag</use></use-clouds>
-    <use-cloud-shadows><use>/earthview/cloud-shadow-flag</use></use-cloud-shadows>
-    <use-overlay-textures><use>/earthview/overlay-texture-flag</use></use-overlay-textures>
-  </parameters>
-</PropertyList>

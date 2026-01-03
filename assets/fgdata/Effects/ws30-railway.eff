@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<PropertyList>
-  <name>Effects/ws30-railway</name>
-  <inherits-from>Effects/model-pbr</inherits-from>
-  <parameters>
-    <metallic-factor type="float">0.0</metallic-factor>
-    <roughness-factor type="float">0.95</roughness-factor>
-  </parameters>
-</PropertyList>
