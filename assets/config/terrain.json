@@ -1,0 +1,51 @@
+{
+  "compiledManifest": "../scenery/active/manifest.json",
+  "compiledVisibleRadius": 4,
+  "compiledMaxLoadsPerFrame": 2,
+  "compiledLod1Distance": 3000.0,
+  "compiledSkirtDepth": 180.0,
+  "compiledDebugLog": false,
+  "terrainTrees": {
+    "enabled": false,
+    "densityPerSqKm": 120.0,
+    "minHeight": 4.0,
+    "maxHeight": 10.0,
+    "minRadius": 0.8,
+    "maxRadius": 2.2,
+    "maxSlope": 0.7,
+    "maxDistance": 5000.0,
+    "avoidRoads": true,
+    "seed": 1337
+  },
+  "terrainVisuals": {
+    "heightMin": 0.0,
+    "heightMax": 2000.0,
+    "noiseScale": 0.001,
+    "noiseStrength": 0.06,
+    "slopeStart": 0.22,
+    "slopeEnd": 0.6,
+    "slopeDarken": 0.2,
+    "fogDistance": 13000.0,
+    "desaturate": 0.12,
+    "tint": [0.45, 0.52, 0.33],
+    "tintStrength": 0.05,
+    "distanceDesatStart": 3500.0,
+    "distanceDesatEnd": 14000.0,
+    "distanceDesatStrength": 0.2,
+    "distanceContrastLoss": 0.2,
+    "fogSunScale": 0.4
+  },
+  "runways": {
+    "enabled": true,
+    "snapToTerrain": true,
+    "json": "../scenery/active/runways.json",
+    "color": [0.12, 0.12, 0.12],
+    "heightOffset": 0.1,
+    "texture": "../terrain/core/Terrain/asphalt.png"
+  },
+  "terrainMaterials": {
+    "mode": "landclass",
+    "root": "../terrain/core",
+    "atlasSize": 512
+  }
+}

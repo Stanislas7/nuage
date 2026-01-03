@@ -4,7 +4,7 @@
 #include "graphics/lighting.hpp"
 #include "graphics/mesh.hpp"
 #include "graphics/renderers/terrain/terrain_mask_blend.hpp"
-#include "graphics/renderers/terrain/fg_materials.hpp"
+#include "graphics/renderers/terrain/material_library.hpp"
 #include "graphics/renderers/terrain/terrain_tile_io.hpp"
 #include "graphics/shader.hpp"
 #include "graphics/texture.hpp"
@@ -379,7 +379,7 @@ void addSkirt(std::vector<float>& verts, std::vector<std::uint32_t>& indices,
         indices.push_back(s0);
     }
 }
-}
+} // namespace
 
 void TerrainRenderer::setupCompiled(const std::string& configPath) {
     auto terrainConfigOpt = loadJsonConfig(configPath);
@@ -413,7 +413,7 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
     m_compiledGridResolution = manifest.value("gridResolution", 129);
     m_compiledMaskResolution = manifest.value("maskResolution", 0);
     std::string maskType = manifest.value("maskType", "landuse");
-    m_compiledMaskIsLandclass = (maskType == "landclass" || maskType == "flightgear");
+    m_compiledMaskIsLandclass = (maskType == "landclass");
     m_compiledOriginValid = false;
     if (manifest.contains("originLLA") && manifest["originLLA"].is_array() && manifest["originLLA"].size() == 3) {
         m_compiledOrigin.latDeg = manifest["originLLA"][0].get<double>();
@@ -477,26 +477,26 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
     m_visuals.applyConfig(config);
     m_visuals.clamp();
     applyTextureConfig(config, configPath);
-    setupFlightGearMaterials(config, configPath);
+    setupLandclassMaterials(config, configPath);
     loadRunways(config, configPath);
-    if (m_useFlightGearMaterials && !m_compiledMaskIsLandclass) {
-        std::cerr << "[terrain] FG materials enabled but maskType is not landclass; update the compiler inputs.\n";
+    if (m_useLandclassMaterials && !m_compiledMaskIsLandclass) {
+        std::cerr << "[terrain] Landclass materials enabled but maskType is not landclass; update the compiler inputs.\n";
     }
 
     m_compiled = true;
 }
 
-void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, const std::string& configPath) {
-    m_useFlightGearMaterials = false;
-    m_fgTextureArray.reset();
-    m_fgLandclassTexScale.fill(0.0f);
-    m_fgLandclassFlags.fill(0);
+void TerrainRenderer::setupLandclassMaterials(const nlohmann::json& config, const std::string& configPath) {
+    m_useLandclassMaterials = false;
+    m_textureArray.reset();
+    m_landclassTexScale.fill(0.0f);
+    m_landclassFlags.fill(0);
 
     if (!config.contains("terrainMaterials") || !config["terrainMaterials"].is_object()) {
         return;
     }
     const auto& materialsConfig = config["terrainMaterials"];
-    if (materialsConfig.value("mode", "") != "flightgear") {
+    if (materialsConfig.value("mode", "") != "landclass") {
         return;
     }
 
@@ -508,22 +508,22 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
         return (cfg.parent_path() / path).string();
     };
 
-    std::string fgRootPath = resolve(materialsConfig.value("fgRoot", "../terrain/fg"));
+    std::string rootPath = resolve(materialsConfig.value("root", "../terrain/core"));
     int atlasSize = materialsConfig.value("atlasSize", 512);
     atlasSize = std::clamp(atlasSize, 64, 2048);
 
-    FGMaterialLibrary lib;
-    if (!lib.loadFromRoot(fgRootPath)) {
-        std::cerr << "[terrain] failed to load FlightGear materials from " << fgRootPath << "\n";
+    MaterialLibrary lib;
+    if (!lib.loadFromRoot(rootPath)) {
+        std::cerr << "[terrain] failed to load materials from " << rootPath << "\n";
         return;
     }
-    m_fgLandclassFlags = lib.landclassFlags();
+    m_landclassFlags = lib.landclassFlags();
 
     std::unordered_map<std::string, int> texIndices;
     std::vector<std::string> texturePaths;
     auto resolveTexture = [&](const std::string& tex) {
         std::string trimmed = stripTexturesPrefix(tex);
-        std::filesystem::path base = std::filesystem::path(fgRootPath);
+        std::filesystem::path base = std::filesystem::path(rootPath);
         std::filesystem::path withTextures = base / "Textures" / trimmed;
         if (std::filesystem::exists(withTextures)) {
             return withTextures.string();
@@ -538,7 +538,7 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
             return it->second;
         }
         if (!std::filesystem::exists(full)) {
-            std::cerr << "[terrain] missing FG texture: " << full << "\n";
+            std::cerr << "[terrain] missing texture: " << full << "\n";
             return std::nullopt;
         }
         int index = static_cast<int>(texturePaths.size());
@@ -549,7 +549,7 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
 
     auto fallbackOpt = addTexture("Terrain/unknown.png");
     if (!fallbackOpt) {
-        std::cerr << "[terrain] missing FG fallback texture; disabling FG materials\n";
+        std::cerr << "[terrain] missing fallback texture; disabling materials\n";
         return;
     }
     int fallbackIndex = *fallbackOpt;
@@ -568,7 +568,7 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
         lutData[base + 3] = clampIndex(idx2);
     };
 
-    m_fgLandclassTexScale.fill(1.0f / 2000.0f);
+    m_landclassTexScale.fill(1.0f / 2000.0f);
     for (int id = 0; id < 256; ++id) {
         writeLut(id, 1, fallbackIndex, fallbackIndex, fallbackIndex, false);
     }
@@ -579,10 +579,10 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
         }
         auto matIt = lib.materialsByName().find(entry.materialName);
         if (matIt == lib.materialsByName().end()) {
-            std::cerr << "[terrain] missing FG material: " << entry.materialName << "\n";
+            std::cerr << "[terrain] missing material: " << entry.materialName << "\n";
             continue;
         }
-        const FGMaterial& mat = matIt->second;
+        const Material& mat = matIt->second;
         std::vector<int> indices;
         for (const auto& tex : mat.textures) {
             if (tex.empty()) {
@@ -599,7 +599,7 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
         if (indices.empty()) {
             indices.push_back(fallbackIndex);
         }
-        bool isWater = (m_fgLandclassFlags[static_cast<size_t>(entry.id)] & 0x1) != 0;
+        bool isWater = (m_landclassFlags[static_cast<size_t>(entry.id)] & 0x1) != 0;
         if (isWater && indices.size() > 1) {
             indices.resize(1);
         }
@@ -612,32 +612,32 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
         if (sizeMeters <= 0.0f) {
             sizeMeters = 2000.0f;
         }
-        m_fgLandclassTexScale[static_cast<size_t>(entry.id)] = 1.0f / sizeMeters;
+        m_landclassTexScale[static_cast<size_t>(entry.id)] = 1.0f / sizeMeters;
     }
 
     if (texturePaths.empty()) {
-        std::cerr << "[terrain] no FlightGear textures found; disabling FG materials\n";
+        std::cerr << "[terrain] no textures found; disabling materials\n";
         return;
     }
     if (texturePaths.size() > 256) {
-        std::cerr << "[terrain] FlightGear texture count exceeds 256; some indices may be truncated\n";
+        std::cerr << "[terrain] texture count exceeds 256; some indices may be truncated\n";
     }
 
     auto array = std::make_unique<TextureArray>();
     if (!array->loadFromFiles(texturePaths, atlasSize, true)) {
-        std::cerr << "[terrain] failed to build FlightGear texture array\n";
+        std::cerr << "[terrain] failed to build texture array\n";
         return;
     }
 
-    m_fgTextureArray = std::move(array);
+    m_textureArray = std::move(array);
     auto lut = std::make_unique<Texture>();
     if (!lut->loadFromData(lutData.data(), 256, 1, 4, false, true, false)) {
-        std::cerr << "[terrain] failed to build FlightGear landclass LUT\n";
-        m_fgTextureArray.reset();
+        std::cerr << "[terrain] failed to build landclass LUT\n";
+        m_textureArray.reset();
         return;
     }
-    m_fgLandclassLut = std::move(lut);
-    m_useFlightGearMaterials = true;
+    m_landclassLut = std::move(lut);
+    m_useLandclassMaterials = true;
 }
 
 Vec3 TerrainRenderer::compiledGeoToWorld(double latDeg, double lonDeg, double altMeters) const {
@@ -728,7 +728,7 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
             if (m_compiledMaskIsLandclass) {
                 apply_mask_to_verts(verts, maskData, m_compiledMaskResolution,
                                     m_compiledTileSizeMeters, tileMinX, tileMinZ,
-                                    &m_fgLandclassFlags);
+                                    &m_landclassFlags);
             } else {
                 apply_mask_to_verts(verts, maskData, m_compiledMaskResolution,
                                     m_compiledTileSizeMeters, tileMinX, tileMinZ);
@@ -834,10 +834,10 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
     if (!m_shader) {
         m_shader = m_assets ? m_assets->getShader("basic") : nullptr;
     }
-    if (!m_fgShader) {
-        m_fgShader = m_assets ? m_assets->getShader("terrain_fg") : nullptr;
+    if (!m_terrainShader) {
+        m_terrainShader = m_assets ? m_assets->getShader("terrain") : nullptr;
     }
-    Shader* activeShader = m_useFlightGearMaterials ? m_fgShader : m_shader;
+    Shader* activeShader = m_useLandclassMaterials ? m_terrainShader : m_shader;
     if (!activeShader) {
         return;
     }
@@ -912,8 +912,8 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
         activeShader->setMat4("uMVP", vp);
         applyDirectionalLighting(activeShader, sunDir);
         m_visuals.bind(activeShader, sunDir, cameraPos);
-        if (m_useFlightGearMaterials) {
-            bindFlightGearMaterials(activeShader, m_compiledMaskResolution > 0);
+        if (m_useLandclassMaterials) {
+            bindLandclassMaterials(activeShader, m_compiledMaskResolution > 0);
         } else {
             bool useMask = (m_compiledMaskResolution > 0) && !m_compiledMaskIsLandclass;
             bindTerrainTextures(activeShader, useMask);

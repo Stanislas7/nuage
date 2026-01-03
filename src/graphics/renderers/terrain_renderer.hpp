@@ -101,7 +101,7 @@ public:
     void setTreesEnabled(bool enabled);
     bool debugMaskView() const { return m_debugMaskView; }
     void setDebugMaskView(bool enabled) { m_debugMaskView = enabled; }
-    bool usesFlightGearMaterials() const { return m_useFlightGearMaterials; }
+    bool usesLandclassMaterials() const { return m_useLandclassMaterials; }
     TerrainVisualSettings& visuals() { return m_visuals; }
     const TerrainVisualSettings& visuals() const { return m_visuals; }
     TerrainTextureSettings& textureSettings() { return m_textureSettings; }
@@ -139,8 +139,8 @@ private:
     std::int64_t packedTileKey(int x, int y) const;
     void applyTextureConfig(const nlohmann::json& config, const std::string& configPath);
     void bindTerrainTextures(Shader* shader, bool useMasks) const;
-    void bindFlightGearMaterials(Shader* shader, bool useMasks) const;
-    void setupFlightGearMaterials(const nlohmann::json& config, const std::string& configPath);
+    void bindLandclassMaterials(Shader* shader, bool useMasks) const;
+    void setupLandclassMaterials(const nlohmann::json& config, const std::string& configPath);
     void loadRunways(const nlohmann::json& config, const std::string& configPath);
     bool sampleRunway(float worldX, float worldZ, TerrainSample& outSample) const;
     bool sampleCompiledSurface(int tx, int ty, float worldX, float worldZ,
@@ -151,7 +151,7 @@ private:
     Mesh* m_mesh = nullptr;
     Shader* m_shader = nullptr;
     Shader* m_texturedShader = nullptr;
-    Shader* m_fgShader = nullptr;
+    Shader* m_terrainShader = nullptr;
     TerrainTextureSettings m_textureSettings;
     Texture* m_texGrass = nullptr;
     Texture* m_texGrassB = nullptr;
@@ -170,10 +170,10 @@ private:
     Texture* m_texRockRough = nullptr;
     Texture* m_texUrbanRough = nullptr;
 
-    std::unique_ptr<TextureArray> m_fgTextureArray;
-    std::unique_ptr<Texture> m_fgLandclassLut;
-    std::array<float, 256> m_fgLandclassTexScale{};
-    std::array<std::uint8_t, 256> m_fgLandclassFlags{};
+    std::unique_ptr<TextureArray> m_textureArray;
+    std::unique_ptr<Texture> m_landclassLut;
+    std::array<float, 256> m_landclassTexScale{};
+    std::array<std::uint8_t, 256> m_landclassFlags{};
 
     std::unique_ptr<Mesh> m_runwayMesh;
     bool m_runwaysEnabled = false;
@@ -194,7 +194,7 @@ private:
 
     bool m_compiled = false;
     bool m_debugMaskView = false;
-    bool m_useFlightGearMaterials = false;
+    bool m_useLandclassMaterials = false;
     AssetStore* m_assets = nullptr;
     std::unordered_map<std::string, TileResource> m_tileCache;
 

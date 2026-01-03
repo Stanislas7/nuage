@@ -1,6 +1,6 @@
 # Nuage Scenery Architecture
 
-Nuage uses an offline pipeline inspired by TerraGear/TerraSync, but outputs Nuage's compiled tiles and packs.
+Nuage uses an offline pipeline for compiling terrain tiles and scenery packs.
 
 ## Pipeline Stages
 1) **Ingest sources**
@@ -16,7 +16,7 @@ Nuage uses an offline pipeline inspired by TerraGear/TerraSync, but outputs Nuag
    - Convert landclass to 16-bit PNG (raw IDs).
 
 3) **Classify**
-   - Map source landclass IDs to FlightGear landclass IDs using `assets/scenery/mappings/`.
+   - Map source landclass IDs to core landclass IDs using `assets/scenery/mappings/`.
 
 4) **Compile**
    - Run `terrainc` to emit tiles + `manifest.json` with `maskType: "landclass"`.
@@ -27,6 +27,6 @@ Nuage uses an offline pipeline inspired by TerraGear/TerraSync, but outputs Nuag
    - Activate with `tools/scenery/scenery_sync.py` (sets `assets/scenery/active`).
 
 ## Runtime
-Nuage streams the active pack and uses FlightGear materials/assets from `assets/terrain/fg`.
+Nuage streams the active pack and uses core terrain assets from `assets/terrain/core`.
 
 This keeps runtime independent while allowing the offline pipeline to evolve without touching the renderer.

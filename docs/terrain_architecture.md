@@ -1,12 +1,12 @@
 # Nuage Terrain Architecture
 
 This document describes the current terrain pipeline, data layout, and runtime
-integration for Nuage (FlightGear-style landclass materials, but fully local).
+integration for Nuage (landclass-style materials, but fully local).
 
 ## Overview
 Nuage terrain is compiled offline (similar to TerraGear) and streamed at runtime.
-The runtime does not depend on FlightGear. All needed textures/materials are
-vendored under `assets/terrain/fg`.
+The runtime does not depend on external simulators. All needed textures/materials are
+vendored under `assets/terrain/core`.
 
 Pipeline summary:
 1) Download/ingest sources (DEM + landclass + optional OSM).
@@ -21,24 +21,24 @@ Pipeline summary:
 ```
 assets/scenery/
   regions/       # region config (bbox + sources + downloads)
-  mappings/      # landclass mapping (ESA -> FG landclass IDs)
+  mappings/      # landclass mapping (ESA -> landclass IDs)
   sources/       # raw input rasters (VRTs + OSM PBF)
   work/          # intermediate outputs (clipped rasters, PGM)
   packs/         # compiled packs (manifest.json + tiles/)
   active/        # symlink/copy to selected pack
 
-assets/terrain/fg/
+assets/terrain/core/
   Materials/ Effects/ Shaders/ Terrain/ Runway/ Water/
 ```
 
 ## Runtime Configuration
-The simulator uses `assets/config/terrain_flightgear.json` which points to:
+The simulator uses `assets/config/terrain.json` which points to:
 - `compiledManifest`: `../scenery/active/manifest.json`
 - `runways.json`: `../scenery/active/runways.json`
-- `terrainMaterials.mode`: `flightgear`
-- `terrainMaterials.fgRoot`: `../terrain/fg`
+- `terrainMaterials.mode`: `landclass`
+- `terrainMaterials.root`: `../terrain/core`
 
-The renderer loads FG materials/landclass mappings and builds a texture array
+The renderer loads materials/landclass mappings and builds a texture array
 plus a compact landclass LUT for fast lookup on GPU.
 
 ## Build Tools
@@ -69,7 +69,7 @@ python3 tools/scenery/scenery_build.py --config assets/scenery/regions/bay_area.
 - `bbox`: region bounds (lon/lat).
 - `sources`: paths for DEM/landclass/OSM and airport CSVs.
 - `downloads`: URLs for DEM, WorldCover, and Geofabrik OSM.
-- `landclassMap`: maps ESA IDs to FG landclass IDs.
+- `landclassMap`: maps ESA IDs to landclass IDs.
 - `gridResolution`: mesh density per tile.
 - `maskResolution`: landclass mask resolution per tile.
 - `landclassMaxDim`: downsample cap before landclass conversion.
@@ -87,7 +87,7 @@ This avoids palette expansion issues that can zero out mask data during load.
 Runways are derived from OurAirports CSVs and written to `runways.json`.
 If the bbox excludes airports, the file may be missing; you can:
 - expand the bbox to include an airport, or
-- disable runways in `terrain_flightgear.json`.
+- disable runways in `terrain.json`.
 
 ## Troubleshooting
 - **Red/white grid**: compiled tiles not loaded. Check `assets/scenery/active`

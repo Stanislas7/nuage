@@ -16,4 +16,4 @@ python3 tools/scenery/scenery_build.py --config assets/scenery/regions/bay_area.
 python3 tools/scenery/scenery_sync.py activate --pack bay_area_v1
 ```
 
-The active pack is referenced by `assets/config/terrain_flightgear.json`.
+The active pack is referenced by `assets/config/terrain.json`.

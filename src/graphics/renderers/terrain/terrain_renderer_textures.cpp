@@ -220,24 +220,24 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     }
 }
 
-void TerrainRenderer::bindFlightGearMaterials(Shader* shader, bool useMasks) const {
+void TerrainRenderer::bindLandclassMaterials(Shader* shader, bool useMasks) const {
     if (!shader) {
         return;
     }
-    bool enabled = m_useFlightGearMaterials && m_fgTextureArray;
+    bool enabled = m_useLandclassMaterials && m_textureArray;
     shader->setBool("uTerrainUseTextures", enabled);
     shader->setBool("uTerrainUseMasks", useMasks);
     if (!enabled) {
         return;
     }
 
-    m_fgTextureArray->bind(0);
+    m_textureArray->bind(0);
     shader->setInt("uTerrainTexArray", 0);
-    if (m_fgLandclassLut) {
-        m_fgLandclassLut->bind(1);
+    if (m_landclassLut) {
+        m_landclassLut->bind(1);
         shader->setInt("uLandclassLut", 1);
     }
-    shader->setFloatArray("uLandclassTexScale", m_fgLandclassTexScale.data(), 256);
+    shader->setFloatArray("uLandclassTexScale", m_landclassTexScale.data(), 256);
 }
 
 } // namespace nuage
