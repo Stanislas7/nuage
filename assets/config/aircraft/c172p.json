@@ -3,12 +3,12 @@
     "jsbsim": {
         "enabled": true,
         "model": "c172p",
-        "latitudeDeg": 37.725,
-        "longitudeDeg": -122.225,
+        "latitudeDeg": 37.6188,
+        "longitudeDeg": -122.3754,
         "rollTrim": 0.12
     },
     "spawn": {
-        "position": [0.0, 1500.0, 0.0],
+        "position": [4362.8, 1500.0, -20171.1],
         "snapToTerrain": false,
         "airspeed": 65.0,
         "headingDeg": 310.0

@@ -180,6 +180,11 @@ private:
     Vec3 m_runwayColor = Vec3(0.12f, 0.12f, 0.12f);
     float m_runwayHeightOffset = 0.15f;
     Texture* m_runwayTexture = nullptr;
+    struct RunwayLayer {
+        std::unique_ptr<Mesh> mesh;
+        Texture* texture = nullptr;
+    };
+    std::vector<RunwayLayer> m_runwayLayers;
 
     struct RunwayCollider {
         Vec3 center;

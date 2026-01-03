@@ -89,6 +89,11 @@ If the bbox excludes airports, the file may be missing; you can:
 - expand the bbox to include an airport, or
 - disable runways in `terrain.json`.
 
+At runtime, runway quads are drawn on top of the compiled tiles and can
+optionally layer markings (centerlines, thresholds, aiming points) using
+textures from `assets/terrain/core/Runway`. These are configured under the
+`runways.markings` block in `assets/config/terrain.json`.
+
 ## Troubleshooting
 - **Red/white grid**: compiled tiles not loaded. Check `assets/scenery/active`
   points to the intended pack and `compiledDebugLog` is true for logs.

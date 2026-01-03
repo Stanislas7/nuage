@@ -29,4 +29,7 @@ Nuage uses an offline pipeline for compiling terrain tiles and scenery packs.
 ## Runtime
 Nuage streams the active pack and uses core terrain assets from `assets/terrain/core`.
 
+Runways are rendered as an overlay mesh with optional markings textures from
+`assets/terrain/core/Runway`, configured in `assets/config/terrain.json`.
+
 This keeps runtime independent while allowing the offline pipeline to evolve without touching the renderer.

@@ -24,6 +24,7 @@ This document describes the modular, property-driven architecture of Nuage, insp
   Asset loading is data-driven via `assets/config/assets.json` to keep engine initialization decoupled from specific shader lists.
 - **Camera**: A flexible camera system (Chase, Orbit) that tracks targets directly via `Aircraft::Instance` interpolation for tight coupling and predictable performance.
 - **Terrain**: Managed by `TerrainRenderer`, which handles tile loading and LOD based on the current camera position.
+- **Runways**: Rendered as overlay meshes on top of compiled terrain, with optional markings sourced from `assets/terrain/core/Runway` and configured in `assets/config/terrain.json`.
 
 ## Configuration
 - **Standardized Paths**: Nuage uses a hierarchical property naming convention (e.g., `controls/engines/current/throttle`).

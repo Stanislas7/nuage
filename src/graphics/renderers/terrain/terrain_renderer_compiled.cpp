@@ -994,6 +994,22 @@ void TerrainRenderer::renderCompiled(const Mat4& vp, const Vec3& sunDir, const V
         }
         glDisable(GL_DEPTH_TEST);
         m_runwayMesh->draw();
+
+        if (!m_runwayLayers.empty()) {
+            Shader* ms = (m_texturedShader) ? m_texturedShader : rs;
+            for (const auto& layer : m_runwayLayers) {
+                if (!layer.mesh || !layer.texture) {
+                    continue;
+                }
+                ms->use();
+                ms->setMat4("uMVP", vp);
+                applyDirectionalLighting(ms, sunDir);
+                layer.texture->bind(0);
+                ms->setInt("uTexture", 0);
+                ms->setBool("uUseUniformColor", false);
+                layer.mesh->draw();
+            }
+        }
         glEnable(GL_DEPTH_TEST);
     }
 }

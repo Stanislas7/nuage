@@ -41,7 +41,22 @@
     "json": "../scenery/active/runways.json",
     "color": [0.12, 0.12, 0.12],
     "heightOffset": 0.1,
-    "texture": "../terrain/core/Terrain/asphalt.png"
+    "texture": "../terrain/core/Terrain/asphalt.png",
+    "markings": {
+      "enabled": true,
+      "centerlineTexture": "../terrain/core/Runway/pa_centerline.png",
+      "thresholdTexture": "../terrain/core/Runway/pa_threshold.png",
+      "aimTexture": "../terrain/core/Runway/pa_aim.png",
+      "centerlineWidthMeters": 1.0,
+      "centerlineRepeatMeters": 20.0,
+      "centerlineInsetMeters": 30.0,
+      "thresholdDepthMeters": 12.0,
+      "thresholdInsetMeters": 0.0,
+      "edgeInsetMeters": 2.0,
+      "aimDepthMeters": 12.0,
+      "aimOffsetMeters": 300.0,
+      "heightOffset": 0.02
+    }
   },
   "terrainMaterials": {
     "mode": "landclass",
