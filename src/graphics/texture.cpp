@@ -56,7 +56,8 @@ bool Texture::loadFromFile(const std::string& path, bool flipY, bool repeat) {
     return true;
 }
 
-bool Texture::loadFromData(const unsigned char* data, int width, int height, int channels, bool repeat) {
+bool Texture::loadFromData(const unsigned char* data, int width, int height, int channels,
+                           bool repeat, bool nearest, bool generateMipmaps) {
     if (!data || width <= 0 || height <= 0 || channels <= 0) {
         return false;
     }
@@ -78,14 +79,25 @@ bool Texture::loadFromData(const unsigned char* data, int width, int height, int
     glGenTextures(1, &m_id);
     glBindTexture(GL_TEXTURE_2D, m_id);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if (nearest) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                        generateMipmaps ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                        generateMipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
     GLint wrapMode = repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
 
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    if (generateMipmaps) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+    }
     return true;
 }
 

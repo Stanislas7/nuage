@@ -43,11 +43,6 @@ void TerrainRenderer::shutdown() {
     m_texUrban = nullptr;
     m_texWater = nullptr;
     m_fgTextureArray.reset();
-    m_fgLandclassTexCount.fill(0);
-    m_fgLandclassTexIndex0.fill(0);
-    m_fgLandclassTexIndex1.fill(0);
-    m_fgLandclassTexIndex2.fill(0);
-    m_fgLandclassTexIndex3.fill(0);
     m_fgLandclassTexScale.fill(0.0f);
     m_fgLandclassFlags.fill(0);
     m_assets = nullptr;
@@ -94,11 +89,6 @@ void TerrainRenderer::setup(const std::string& configPath, AssetStore& assets) {
     m_texUrban = nullptr;
     m_texWater = nullptr;
     m_fgTextureArray.reset();
-    m_fgLandclassTexCount.fill(0);
-    m_fgLandclassTexIndex0.fill(0);
-    m_fgLandclassTexIndex1.fill(0);
-    m_fgLandclassTexIndex2.fill(0);
-    m_fgLandclassTexIndex3.fill(0);
     m_fgLandclassTexScale.fill(0.0f);
     m_fgLandclassFlags.fill(0);
     m_visuals.resetDefaults();

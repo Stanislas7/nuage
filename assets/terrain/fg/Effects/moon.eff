@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<PropertyList>
+  <name>Effects/moon</name>
+
+  <parameters>
+    <texture n="1">
+      <image>Textures/Sky/moon_color.png</image>
+      <type>2d</type>
+      <filter>linear-mipmap-linear</filter>
+      <mag-filter>linear</mag-filter>
+      <wrap-s>clamp-to-edge</wrap-s>
+      <wrap-t>clamp-to-edge</wrap-t>
+      <internal-format>normalized</internal-format>
+    </texture>
+    <texture n="2">
+      <image>Textures/Sky/moon_n.png</image>
+      <type>2d</type>
+      <filter>linear-mipmap-linear</filter>
+      <mag-filter>linear</mag-filter>
+      <wrap-s>clamp-to-edge</wrap-s>
+      <wrap-t>clamp-to-edge</wrap-t>
+      <internal-format>normalized</internal-format>
+    </texture>
+    <!-- exposure.glsl -->
+    <exposure-compensation>
+      <use>/sim/rendering/hdr/exposure-compensation</use>
+    </exposure-compensation>
+  </parameters>
+
+  <technique n="129">
+    <scheme>hdr-forward</scheme>
+    <pass>
+      <depth>
+        <enabled>true</enabled>
+        <function>less</function>
+        <write-mask>false</write-mask>
+      </depth>
+      <!-- Make sure we render after the skydome -->
+      <render-bin>
+        <bin-number>-5</bin-number>
+        <bin-name>RenderBin</bin-name>
+      </render-bin>
+      <!-- Color map -->
+      <texture-unit>
+        <unit>1</unit>
+        <type><use>texture[1]/type</use></type>
+        <image><use>texture[1]/image</use></image>
+        <filter><use>texture[1]/filter</use></filter>
+        <mag-filter><use>texture[1]/mag-filter</use></mag-filter>
+        <wrap-s><use>texture[1]/wrap-s</use></wrap-s>
+        <wrap-t><use>texture[1]/wrap-t</use></wrap-t>
+      </texture-unit>
+      <!-- Normal map -->
+      <texture-unit>
+        <unit>2</unit>
+        <type><use>texture[2]/type</use></type>
+        <image><use>texture[2]/image</use></image>
+        <filter><use>texture[2]/filter</use></filter>
+        <mag-filter><use>texture[2]/mag-filter</use></mag-filter>
+        <wrap-s><use>texture[2]/wrap-s</use></wrap-s>
+        <wrap-t><use>texture[2]/wrap-t</use></wrap-t>
+      </texture-unit>
+      <cull-face>back</cull-face>
+      <!-- Additive blending to add the sky in-scattering from the skydome -->
+      <blend>
+        <active>true</active>
+        <source>one</source>
+        <destination>one</destination>
+      </blend>
+      <program>
+        <vertex-shader>Shaders/HDR/moon.vert</vertex-shader>
+        <fragment-shader>Shaders/HDR/moon.frag</fragment-shader>
+        <fragment-shader>Shaders/HDR/celestial_body.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/math.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/color.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/normalmap.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/atmos_spectral.glsl</fragment-shader>
+        <fragment-shader>Shaders/HDR/exposure.glsl</fragment-shader>
+      </program>
+      <uniform>
+        <name>color_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">1</value>
+      </uniform>
+      <uniform>
+        <name>normal_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">2</value>
+      </uniform>
+      <!-- celestial_body.glsl -->
+      <uniform>
+        <name>transmittance_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">12</value>
+      </uniform>
+      <!-- exposure.glsl -->
+      <uniform>
+        <name>lum_tex</name>
+        <type>sampler-2d</type>
+        <value type="int">14</value>
+      </uniform>
+      <uniform>
+        <name>exposure_compensation</name>
+        <type>float</type>
+        <value><use>exposure-compensation</use></value>
+      </uniform>
+    </pass>
+  </technique>
+</PropertyList>

@@ -76,7 +76,6 @@ uniform vec3 uTerrainWaterColor = vec3(0.14, 0.32, 0.55);
 uniform bool uTerrainHasNormalMaps = false;
 uniform bool uTerrainHasRoughnessMaps = false;
 uniform bool uTerrainHasWaterTex = false;
-uniform sampler2D uTerrainTexWater;
 uniform float uTerrainWaterTexScale = 0.001;
 uniform float uTerrainWaterTexStrength = 0.65;
 uniform float uTerrainShoreWidth = 0.45;
@@ -267,11 +266,6 @@ void main() {
         vec3 farmlandBase = mix(grassMixed, dirtTexAlt, 0.6);
         vec3 landColor = (grassMixed * wGrass + urbanTex * wUrban + forestTex * wForest + farmlandBase * wFarmland) / landSum;
         vec3 waterBase = uTerrainWaterColor;
-        if (uTerrainHasWaterTex) {
-            vec2 waterUv = vWorldPos.xz * uTerrainWaterTexScale + macroOffset * 0.8;
-            vec3 waterTex = texture(uTerrainTexWater, waterUv).rgb;
-            waterBase = mix(uTerrainWaterColor, waterTex, uTerrainWaterTexStrength);
-        }
         baseColor = mix(landColor, waterBase, wWater);
 
         // Elevation-driven tinting for broader biome feel (tempered by noise).

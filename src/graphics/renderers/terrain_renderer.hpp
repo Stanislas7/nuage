@@ -4,6 +4,7 @@
 #include "math/mat4.hpp"
 #include "math/vec3.hpp"
 #include "graphics/renderers/terrain/terrain_visual_settings.hpp"
+#include "graphics/texture_array.hpp"
 #include "utils/json.hpp"
 #include <array>
 #include <unordered_map>
@@ -170,11 +171,7 @@ private:
     Texture* m_texUrbanRough = nullptr;
 
     std::unique_ptr<TextureArray> m_fgTextureArray;
-    std::array<int, 256> m_fgLandclassTexCount{};
-    std::array<int, 256> m_fgLandclassTexIndex0{};
-    std::array<int, 256> m_fgLandclassTexIndex1{};
-    std::array<int, 256> m_fgLandclassTexIndex2{};
-    std::array<int, 256> m_fgLandclassTexIndex3{};
+    std::unique_ptr<Texture> m_fgLandclassLut;
     std::array<float, 256> m_fgLandclassTexScale{};
     std::array<std::uint8_t, 256> m_fgLandclassFlags{};
 

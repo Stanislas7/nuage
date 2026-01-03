@@ -233,11 +233,10 @@ void TerrainRenderer::bindFlightGearMaterials(Shader* shader, bool useMasks) con
 
     m_fgTextureArray->bind(0);
     shader->setInt("uTerrainTexArray", 0);
-    shader->setIntArray("uLandclassTexCount", m_fgLandclassTexCount.data(), 256);
-    shader->setIntArray("uLandclassTexIndex0", m_fgLandclassTexIndex0.data(), 256);
-    shader->setIntArray("uLandclassTexIndex1", m_fgLandclassTexIndex1.data(), 256);
-    shader->setIntArray("uLandclassTexIndex2", m_fgLandclassTexIndex2.data(), 256);
-    shader->setIntArray("uLandclassTexIndex3", m_fgLandclassTexIndex3.data(), 256);
+    if (m_fgLandclassLut) {
+        m_fgLandclassLut->bind(1);
+        shader->setInt("uLandclassLut", 1);
+    }
     shader->setFloatArray("uLandclassTexScale", m_fgLandclassTexScale.data(), 256);
 }
 

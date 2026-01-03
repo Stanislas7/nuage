@@ -1,12 +1,12 @@
 {
-  "compiledManifest": "../terrain/compiled/manifest.json",
-  "compiledVisibleRadius": 2,
+  "compiledManifest": "../scenery/active/manifest.json",
+  "compiledVisibleRadius": 4,
   "compiledMaxLoadsPerFrame": 2,
   "compiledLod1Distance": 3000.0,
   "compiledSkirtDepth": 180.0,
   "compiledDebugLog": false,
   "terrainTrees": {
-    "enabled": true,
+    "enabled": false,
     "densityPerSqKm": 120.0,
     "minHeight": 4.0,
     "maxHeight": 10.0,
@@ -37,14 +37,14 @@
   },
   "terrainTextures": {
     "enabled": false,
-    "grass": "../fgdata/Textures/Terrain/grass.png",
-    "grassB": "../fgdata/Textures/Terrain/grass_dry2.png",
-    "forest": "../fgdata/Textures/Terrain/forest.png",
-    "rock": "../fgdata/Textures/Terrain/rock.png",
-    "dirt": "../fgdata/Textures/Terrain/dirtrock.png",
-    "dirtB": "../fgdata/Textures/Terrain/mixedcrop1.png",
-    "urban": "../fgdata/Textures/Terrain/city1.png",
-    "water": "../fgdata/Textures/Terrain/water.png",
+    "grass": "../terrain/fg/Terrain/grass.png",
+    "grassB": "../terrain/fg/Terrain/grass_dry2.png",
+    "forest": "../terrain/fg/Terrain/forest.png",
+    "rock": "../terrain/fg/Terrain/rock.png",
+    "dirt": "../terrain/fg/Terrain/dirtrock.png",
+    "dirtB": "../terrain/fg/Terrain/mixedcrop1.png",
+    "urban": "../terrain/fg/Terrain/city1.png",
+    "water": "../terrain/fg/Terrain/water.png",
     "texScale": 0.001,
     "detailScale": 0.02,
     "detailStrength": 0.08,
@@ -88,14 +88,14 @@
   "runways": {
     "enabled": true,
     "snapToTerrain": true,
-    "json": "../terrain/sources/runways_oakland.json",
+    "json": "../scenery/active/runways.json",
     "color": [0.12, 0.12, 0.12],
     "heightOffset": 0.1,
-    "texture": "../fgdata/Textures/Terrain/asphalt.png"
+    "texture": "../terrain/fg/Terrain/asphalt.png"
   },
   "terrainMaterials": {
     "mode": "flightgear",
-    "fgRoot": "../fgdata",
+    "fgRoot": "../terrain/fg",
     "atlasSize": 512
   }
 }

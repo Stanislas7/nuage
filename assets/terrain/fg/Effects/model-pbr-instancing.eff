@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<PropertyList>
+  <name>Effects/model-pbr-instancing</name>
+  <inherits-from>Effects/model-pbr</inherits-from>
+
+  <!-- Overwrite the geometry technique -->
+  <technique n="109">
+    <pass>
+      <define>
+        <name>USE_INSTANCING</name>
+      </define>
+      <program>
+        <vertex-shader n="100">Shaders/HDR/object_instancing.glsl</vertex-shader>
+      </program>
+    </pass>
+  </technique>
+
+  <!-- Overwrite the shadow technique -->
+  <technique n="119">
+    <pass>
+      <define>
+        <name>USE_INSTANCING</name>
+      </define>
+      <program>
+        <vertex-shader n="100">Shaders/HDR/object_instancing.glsl</vertex-shader>
+      </program>
+    </pass>
+  </technique>
+</PropertyList>

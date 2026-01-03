@@ -489,11 +489,6 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
 void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, const std::string& configPath) {
     m_useFlightGearMaterials = false;
     m_fgTextureArray.reset();
-    m_fgLandclassTexCount.fill(0);
-    m_fgLandclassTexIndex0.fill(0);
-    m_fgLandclassTexIndex1.fill(0);
-    m_fgLandclassTexIndex2.fill(0);
-    m_fgLandclassTexIndex3.fill(0);
     m_fgLandclassTexScale.fill(0.0f);
     m_fgLandclassFlags.fill(0);
 
@@ -513,7 +508,7 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
         return (cfg.parent_path() / path).string();
     };
 
-    std::string fgRootPath = resolve(materialsConfig.value("fgRoot", "../fgdata"));
+    std::string fgRootPath = resolve(materialsConfig.value("fgRoot", "../terrain/fg"));
     int atlasSize = materialsConfig.value("atlasSize", 512);
     atlasSize = std::clamp(atlasSize, 64, 2048);
 
@@ -528,8 +523,13 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
     std::vector<std::string> texturePaths;
     auto resolveTexture = [&](const std::string& tex) {
         std::string trimmed = stripTexturesPrefix(tex);
-        std::filesystem::path full = std::filesystem::path(fgRootPath) / "Textures" / trimmed;
-        return full.string();
+        std::filesystem::path base = std::filesystem::path(fgRootPath);
+        std::filesystem::path withTextures = base / "Textures" / trimmed;
+        if (std::filesystem::exists(withTextures)) {
+            return withTextures.string();
+        }
+        std::filesystem::path direct = base / trimmed;
+        return direct.string();
     };
     auto addTexture = [&](const std::string& tex) -> std::optional<int> {
         std::string full = resolveTexture(tex);
@@ -554,6 +554,24 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
     }
     int fallbackIndex = *fallbackOpt;
 
+    std::vector<std::uint8_t> lutData(256 * 4, 0);
+    auto writeLut = [&](int id, int count, int idx0, int idx1, int idx2) {
+        int clampedCount = std::clamp(count, 1, 3);
+        auto clampIndex = [&](int idx) {
+            return static_cast<std::uint8_t>(std::clamp(idx, 0, 255));
+        };
+        size_t base = static_cast<size_t>(id) * 4;
+        lutData[base + 0] = static_cast<std::uint8_t>(clampedCount);
+        lutData[base + 1] = clampIndex(idx0);
+        lutData[base + 2] = clampIndex(idx1);
+        lutData[base + 3] = clampIndex(idx2);
+    };
+
+    m_fgLandclassTexScale.fill(1.0f / 2000.0f);
+    for (int id = 0; id < 256; ++id) {
+        writeLut(id, 1, fallbackIndex, fallbackIndex, fallbackIndex);
+    }
+
     for (const auto& entry : lib.landclassEntries()) {
         if (entry.id < 0 || entry.id >= 256) {
             continue;
@@ -573,18 +591,17 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
             if (idx) {
                 indices.push_back(*idx);
             }
-            if (indices.size() >= 4) {
+            if (indices.size() >= 3) {
                 break;
             }
         }
         if (indices.empty()) {
             indices.push_back(fallbackIndex);
         }
-        m_fgLandclassTexCount[static_cast<size_t>(entry.id)] = static_cast<int>(indices.size());
-        m_fgLandclassTexIndex0[static_cast<size_t>(entry.id)] = indices[0];
-        m_fgLandclassTexIndex1[static_cast<size_t>(entry.id)] = indices.size() > 1 ? indices[1] : indices[0];
-        m_fgLandclassTexIndex2[static_cast<size_t>(entry.id)] = indices.size() > 2 ? indices[2] : indices[0];
-        m_fgLandclassTexIndex3[static_cast<size_t>(entry.id)] = indices.size() > 3 ? indices[3] : indices[0];
+        int idx0 = indices[0];
+        int idx1 = indices.size() > 1 ? indices[1] : indices[0];
+        int idx2 = indices.size() > 2 ? indices[2] : indices[0];
+        writeLut(entry.id, static_cast<int>(indices.size()), idx0, idx1, idx2);
 
         float sizeMeters = mat.xsize > 0.0f ? mat.xsize : mat.ysize;
         if (sizeMeters <= 0.0f) {
@@ -597,6 +614,9 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
         std::cerr << "[terrain] no FlightGear textures found; disabling FG materials\n";
         return;
     }
+    if (texturePaths.size() > 256) {
+        std::cerr << "[terrain] FlightGear texture count exceeds 256; some indices may be truncated\n";
+    }
 
     auto array = std::make_unique<TextureArray>();
     if (!array->loadFromFiles(texturePaths, atlasSize, true)) {
@@ -605,6 +625,13 @@ void TerrainRenderer::setupFlightGearMaterials(const nlohmann::json& config, con
     }
 
     m_fgTextureArray = std::move(array);
+    auto lut = std::make_unique<Texture>();
+    if (!lut->loadFromData(lutData.data(), 256, 1, 4, false, true, false)) {
+        std::cerr << "[terrain] failed to build FlightGear landclass LUT\n";
+        m_fgTextureArray.reset();
+        return;
+    }
+    m_fgLandclassLut = std::move(lut);
     m_useFlightGearMaterials = true;
 }
 

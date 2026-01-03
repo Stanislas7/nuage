@@ -225,7 +225,8 @@ Landclass raster (raw IDs, for FlightGear mode):
 build/terrainc \
   --heightmap assets/terrain/sources/height.png \
   --height-min <m> --height-max <m> --tile-size 2000 --grid 257 \
-  --landclass assets/terrain/sources/landclass.png --mask-res 256 \
+  --landclass assets/terrain/sources/landclass.png --landclass-map assets/scenery/mappings/esa_worldcover.json \
+  --mask-res 256 \
   --xmin <xmin> --ymin <ymin> --xmax <xmax> --ymax <ymax> \
   --out assets/terrain/compiled
 ```

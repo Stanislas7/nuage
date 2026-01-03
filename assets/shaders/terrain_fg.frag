@@ -35,11 +35,7 @@ uniform vec2 uTerrainMaskOrigin;
 uniform vec2 uTerrainMaskInvSize;
 
 uniform sampler2DArray uTerrainTexArray;
-uniform int uLandclassTexCount[256];
-uniform int uLandclassTexIndex0[256];
-uniform int uLandclassTexIndex1[256];
-uniform int uLandclassTexIndex2[256];
-uniform int uLandclassTexIndex3[256];
+uniform sampler2D uLandclassLut;
 uniform float uLandclassTexScale[256];
 
 float hash(vec2 p) {
@@ -67,16 +63,20 @@ int sampleLandclass(vec2 worldPos) {
 }
 
 int selectTextureIndex(int landclass, float picker) {
-    int count = uLandclassTexCount[landclass];
-    if (count <= 1) {
-        return uLandclassTexIndex0[landclass];
+    vec4 lut = texelFetch(uLandclassLut, ivec2(landclass, 0), 0);
+    int count = int(floor(lut.r * 255.0 + 0.5));
+    int idx0 = int(floor(lut.g * 255.0 + 0.5));
+    int idx1 = int(floor(lut.b * 255.0 + 0.5));
+    int idx2 = int(floor(lut.a * 255.0 + 0.5));
+    count = clamp(count, 1, 3);
+    if (count == 1) {
+        return idx0;
     }
     int slot = int(floor(picker * float(count)));
     slot = clamp(slot, 0, count - 1);
-    if (slot == 1) return uLandclassTexIndex1[landclass];
-    if (slot == 2) return uLandclassTexIndex2[landclass];
-    if (slot == 3) return uLandclassTexIndex3[landclass];
-    return uLandclassTexIndex0[landclass];
+    if (slot == 1) return idx1;
+    if (slot == 2) return idx2;
+    return idx0;
 }
 
 void main() {

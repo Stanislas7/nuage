@@ -28,6 +28,7 @@ struct Config {
     std::string osmPath;
     std::string landcoverPath;
     std::string landclassPath;
+    std::string landclassMapPath;
     std::string outDir;
     std::string runwaysJsonPath;
     float sizeX = 0.0f;
@@ -81,7 +82,7 @@ void printUsage() {
               << "               [--osm <path> --mask-res <pixels> --xmin <lon> --ymin <lat>\n"
               << "                --xmax <lon> --ymax <lat> --mask-smooth <passes>\n"
               << "                --road-width-boost <scale> --road-smooth <passes>]\n"
-              << "               [--landcover <path>] [--landclass <path>]\n";
+              << "               [--landcover <path>] [--landclass <path>] [--landclass-map <path>]\n";
 }
 
 bool parseArgs(int argc, char** argv, Config& cfg) {
@@ -133,6 +134,8 @@ bool parseArgs(int argc, char** argv, Config& cfg) {
             if (!next(cfg.landcoverPath)) return false;
         } else if (arg == "--landclass") {
             if (!next(cfg.landclassPath)) return false;
+        } else if (arg == "--landclass-map") {
+            if (!next(cfg.landclassMapPath)) return false;
         } else if (arg == "--mask-res") {
             std::string v;
             if (!next(v)) return false;
@@ -254,6 +257,12 @@ struct LandcoverRaster {
     bool valid = false;
 };
 
+struct LandclassMap {
+    std::unordered_map<int, int> values;
+    int defaultValue = 0;
+    bool enabled = false;
+};
+
 bool pointInPolygon(const std::vector<nuage::Vec2>& poly, float x, float z) {
     bool inside = false;
     size_t count = poly.size();
@@ -355,6 +364,44 @@ LandcoverRaster loadLandcoverRaster(const std::string& path) {
     lc.geo = gt;
     lc.valid = !lc.data.empty();
     return lc;
+}
+
+LandclassMap loadLandclassMap(const std::string& path) {
+    LandclassMap mapping;
+    if (path.empty()) {
+        return mapping;
+    }
+    auto jsonOpt = nuage::loadJsonConfig(path);
+    if (!jsonOpt) {
+        std::cerr << "Failed to load landclass map: " << path << "\n";
+        return mapping;
+    }
+    const auto& j = *jsonOpt;
+    if (j.contains("default") && j["default"].is_number_integer()) {
+        mapping.defaultValue = j["default"].get<int>();
+    }
+    const nlohmann::json* mapNode = nullptr;
+    if (j.contains("map") && j["map"].is_object()) {
+        mapNode = &j["map"];
+    } else if (j.is_object()) {
+        mapNode = &j;
+    }
+    if (mapNode) {
+        for (auto it = mapNode->begin(); it != mapNode->end(); ++it) {
+            if (!it.value().is_number_integer()) {
+                continue;
+            }
+            int key = 0;
+            try {
+                key = std::stoi(it.key());
+            } catch (...) {
+                continue;
+            }
+            mapping.values[key] = it.value().get<int>();
+        }
+    }
+    mapping.enabled = !mapping.values.empty();
+    return mapping;
 }
 
 int classFromTags(const nlohmann::json& tags) {
@@ -644,6 +691,17 @@ int sampleLandclassValue(const LandcoverRaster& lc, double lon, double lat) {
     return static_cast<int>(std::min<std::uint16_t>(v, 255));
 }
 
+int mapLandclassValue(int value, const LandclassMap* map) {
+    if (!map || !map->enabled) {
+        return value;
+    }
+    auto it = map->values.find(value);
+    if (it != map->values.end()) {
+        return it->second;
+    }
+    return map->defaultValue;
+}
+
 void fillMaskFromLandcover(std::vector<std::uint8_t>& mask, int maskRes,
                            float tileMinX, float tileMinZ, float tileSize,
                            const Projection& proj, const LandcoverRaster& lc) {
@@ -667,7 +725,8 @@ void fillMaskFromLandcover(std::vector<std::uint8_t>& mask, int maskRes,
 
 void fillMaskFromLandclass(std::vector<std::uint8_t>& mask, int maskRes,
                            float tileMinX, float tileMinZ, float tileSize,
-                           const Projection& proj, const LandcoverRaster& lc) {
+                           const Projection& proj, const LandcoverRaster& lc,
+                           const LandclassMap* map) {
     if (!lc.valid || maskRes <= 0) {
         return;
     }
@@ -681,6 +740,8 @@ void fillMaskFromLandclass(std::vector<std::uint8_t>& mask, int maskRes,
             double lat = 0.0;
             unprojectToLonLat(proj, worldX, worldZ, lon, lat);
             int cls = sampleLandclassValue(lc, lon, lat);
+            cls = mapLandclassValue(cls, map);
+            cls = std::clamp(cls, 0, 255);
             mask[z * maskRes + x] = static_cast<std::uint8_t>(cls);
         }
     }
@@ -983,6 +1044,10 @@ int main(int argc, char** argv) {
         return 1;
     }
     bool useLandclass = landclass.valid;
+    LandclassMap landclassMap = loadLandclassMap(cfg.landclassMapPath);
+    if (!cfg.landclassMapPath.empty() && !landclassMap.enabled) {
+        std::cerr << "Landclass map provided but no valid mappings found.\n";
+    }
     if (useLandclass && (landcover.valid || !cfg.osmPath.empty())) {
         std::cerr << "Landclass provided; ignoring landcover and OSM masks.\n";
     }
@@ -1382,7 +1447,7 @@ int main(int argc, char** argv) {
                 std::vector<std::uint8_t> mask(static_cast<size_t>(cfg.maskResolution * cfg.maskResolution), 0);
                 if (useLandclass) {
                     fillMaskFromLandclass(mask, cfg.maskResolution, tileMinX, tileMinZ,
-                                          cfg.tileSize, proj, landclass);
+                                          cfg.tileSize, proj, landclass, landclassMap.enabled ? &landclassMap : nullptr);
                 } else {
                     if (landcover.valid) {
                         fillMaskFromLandcover(mask, cfg.maskResolution, tileMinX, tileMinZ,

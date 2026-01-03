@@ -21,8 +21,10 @@ Nuage uses a **compiled, real‑world terrain pipeline**. Procedural terrain gen
 Compiled terrain keeps the system deterministic, fast, and GIS-accurate without runtime parsing. It also matches how flight sims handle non‑ortho terrain: real DEM + landclass + curated textures.
 
 ## FlightGear Materials Mode
-Nuage now vendors the FlightGear terrain assets into `assets/fgdata` and can load them directly:
+Nuage now vendors the FlightGear terrain assets into `assets/terrain/fg` and can load them directly:
 - Config: `assets/config/terrain_flightgear.json`.
 - Runtime: sets `flight.terrainPath` to that config in `src/core/app.cpp`.
 
 This mode uses a FlightGear material/landclass lookup and a texture-array shader. It does **not** yet replicate the full FlightGear effects stack, but the loader and data layout are in place for that next step.
+
+Scenery packs are built offline under `assets/scenery/` and activated via `tools/scenery/scenery_sync.py`, which updates `assets/scenery/active/` for runtime streaming.
