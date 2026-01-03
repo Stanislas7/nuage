@@ -62,6 +62,7 @@ public:
         float shoreFeather = 0.18f;
         float wetStrength = 0.35f;
         float farmTexScale = 0.12f;
+        float roadStrength = 0.7f;
     };
 
     struct TerrainSample {
@@ -208,6 +209,7 @@ private:
     float m_treesMaxSlope = 0.7f;
     float m_treesMaxDistance = 5000.0f;
     float m_treesMaxDistanceSq = 0.0f;
+    bool m_treesAvoidRoads = true;
     int m_treesSeed = 1337;
 
     TerrainVisualSettings m_visuals;

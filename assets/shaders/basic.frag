@@ -77,6 +77,7 @@ uniform float uTerrainShoreWidth = 0.45;
 uniform float uTerrainShoreFeather = 0.18;
 uniform float uTerrainWetStrength = 0.35;
 uniform float uTerrainFarmTexScale = 0.12;
+uniform float uTerrainRoadStrength = 0.7;
 uniform bool uTerrainHasMaskTex = false;
 uniform sampler2D uTerrainMaskTex;
 uniform vec2 uTerrainMaskOrigin;
@@ -122,12 +123,13 @@ int maskClassAt(vec2 worldPos) {
 
 void sampleMaskWeights(vec3 vtxColor, vec2 worldPos,
                        out float wWater, out float wUrban, out float wForest,
-                       out float wFarmland, out float wRockClass) {
+                       out float wFarmland, out float wRockClass, out float wRoad) {
     wWater = 0.0;
     wUrban = 0.0;
     wForest = 0.0;
     wFarmland = 0.0;
     wRockClass = 0.0;
+    wRoad = 0.0;
     if (!uTerrainUseMasks) {
         return;
     }
@@ -160,6 +162,7 @@ void sampleMaskWeights(vec3 vtxColor, vec2 worldPos,
             wForest += clsId == 3 ? 1.0 : 0.0;
             wFarmland += clsId == 5 ? 1.0 : 0.0;
             wRockClass += clsId == 6 ? 1.0 : 0.0;
+            wRoad += clsId == 7 ? 1.0 : 0.0;
             samples += 1.0;
         }
         wWater /= samples;
@@ -167,6 +170,7 @@ void sampleMaskWeights(vec3 vtxColor, vec2 worldPos,
         wForest /= samples;
         wFarmland /= samples;
         wRockClass /= samples;
+        wRoad /= samples;
     } else {
         wWater = clamp(vtxColor.r, 0.0, 1.0);
         wUrban = clamp(vtxColor.g, 0.0, 1.0);
@@ -187,7 +191,8 @@ void main() {
     float wForest = 0.0;
     float wFarmland = 0.0;
     float wRockClass = 0.0;
-    sampleMaskWeights(vColor, vWorldPos.xz, wWater, wUrban, wForest, wFarmland, wRockClass);
+    float wRoad = 0.0;
+    sampleMaskWeights(vColor, vWorldPos.xz, wWater, wUrban, wForest, wFarmland, wRockClass, wRoad);
     float wGrass = clamp(1.0 - (wWater + wUrban + wForest + (wFarmland * 0.75)), 0.0, 1.0);
     float edgeNoise = noise(vWorldPos.xz * 0.0009 + vec2(21.3, 4.7)) - 0.5;
     float farmlandSoft = smoothstep(0.15, 0.85, wFarmland + edgeNoise * uTerrainMaskEdgeNoise);
@@ -200,6 +205,7 @@ void main() {
         debugColor += wFarmland * vec3(0.72, 0.62, 0.28);
         debugColor += wRockClass * vec3(0.55, 0.5, 0.48);
         debugColor += wGrass * vec3(0.25, 0.65, 0.28);
+        debugColor += wRoad * vec3(0.1, 0.1, 0.1);
         FragColor = vec4(debugColor, 1.0);
         return;
     }
@@ -333,6 +339,12 @@ void main() {
         float waterNoise = noise(vWorldPos.xz * uTerrainWaterDetailScale);
         float waterGain = mix(1.0 - uTerrainWaterDetailStrength, 1.0 + uTerrainWaterDetailStrength, waterNoise);
         baseColor = mix(baseColor, baseColor * waterGain, wWater);
+
+        float roadMask = smoothstep(0.05, 0.25, wRoad);
+        roadMask = clamp(roadMask * uTerrainRoadStrength, 0.0, 1.0);
+        vec3 roadColor = mix(urbanTex, dirtTexAlt, 0.2) * 0.75;
+        roadColor *= 0.9 + 0.2 * noise(vWorldPos.xz * 0.05);
+        baseColor = mix(baseColor, roadColor, roadMask);
     }
     if (uTerrainShading) {
         float luma = dot(baseColor, vec3(0.299, 0.587, 0.114));

@@ -37,6 +37,8 @@ struct Config {
     int gridResolution = 129;
     int maskResolution = 0;
     int maskSmooth = 0;
+    float roadWidthBoost = 1.8f;
+    int roadSmooth = 0;
     double xmin = 0.0;
     double ymin = 0.0;
     double xmax = 0.0;
@@ -76,7 +78,8 @@ void printUsage() {
               << "               [--runways-json <path> --runway-blend <meters>]\n"
               << "               [--origin-lat <deg>] [--origin-lon <deg>] [--origin-alt <m>]\n"
               << "               [--osm <path> --mask-res <pixels> --xmin <lon> --ymin <lat>\n"
-              << "                --xmax <lon> --ymax <lat> --mask-smooth <passes>]\n"
+              << "                --xmax <lon> --ymax <lat> --mask-smooth <passes>\n"
+              << "                --road-width-boost <scale> --road-smooth <passes>]\n"
               << "               [--landcover <path>]\n";
 }
 
@@ -135,6 +138,14 @@ bool parseArgs(int argc, char** argv, Config& cfg) {
             std::string v;
             if (!next(v)) return false;
             cfg.maskSmooth = std::stoi(v);
+        } else if (arg == "--road-width-boost") {
+            std::string v;
+            if (!next(v)) return false;
+            cfg.roadWidthBoost = std::stof(v);
+        } else if (arg == "--road-smooth") {
+            std::string v;
+            if (!next(v)) return false;
+            cfg.roadSmooth = std::stoi(v);
         } else if (arg == "--xmin") {
             std::string v;
             if (!next(v)) return false;
@@ -211,6 +222,16 @@ struct Polygon {
     float maxX = 0.0f;
     float maxZ = 0.0f;
     int classId = 0;
+};
+
+struct Road {
+    std::vector<nuage::Vec2> points;
+    float minX = 0.0f;
+    float minZ = 0.0f;
+    float maxX = 0.0f;
+    float maxZ = 0.0f;
+    float halfWidth = 3.0f;
+    bool valid = false;
 };
 
 struct GeoTransform {
@@ -551,6 +572,7 @@ std::vector<Polygon> loadPolygonsFromGeoJson(const std::string& path, int defaul
 
 int classPriority(int classId) {
     switch (classId) {
+        case 7: return 6; // roads
         case 1: return 6; // water
         case 2: return 5; // urban
         case 6: return 4; // rock/bare
@@ -621,6 +643,159 @@ void fillMaskFromLandcover(std::vector<std::uint8_t>& mask, int maskRes,
             unprojectToLonLat(proj, worldX, worldZ, lon, lat);
             int cls = sampleLandcoverClass(lc, lon, lat);
             mask[z * maskRes + x] = static_cast<std::uint8_t>(cls);
+        }
+    }
+}
+
+float roadHalfWidthFromTags(const nlohmann::json& tags) {
+    auto getTag = [&](const char* key) -> std::string {
+        if (!tags.contains(key)) return {};
+        const auto& val = tags[key];
+        if (!val.is_string()) return {};
+        return val.get<std::string>();
+    };
+    std::string highway = getTag("highway");
+    if (highway.empty()) {
+        return 0.0f;
+    }
+    if (highway == "footway" || highway == "path" || highway == "cycleway" || highway == "bridleway") {
+        return 0.0f;
+    }
+    if (highway == "motorway" || highway == "trunk") return 6.0f;
+    if (highway == "primary") return 5.0f;
+    if (highway == "secondary") return 4.0f;
+    if (highway == "tertiary") return 3.5f;
+    if (highway == "residential" || highway == "unclassified") return 3.0f;
+    if (highway == "service" || highway == "track") return 2.5f;
+    return 3.0f;
+}
+
+std::vector<Road> loadRoadsFromGeoJson(const std::string& path, const Projection& proj) {
+    std::ifstream in(path);
+    if (!in.is_open()) {
+        std::cerr << "Failed to open roads GeoJSON: " << path << "\n";
+        return {};
+    }
+    nlohmann::json doc;
+    in >> doc;
+    if (!doc.contains("features") || !doc["features"].is_array()) {
+        return {};
+    }
+
+    std::vector<Road> roads;
+    for (const auto& feature : doc["features"]) {
+        if (!feature.contains("geometry") || !feature.contains("properties")) {
+            continue;
+        }
+        const auto& geom = feature["geometry"];
+        if (!geom.contains("type") || !geom.contains("coordinates")) {
+            continue;
+        }
+        const auto& props = feature["properties"];
+        const auto* tags = &props;
+        if (props.contains("tags") && props["tags"].is_object()) {
+            tags = &props["tags"];
+        }
+        float halfWidth = roadHalfWidthFromTags(*tags);
+        if (halfWidth <= 0.0f) {
+            continue;
+        }
+
+        std::string type = geom["type"].get<std::string>();
+        const auto& coords = geom["coordinates"];
+        auto addLine = [&](const nlohmann::json& line) {
+            if (!line.is_array() || line.size() < 2) return;
+            Road road;
+            road.halfWidth = halfWidth;
+            road.minX = road.minZ = std::numeric_limits<float>::max();
+            road.maxX = road.maxZ = std::numeric_limits<float>::lowest();
+            for (const auto& pt : line) {
+                if (!pt.is_array() || pt.size() < 2) continue;
+                double lon = pt[0].get<double>();
+                double lat = pt[1].get<double>();
+                nuage::Vec2 p = projectLonLat(proj, lon, lat);
+                road.minX = std::min(road.minX, p.x);
+                road.maxX = std::max(road.maxX, p.x);
+                road.minZ = std::min(road.minZ, p.y);
+                road.maxZ = std::max(road.maxZ, p.y);
+                road.points.push_back(p);
+            }
+            if (road.points.size() >= 2) {
+                road.valid = true;
+                roads.push_back(std::move(road));
+            }
+        };
+
+        if (type == "LineString") {
+            addLine(coords);
+        } else if (type == "MultiLineString") {
+            if (coords.is_array()) {
+                for (const auto& line : coords) {
+                    addLine(line);
+                }
+            }
+        }
+    }
+    return roads;
+}
+
+float distancePointToSegment(const nuage::Vec2& p, const nuage::Vec2& a, const nuage::Vec2& b) {
+    nuage::Vec2 ab = b - a;
+    float denom = ab.x * ab.x + ab.y * ab.y;
+    if (denom <= 1e-6f) {
+        return (p - a).length();
+    }
+    float t = ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / denom;
+    t = std::clamp(t, 0.0f, 1.0f);
+    nuage::Vec2 proj = a + ab * t;
+    return (p - proj).length();
+}
+
+void rasterizeRoadsToMaskList(std::vector<std::uint8_t>& mask, int maskRes,
+                              float tileMinX, float tileMinZ, float tileSize,
+                              const std::vector<Road>& roads,
+                              const std::vector<int>& indices,
+                              float widthBoost) {
+    if (maskRes <= 0 || indices.empty()) return;
+    for (int idx : indices) {
+        const auto& road = roads[static_cast<size_t>(idx)];
+        if (!road.valid) continue;
+        if (road.maxX <= tileMinX || road.minX >= tileMinX + tileSize ||
+            road.maxZ <= tileMinZ || road.minZ >= tileMinZ + tileSize) {
+            continue;
+        }
+        float halfWidth = road.halfWidth * widthBoost;
+        float expand = halfWidth;
+        int x0 = static_cast<int>(std::floor((road.minX - expand - tileMinX) / tileSize * maskRes));
+        int x1 = static_cast<int>(std::ceil((road.maxX + expand - tileMinX) / tileSize * maskRes));
+        int z0 = static_cast<int>(std::floor((road.minZ - expand - tileMinZ) / tileSize * maskRes));
+        int z1 = static_cast<int>(std::ceil((road.maxZ + expand - tileMinZ) / tileSize * maskRes));
+        x0 = std::clamp(x0, 0, maskRes - 1);
+        x1 = std::clamp(x1, 0, maskRes - 1);
+        z0 = std::clamp(z0, 0, maskRes - 1);
+        z1 = std::clamp(z1, 0, maskRes - 1);
+
+        for (int z = z0; z <= z1; ++z) {
+            for (int x = x0; x <= x1; ++x) {
+                float fx = (static_cast<float>(x) + 0.5f) / maskRes;
+                float fz = (static_cast<float>(z) + 0.5f) / maskRes;
+                nuage::Vec2 p(tileMinX + fx * tileSize, tileMinZ + fz * tileSize);
+                bool hit = false;
+                for (size_t i = 0; i + 1 < road.points.size(); ++i) {
+                    float d = distancePointToSegment(p, road.points[i], road.points[i + 1]);
+                    if (d <= halfWidth) {
+                        hit = true;
+                        break;
+                    }
+                }
+                if (hit) {
+                    std::uint8_t& cell = mask[z * maskRes + x];
+                    if (cell == 1) continue;
+                    if (classPriority(7) >= classPriority(cell)) {
+                        cell = 7;
+                    }
+                }
+            }
         }
     }
 }
@@ -911,7 +1086,9 @@ int main(int argc, char** argv) {
     std::vector<Polygon> waterPolys;
     std::vector<Polygon> landPolys;
     std::vector<Polygon> allPolys;
+    std::vector<Road> roadLines;
     std::unordered_map<std::int64_t, std::vector<int>> polyBuckets;
+    std::unordered_map<std::int64_t, std::vector<int>> roadBuckets;
     if (!cfg.osmPath.empty()) {
         std::filesystem::path outDir(cfg.outDir);
         std::filesystem::path tmpDir = outDir / "osm_tmp";
@@ -922,6 +1099,8 @@ int main(int argc, char** argv) {
         std::filesystem::path landPbf = tmpDir / "landuse.pbf";
         std::filesystem::path waterGeo = tmpDir / "water.geojson";
         std::filesystem::path landGeo = tmpDir / "landuse.geojson";
+        std::filesystem::path roadPbf = tmpDir / "roads.pbf";
+        std::filesystem::path roadGeo = tmpDir / "roads.geojson";
 
         std::ostringstream bbox;
         bbox << cfg.xmin << "," << cfg.ymin << "," << cfg.xmax << "," << cfg.ymax;
@@ -937,7 +1116,9 @@ int main(int argc, char** argv) {
         std::ostringstream waterCmd;
         waterCmd << "osmium tags-filter -o \"" << waterPbf.string() << "\" \"" << areaPbf.string()
                  << "\" w/natural=water w/waterway=riverbank w/water=* w/natural=wetland"
-                 << " r/natural=water r/waterway=riverbank r/water=* r/natural=wetland";
+                 << " w/waterway=river w/waterway=stream w/waterway=canal"
+                 << " r/natural=water r/waterway=riverbank r/water=* r/natural=wetland"
+                 << " r/waterway=river r/waterway=stream r/waterway=canal";
         if (!runCommand(waterCmd.str())) {
             std::cerr << "Failed to filter water from OSM.\n";
             return 1;
@@ -946,9 +1127,18 @@ int main(int argc, char** argv) {
         std::ostringstream landCmd;
         landCmd << "osmium tags-filter -o \"" << landPbf.string() << "\" \"" << areaPbf.string()
                 << "\" w/landuse=* w/natural=wood w/natural=grassland w/natural=heath w/natural=scrub"
-                << " r/landuse=* r/natural=wood r/natural=grassland r/natural=heath r/natural=scrub";
+                << " w/natural=beach w/natural=bare_rock w/natural=scree w/natural=shingle"
+                << " r/landuse=* r/natural=wood r/natural=grassland r/natural=heath r/natural=scrub"
+                << " r/natural=beach r/natural=bare_rock r/natural=scree r/natural=shingle";
         if (!runCommand(landCmd.str())) {
             std::cerr << "Failed to filter landuse from OSM.\n";
+            return 1;
+        }
+        std::ostringstream roadCmd;
+        roadCmd << "osmium tags-filter -o \"" << roadPbf.string() << "\" \"" << areaPbf.string()
+                << "\" w/highway=* r/highway=*";
+        if (!runCommand(roadCmd.str())) {
+            std::cerr << "Failed to filter roads from OSM.\n";
             return 1;
         }
 
@@ -965,11 +1155,19 @@ int main(int argc, char** argv) {
             std::cerr << "Failed to export landuse GeoJSON.\n";
             return 1;
         }
+        std::ostringstream roadExport;
+        roadExport << "osmium export -f geojson -o \"" << roadGeo.string() << "\" \"" << roadPbf.string() << "\"";
+        if (!runCommand(roadExport.str())) {
+            std::cerr << "Failed to export roads GeoJSON.\n";
+            return 1;
+        }
 
         landPolys = loadPolygonsFromGeoJson(landGeo.string(), 0, proj, true);
         waterPolys = loadPolygonsFromGeoJson(waterGeo.string(), 1, proj, false);
+        roadLines = loadRoadsFromGeoJson(roadGeo.string(), proj);
         std::cout << "Loaded landuse polygons: " << landPolys.size() << "\n";
         std::cout << "Loaded water polygons: " << waterPolys.size() << "\n";
+        std::cout << "Loaded road lines: " << roadLines.size() << "\n";
     }
 
     if (!landPolys.empty() || !waterPolys.empty()) {
@@ -996,6 +1194,27 @@ int main(int argc, char** argv) {
             for (int ty = minTz; ty <= maxTz; ++ty) {
                 for (int tx = minTx; tx <= maxTx; ++tx) {
                     polyBuckets[tileKey(tx, ty)].push_back(static_cast<int>(i));
+                }
+            }
+        }
+    }
+    if (!roadLines.empty()) {
+        for (size_t i = 0; i < roadLines.size(); ++i) {
+            const auto& road = roadLines[i];
+            if (!road.valid) continue;
+            int minTx = static_cast<int>(std::floor(road.minX / cfg.tileSize));
+            int maxTx = static_cast<int>(std::floor(road.maxX / cfg.tileSize));
+            int minTz = static_cast<int>(std::floor(road.minZ / cfg.tileSize));
+            int maxTz = static_cast<int>(std::floor(road.maxZ / cfg.tileSize));
+
+            minTx = std::max(minTx, minTileX);
+            maxTx = std::min(maxTx, maxTileX);
+            minTz = std::max(minTz, minTileZ);
+            maxTz = std::min(maxTz, maxTileZ);
+
+            for (int ty = minTz; ty <= maxTz; ++ty) {
+                for (int tx = minTx; tx <= maxTx; ++tx) {
+                    roadBuckets[tileKey(tx, ty)].push_back(static_cast<int>(i));
                 }
             }
         }
@@ -1118,6 +1337,14 @@ int main(int argc, char** argv) {
                 }
                 if (cfg.maskSmooth > 0) {
                     smoothMask(mask, cfg.maskResolution, cfg.maskSmooth);
+                }
+                auto roadIt = roadBuckets.find(tileKey(tx, ty));
+                if (roadIt != roadBuckets.end()) {
+                    rasterizeRoadsToMaskList(mask, cfg.maskResolution, tileMinX, tileMinZ,
+                                             cfg.tileSize, roadLines, roadIt->second, cfg.roadWidthBoost);
+                }
+                if (cfg.roadSmooth > 0) {
+                    smoothMask(mask, cfg.maskResolution, cfg.roadSmooth);
                 }
 
                 std::filesystem::path maskPath = tilesDir / ("tile_" + std::to_string(tx) + "_" + std::to_string(ty) + ".mask");

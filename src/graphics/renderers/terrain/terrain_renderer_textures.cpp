@@ -45,6 +45,7 @@ void TerrainRenderer::applyTextureConfig(const nlohmann::json& config, const std
     m_textureSettings.shoreFeather = texConfig.value("shoreFeather", m_textureSettings.shoreFeather);
     m_textureSettings.wetStrength = texConfig.value("wetStrength", m_textureSettings.wetStrength);
     m_textureSettings.farmTexScale = texConfig.value("farmTexScale", m_textureSettings.farmTexScale);
+    m_textureSettings.roadStrength = texConfig.value("roadStrength", m_textureSettings.roadStrength);
     auto loadTint = [&](const char* key, Vec3& out) {
         if (texConfig.contains(key) && texConfig[key].is_array() && texConfig[key].size() == 3) {
             out = Vec3(texConfig[key][0].get<float>(),
@@ -172,6 +173,7 @@ void TerrainRenderer::bindTerrainTextures(Shader* shader, bool useMasks) const {
     shader->setFloat("uTerrainShoreFeather", m_textureSettings.shoreFeather);
     shader->setFloat("uTerrainWetStrength", m_textureSettings.wetStrength);
     shader->setFloat("uTerrainFarmTexScale", m_textureSettings.farmTexScale);
+    shader->setFloat("uTerrainRoadStrength", m_textureSettings.roadStrength);
 
     grass->bind(0);
     shader->setInt("uTerrainTexGrass", 0);

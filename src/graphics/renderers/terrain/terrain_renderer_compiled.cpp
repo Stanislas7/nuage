@@ -122,7 +122,8 @@ void appendTriangle(std::vector<float>& verts, const Vec3& a, const Vec3& b, con
 
 std::unique_ptr<Mesh> buildTreeMeshForTile(const std::vector<float>& gridVerts, int res, int tileX, int tileY,
                                            float tileMinX, float tileMinZ, float tileSize, bool useWaterMask,
-                                           bool enabled, float densityPerSqKm, float minHeight,
+                                           const std::vector<std::uint8_t>* maskData, int maskRes,
+                                           bool avoidRoads, bool enabled, float densityPerSqKm, float minHeight,
                                            float maxHeight, float minRadius, float maxRadius,
                                            float maxSlope, int seed) {
     if (!enabled || densityPerSqKm <= 0.0f || res < 2) {
@@ -168,6 +169,18 @@ std::unique_ptr<Mesh> buildTreeMeshForTile(const std::vector<float>& gridVerts, 
         }
         if (urban > 0.35f) {
             continue;
+        }
+        if (avoidRoads && maskData && maskRes > 1) {
+            float fx = std::clamp((x - tileMinX) / tileSize, 0.0f, 1.0f);
+            float fz = std::clamp((z - tileMinZ) / tileSize, 0.0f, 1.0f);
+            int mx = static_cast<int>(std::round(fx * (maskRes - 1)));
+            int mz = static_cast<int>(std::round(fz * (maskRes - 1)));
+            mx = std::clamp(mx, 0, maskRes - 1);
+            mz = std::clamp(mz, 0, maskRes - 1);
+            std::uint8_t cls = (*maskData)[static_cast<size_t>(mz) * maskRes + static_cast<size_t>(mx)];
+            if (cls == 7) {
+                continue;
+            }
         }
         if (useWaterMask) {
             float forestChance = std::clamp(forest, 0.0f, 1.0f);
@@ -411,6 +424,7 @@ void TerrainRenderer::setupCompiled(const std::string& configPath) {
         m_treesMaxRadius = trees.value("maxRadius", m_treesMaxRadius);
         m_treesMaxSlope = trees.value("maxSlope", m_treesMaxSlope);
         m_treesMaxDistance = trees.value("maxDistance", m_treesMaxDistance);
+        m_treesAvoidRoads = trees.value("avoidRoads", m_treesAvoidRoads);
         m_treesSeed = trees.value("seed", m_treesSeed);
     }
 
@@ -610,10 +624,12 @@ TerrainRenderer::TileResource* TerrainRenderer::ensureCompiledTileLoaded(int x, 
     if (builtGrid && m_treesEnabled) {
         int res = m_compiledGridResolution + 1;
         bool useWaterMask = m_compiledMaskResolution > 0;
+        const std::vector<std::uint8_t>* roadMask = maskData.empty() ? nullptr : &maskData;
         resource.ownedTreeMesh = buildTreeMeshForTile(resource.gridVerts.empty() ? gridVerts : resource.gridVerts,
                                                       res, x, y,
                                                       tileMinX, tileMinZ,
                                                       m_compiledTileSizeMeters, useWaterMask,
+                                                      roadMask, m_compiledMaskResolution, m_treesAvoidRoads,
                                                       m_treesEnabled, m_treesDensityPerSqKm,
                                                       m_treesMinHeight, m_treesMaxHeight,
                                                       m_treesMinRadius, m_treesMaxRadius,
